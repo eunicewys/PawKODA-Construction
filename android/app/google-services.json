@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "776753629563",
+    "project_id": "pawkoda-b355c",
+    "storage_bucket": "pawkoda-b355c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:776753629563:android:b1913a5d0000c1d2a0d5de",
+        "android_client_info": {
+          "package_name": "inti.edu.pawkoda_fyp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTeMeONmlYg1zjGpZLRr-3qaV15l5HmY8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
