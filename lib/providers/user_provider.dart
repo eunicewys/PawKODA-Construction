@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
 
 class UserProvider extends ChangeNotifier {
-  //private variables that hold current app state
-  String _userRole = 'owner'; //default role: 'owner', 'vet', 'admin'
-  String _userName = '';
+  String? _uid;
+  String? _displayName;
+  String? _role; // 'owner', 'vet', 'admin'
+  String? _email;
 
-  //create getters to allow UI screens to read the data safely
-  String get userRole => _userRole;
-  String get userName => _userName;
+  String? get uid => _uid;
+  String? get displayName => _displayName;
+  String? get role => _role;
+  String? get email => _email;
 
-  //methods to update the state and notify the UI
-  void setUserDetails(String name, String role) {
-    _userName = name;
-    _userRole = role;
+  bool get isLoggedIn => _uid != null;
 
-    //This function tells Flutter: "Data updated! Redraw screens listening to me."
+  void setUser(String uid, String name, String role, String email) {
+    _uid = uid;
+    _displayName = name;
+    _role = role;
+    _email = email;
+    notifyListeners();
+  }
+
+  void clearUser() {
+    _uid = null;
+    _displayName = null;
+    _role = null;
+    _email = null;
     notifyListeners();
   }
 }
