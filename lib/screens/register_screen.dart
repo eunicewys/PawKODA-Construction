@@ -18,13 +18,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   
-  // Default role for the dropdown
-  String _selectedRole = 'owner'; 
   bool _isLoading = false;
   bool _isObscured = true;
-
-  // List of roles for the dropdown menu
-  final List<String> _roles = ['owner', 'vet', 'admin'];
 
   // Function to handle the registration process
   Future<void> _handleRegister() async {
@@ -43,12 +38,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text.trim(),
       );
 
+      /**
+       * IMPORTANT FOR VIVA: 
+       * All new accounts are set to 'owner' role by default for security.
+       * This prevents regular users from accidentally or intentionally becoming admins.
+       * If a user needs to be a 'vet' or 'admin', you can change it manually in Firebase Console.
+       */
+      const String defaultRole = 'owner';
+
       // 3. Save additional user details (name, role) to Firestore database
       await FirebaseFirestore.instance.collection('USERS').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
-        'role': _selectedRole,
+        'role': defaultRole,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -57,7 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         Provider.of<UserProvider>(context, listen: false).setUser(
           userCredential.user!.uid,
           _nameController.text.trim(),
-          _selectedRole,
+          defaultRole,
           _emailController.text.trim(),
         );
 
@@ -115,7 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.7,
+              height: MediaQuery.of(context).size.height * 0.65,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -129,6 +132,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text(
+                      "Join PawKODA",
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
+                    ),
+                    const Text(
+                      "Start managing your pet's health today",
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 25),
+
                     // Input: Full Name
                     _buildTextField(label: "FULL NAME", controller: _nameController, hint: "Sarah Lim"),
                     const SizedBox(height: 15),
@@ -139,29 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     
                     // Input: Password
                     _buildTextField(label: "PASSWORD", controller: _passwordController, hint: "••••••••", isPassword: true),
-                    const SizedBox(height: 15),
-                    
-                    // Input: Role Selection (Owner, Vet, Admin)
-                    const Text("YOU ARE A:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F4F2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedRole,
-                          isExpanded: true,
-                          items: _roles.map((String role) {
-                            return DropdownMenuItem(value: role, child: Text(role.toUpperCase()));
-                          }).toList(),
-                          onChanged: (value) => setState(() => _selectedRole = value!),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 35),
                     
                     // The "Sign Up" Button
                     SizedBox(
