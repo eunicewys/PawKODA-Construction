@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'home_screen.dart';
+import 'register_screen.dart'; // Import the new Register Screen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,27 +14,32 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Controllers to capture user input from text fields
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  
+  // Variables to manage UI state (loading spinner and password visibility)
   bool _isLoading = false;
   bool _isObscured = true;
 
+  // Function to handle the login process
   Future<void> _handleLogin() async {
+    // 1. Basic Validation: check if fields are empty
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showSnackBar("Please enter email and password");
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isLoading = true); // Start showing the loading spinner
 
     try {
-      // 1. Firebase Auth Sign In
+      // 2. Sign in using Firebase Authentication
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 2. Fetch User Profile from Firestore
+      // 3. Fetch user details (like name and role) from Firestore database
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('USERS')
           .doc(userCredential.user!.uid)
@@ -44,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final String role = data['role'] ?? 'owner';
         final String name = data['name'] ?? 'User';
 
-        // 3. Save to Provider
+        // 4. Save user details to UserProvider so other screens can use them
         if (mounted) {
           Provider.of<UserProvider>(context, listen: false).setUser(
             userCredential.user!.uid,
@@ -53,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
             userCredential.user!.email ?? '',
           );
 
-          // 4. Navigate to Home
+          // 5. Go to the Home Screen and clear the login screen from memory
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -63,14 +69,16 @@ class _LoginScreenState extends State<LoginScreen> {
         _showSnackBar("User data not found in database.");
       }
     } on FirebaseAuthException catch (e) {
+      // Catch errors like "wrong password" or "user not found"
       _showSnackBar(e.message ?? "An error occurred during sign in.");
     } catch (e) {
       _showSnackBar("Something went wrong. Please try again.");
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false); // Stop loading spinner
     }
   }
 
+  // Helper function to show simple messages at the bottom
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -78,10 +86,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF759C86),
+      backgroundColor: const Color(0xFF759C86), // Morandi Green Background
       body: Stack(
         children: [
-          // Top Background Content
+          // Top section: Logo and App Name
           SafeArea(
             child: Column(
               children: [
@@ -113,7 +121,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
-          // White Bottom Sheet
+          
+          // Bottom section: White curved container (The Login Form)
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -133,23 +142,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text(
                       "Welcome back!",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D3142),
-                      ),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
                     ),
                     const Text(
                       "Sign in to manage your pet's health",
                       style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                     const SizedBox(height: 30),
+                    
+                    // Input: Email
                     _buildTextField(
                       label: "EMAIL ADDRESS",
                       controller: _emailController,
                       hint: "hello@pawkoda.com",
                     ),
                     const SizedBox(height: 20),
+                    
+                    // Input: Password
                     _buildTextField(
                       label: "PASSWORD",
                       controller: _passwordController,
@@ -157,6 +166,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       isPassword: true,
                     ),
                     const SizedBox(height: 40),
+                    
+                    // The "Sign In" Button
                     SizedBox(
                       width: double.infinity,
                       height: 55,
@@ -164,9 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF759C86),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
                         child: _isLoading
@@ -182,9 +191,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+                    
+                    // The "Create Account" Link - NOW FUNCTIONAL
                     Center(
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          // Navigate to the Registration Screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          );
+                        },
                         child: Text.rich(
                           TextSpan(
                             text: "Don't have an account? ",
@@ -209,6 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Helper function to build inputs (keeps code clean and reusable)
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -231,10 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
             fillColor: const Color(0xFFF0F4F2),
             filled: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
