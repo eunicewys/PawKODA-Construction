@@ -246,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
           obscureText: isPassword && _isObscured,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14), // Lighter grey for hint text
             fillColor: const Color(0xFFF0F4F2),
             filled: true,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
