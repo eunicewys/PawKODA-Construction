@@ -137,7 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
                     ),
                     const Text(
-                      "Start managing your pet's health today",
+                      "Start to manage your pet's health today",
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                     const SizedBox(height: 25),
