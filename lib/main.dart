@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-// import 'firebase_options.dart';
+import 'firebase_options.dart'; // Re-enable the configuration file
 import 'providers/user_provider.dart';
 import 'screens/login_screen.dart';
 
@@ -12,9 +12,10 @@ void main() async {
   // Ensure that Flutter is ready before we start Firebase
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Start the Firebase service
-  // Note: If you have run 'flutterfire configure', you can use DefaultFirebaseOptions.currentPlatform
-  await Firebase.initializeApp();
+  // Start the Firebase service using the options from firebase_options.dart
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Run the app and wrap it in MultiProvider
   runApp(
