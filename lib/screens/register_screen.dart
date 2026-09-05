@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'home_screen.dart';
 
+/**
+ * RegisterScreen: Handles new user registration.
+ */
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -13,54 +16,42 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // Controllers to capture user input from text fields
+  // Input controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   
   bool _isLoading = false;
-  bool _isObscured = true;
 
-  // Function to handle the registration process
+  // Logic to register and create database entry
   Future<void> _handleRegister() async {
-    // 1. Basic Validation: check if fields are empty
     if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showSnackBar("Please fill in all fields");
       return;
     }
 
-    setState(() => _isLoading = true); // Start showing the loading spinner
+    setState(() => _isLoading = true);
 
     try {
-      // 2. Create user in Firebase Authentication
+      // 1. Firebase Authentication: Create user
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      /**
-       * IMPORTANT FOR VIVA: 
-       * All new accounts are set to 'owner' role by default for security.
-       * This prevents regular users from accidentally or intentionally becoming admins.
-       * If a user needs to be a 'vet' or 'admin', you can change it manually in Firebase Console.
-       */
+      // 2. Firestore: Automatically create the USER document
+      // We use hardcoded 'owner' as the default role for security
       const String defaultRole = 'owner';
-
-      // 3. Save additional user details (name, role) to Firestore database
-      // We add a 10-second timeout here. If the network is slow, it will still
-      // move to the next step, and Firestore will finish saving in the background.
+      
       await FirebaseFirestore.instance.collection('USERS').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
-        'name': _nameController.text.trim(),
+        'displayName': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'role': defaultRole,
         'createdAt': FieldValue.serverTimestamp(),
-      }).timeout(const Duration(seconds: 10), onTimeout: () {
-        // If it takes more than 10s, we just log it and move on.
-        debugPrint("Firestore save timed out, proceeding anyway...");
       });
 
-      // 4. Update the local UserProvider to remember who is logged in
+      // 3. Update UserProvider and navigate to Home
       if (mounted) {
         Provider.of<UserProvider>(context, listen: false).setUser(
           userCredential.user!.uid,
@@ -69,22 +60,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _emailController.text.trim(),
         );
 
-        // 5. Navigate to the Home Screen and remove this screen from history
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
-    } on FirebaseAuthException catch (e) {
-      _showSnackBar(e.message ?? "Registration failed.");
     } catch (e) {
-      _showSnackBar("Something went wrong. Try again.");
+      _showSnackBar("Error: $e");
     } finally {
-      if (mounted) setState(() => _isLoading = false); // Stop loading spinner
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Helper function to show simple popup messages at the bottom
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -92,34 +79,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF759C86), // Primary Morandi Green
+      backgroundColor: const Color(0xFF759C86), // Sage Green background
       body: Stack(
         children: [
-          // Top section with App Name and Logo
+          // Top section: Logo & App Name
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 50),
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(51), // Transparent white
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 50),
+                    decoration: BoxDecoration(color: Colors.white.withAlpha(51), borderRadius: BorderRadius.circular(24)),
+                    child: const Icon(Icons.pets, color: Colors.white, size: 48),
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  "Create Account",
-                  style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-                ),
+                const SizedBox(height: 15),
+                const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
           
-          // Bottom section: White curved container (The Form)
+          // Bottom section: Curved White Sheet
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -127,62 +108,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
+              padding: const EdgeInsets.all(30),
               child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Join PawKODA",
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
-                    ),
-                    const Text(
-                      "Start to manage your pet's health today",
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                    const SizedBox(height: 25),
-
-                    // Input: Full Name
-                    _buildTextField(label: "FULL NAME", controller: _nameController, hint: "Sarah Lim"),
+                    _buildField("FULL NAME", _nameController, "Sarah Lim"),
                     const SizedBox(height: 15),
-                    
-                    // Input: Email Address
-                    _buildTextField(label: "EMAIL ADDRESS", controller: _emailController, hint: "hello@pawkoda.com"),
+                    _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
                     const SizedBox(height: 15),
-                    
-                    // Input: Password
-                    _buildTextField(label: "PASSWORD", controller: _passwordController, hint: "••••••••", isPassword: true),
+                    _buildField("PASSWORD", _passwordController, "••••••••", isPass: true),
                     const SizedBox(height: 35),
                     
-                    // The "Sign Up" Button
+                    // The Create Account Button
                     SizedBox(
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _handleRegister,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF759C86),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
-                        ),
-                        child: _isLoading 
-                          ? const CircularProgressIndicator(color: Colors.white) 
-                          : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF759C86), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     
-                    // Link to go back to Login Page
-                    Center(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Already have an account? Sign In", style: TextStyle(color: Color(0xFF759C86))),
-                      ),
-                    ),
+                    // Text link to Login
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text("Already have an account? Sign In", style: TextStyle(color: Color(0xFF759C86)))),
                   ],
                 ),
               ),
@@ -193,28 +144,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Reusable helper function to build styled text input fields
-  Widget _buildTextField({required String label, required TextEditingController controller, required String hint, bool isPassword = false}) {
+  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: isPassword && _isObscured,
+          obscureText: isPass,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14), // Lighter grey for hint text
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
             fillColor: const Color(0xFFF0F4F2),
             filled: true,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            suffixIcon: isPassword 
-              ? IconButton(
-                  icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
-                  onPressed: () => setState(() => _isObscured = !_isObscured),
-                ) 
-              : null,
           ),
         ),
       ],
