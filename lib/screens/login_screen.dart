@@ -40,10 +40,12 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       // 3. Fetch user details (like name and role) from Firestore database
+      // We add a 10-second timeout to avoid waiting too long if the network is bad.
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('USERS')
           .doc(userCredential.user!.uid)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 10));
 
       if (userDoc.exists) {
         final data = userDoc.data() as Map<String, dynamic>;
