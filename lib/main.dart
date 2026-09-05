@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // Re-enable the configuration file
+import 'firebase_options.dart';
 import 'providers/user_provider.dart';
 import 'screens/login_screen.dart';
 
 /**
- * main: The starting point of the whole application.
+ * main: The starting point of the app.
  */
 void main() async {
-  // Ensure that Flutter is ready before we start Firebase
+  // 1. Initialize Flutter and Firebase
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Start the Firebase service using the options from firebase_options.dart
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Run the app and wrap it in MultiProvider
+  // 2. Wrap the entire app in MultiProvider to share data (UserProvider)
   runApp(
     MultiProvider(
       providers: [
-        // This makes UserProvider accessible to the entire app
         ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
       child: const PawKODAApp(),
@@ -36,32 +33,29 @@ class PawKODAApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PawKODA',
-      debugShowCheckedModeBanner: false, // Hides the "Debug" banner in the corner
+      debugShowCheckedModeBanner: false, // Hides the debug tag
       
-      // Define the Look and Feel (Theme) of the app
+      // 3. Set the "Morandi" Design Theme
       theme: ThemeData(
         useMaterial3: true,
-        primaryColor: const Color(0xFF759C86), // Soft Sage Green
-        scaffoldBackgroundColor: const Color(0xFFF8F9F8), // Soft Off-White
+        primaryColor: const Color(0xFF759C86), // Sage Green
+        scaffoldBackgroundColor: const Color(0xFFF8F9F8), // Soft White Background
         
-        // ColorScheme: Defines colors for buttons, surfaces, and text
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF759C86),
           primary: const Color(0xFF759C86),
-          secondary: const Color(0xFFD4C2AD), // Muted Sand
           surface: Colors.white,
-          onSurface: const Color(0xFF2D3142), // Dark Charcoal
+          onSurface: const Color(0xFF2D3142), // Dark Charcoal Text
         ),
         
-        // TextTheme: Defines default styles for all text in the app
+        // Define default text styles
         textTheme: const TextTheme(
           displayLarge: TextStyle(color: Color(0xFF2D3142), fontWeight: FontWeight.bold),
           bodyLarge: TextStyle(color: Color(0xFF2D3142)),
-          bodyMedium: TextStyle(color: Color(0xFF2D3142)),
         ),
       ),
       
-      // The app starts at the Login Screen
+      // 4. Set the initial screen
       home: const LoginScreen(),
     );
   }

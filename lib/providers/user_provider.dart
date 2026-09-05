@@ -1,49 +1,39 @@
 import 'package:flutter/material.dart';
 
 /**
- * UserProvider: This class acts like a "Global Memory" for the app.
- * It stores information about the logged-in user so that any screen
- * (like Home or Profile) can easily access the user's name and role.
+ * UserProvider: This is the "Global Memory" of the app.
+ * It stores the user's information after they login or register
+ * so that all other screens can access it.
  */
 class UserProvider extends ChangeNotifier {
-  // Private variables to store user data
   String? _uid;
   String? _displayName;
-  String? _role; // Can be 'owner', 'vet', or 'admin'
+  String? _role; // Default is 'owner'
   String? _email;
 
-  // Getters: These allow other screens to READ the data but not change it directly
+  // Getters to safely read data from other screens
   String? get uid => _uid;
   String? get displayName => _displayName;
   String? get role => _role;
   String? get email => _email;
 
-  // Check if a user is currently logged in
-  bool get isLoggedIn => _uid != null;
-
-  /**
-   * setUser: Call this after a successful Login or Registration.
-   * It fills the "Global Memory" with the user's details.
-   */
+  // Function to save user data into memory
   void setUser(String uid, String name, String role, String email) {
     _uid = uid;
     _displayName = name;
     _role = role;
     _email = email;
     
-    // notifyListeners() tells the whole app: "Hey, the user data changed! Please refresh the screens."
+    // This tells the app to refresh screens that are using this data
     notifyListeners();
   }
 
-  /**
-   * clearUser: Call this when the user logs out to wipe the memory.
-   */
+  // Function to clear memory (use this for Logout)
   void clearUser() {
     _uid = null;
     _displayName = null;
     _role = null;
     _email = null;
-    
     notifyListeners();
   }
 }
