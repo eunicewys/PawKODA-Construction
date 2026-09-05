@@ -46,9 +46,31 @@ class HomeScreen extends StatelessWidget {
                         _getGreeting(),
                         style: const TextStyle(color: Colors.grey, fontSize: 14),
                       ),
-                      Text(
-                        "$userName 👋",
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
+                      Row(
+                        children: [
+                          Text(
+                            "$userName 👋",
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
+                          ),
+                          if (userProvider.role != null && userProvider.role != 'owner') ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: userProvider.role == 'admin' ? Colors.redAccent.withAlpha(50) : Colors.blueAccent.withAlpha(50),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                userProvider.role!.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: userProvider.role == 'admin' ? Colors.redAccent : Colors.blueAccent,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -94,6 +116,28 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
+
+              // --- ADMIN PANEL (ONLY FOR ADMINS) ---
+              if (userProvider.role == 'admin') ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Admin Panel access requested")),
+                      );
+                    },
+                    icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                    label: const Text("Admin Management Panel", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D3142),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
 
               // --- PET PASSPORTS SECTION ---
               Row(

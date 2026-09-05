@@ -47,12 +47,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       const String defaultRole = 'owner';
 
       // 3. Save additional user details (name, role) to Firestore database
+      // We add a 10-second timeout here. If the network is slow, it will still
+      // move to the next step, and Firestore will finish saving in the background.
       await FirebaseFirestore.instance.collection('USERS').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'role': defaultRole,
         'createdAt': FieldValue.serverTimestamp(),
+      }).timeout(const Duration(seconds: 10), onTimeout: () {
+        // If it takes more than 10s, we just log it and move on.
+        debugPrint("Firestore save timed out, proceeding anyway...");
       });
 
       // 4. Update the local UserProvider to remember who is logged in
