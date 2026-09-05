@@ -8,7 +8,6 @@ import 'register_screen.dart';
 
 /**
  * LoginScreen: The first screen the user sees.
- * Features a split Morandi layout (Green Top, White Curved Bottom).
  */
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,11 +20,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isObscured = true;
 
   // Logic to authenticate and fetch profile data
   Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showSnackBar("Please enter email and password");
+      _showPawDialog("Error", "Please enter email and password.", isError: true);
       return;
     }
 
@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // 2. Firestore: Fetch user document to get their name and role
+      // 2. Firestore: Fetch user document
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('USERS')
           .doc(userCredential.user!.uid)
@@ -65,26 +65,71 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        _showSnackBar("User profile not found in database.");
+        _showPawDialog("Access Error", "User profile not found in database.", isError: true);
       }
+    } on FirebaseAuthException catch (e) {
+      String errorMsg = "Login failed.";
+      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        errorMsg = "Invalid email or password. Please try again.";
+      }
+      _showPawDialog("Login Error", errorMsg, isError: true);
     } catch (e) {
-      _showSnackBar("Error: $e");
+      _showPawDialog("Connection Error", "The network is slow. Please try again in a few seconds.", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  /**
+   * _showPawDialog: A professional middle-of-screen dialog for messages.
+   */
+  void _showPawDialog(String title, String message, {required bool isError}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        title: Column(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: isError ? const Color(0xFFE5989B) : const Color(0xFF759C86),
+              size: 50,
+            ),
+            const SizedBox(height: 15),
+            Text(title, style: const TextStyle(color: Color(0xFF2D3142), fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Color(0xFF2D3142)),
+        ),
+        actions: [
+          Center(
+            child: SizedBox(
+              width: 120,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isError ? const Color(0xFFE5989B) : const Color(0xFF759C86),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Okay", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF759C86), // Sage Green background
+      backgroundColor: const Color(0xFF759C86),
       body: Stack(
         children: [
-          // Top section: Logo & App Name
           SafeArea(
             child: Column(
               children: [
@@ -102,8 +147,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
-          
-          // Bottom section: Curved White Sheet for the Form
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -121,13 +164,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Text("Welcome back!", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D3142))),
                     const Text("Sign in to manage your pet's health", style: TextStyle(color: Colors.grey, fontSize: 14)),
                     const SizedBox(height: 30),
-                    
                     _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
                     const SizedBox(height: 20),
                     _buildField("PASSWORD", _passwordController, "••••••••", isPass: true),
                     const SizedBox(height: 40),
-                    
-                    // The Sign In Button
                     SizedBox(
                       width: double.infinity,
                       height: 55,
@@ -137,8 +177,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    
-                    // Link to navigate to Registration Screen
                     const SizedBox(height: 20),
                     Center(
                       child: TextButton(
@@ -162,7 +200,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Reusable text field helper
   Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,13 +208,19 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: isPass,
+          obscureText: isPass && _isObscured,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
             fillColor: const Color(0xFFF0F4F2),
             filled: true,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            suffixIcon: isPass 
+              ? IconButton(
+                  icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                  onPressed: () => setState(() => _isObscured = !_isObscured),
+                ) 
+              : null,
           ),
         ),
       ],
