@@ -23,7 +23,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
   
   bool _isLoading = false;
-  bool _isObscured = true;
+  bool _isObscuredCreate = true;
+  bool _isObscuredConfirm = true;
 
   // Logic to register and create database entry
   Future<void> _handleRegister() async {
@@ -193,7 +194,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.75, // Increased height for extra field
+              height: MediaQuery.of(context).size.height * 0.7, // Reduced from 0.75 to 0.7
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -216,9 +217,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 12),
                     _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
                     const SizedBox(height: 12),
-                    _buildField("CREATE PASSWORD", _passwordController, "••••••••", isPass: true),
+                    _buildField(
+                      "CREATE PASSWORD", 
+                      _passwordController, 
+                      "••••••••", 
+                      isPass: true,
+                      isObscured: _isObscuredCreate,
+                      onToggle: () => setState(() => _isObscuredCreate = !_isObscuredCreate),
+                    ),
                     const SizedBox(height: 12),
-                    _buildField("RE-CONFIRM PASSWORD", _confirmPasswordController, "••••••••", isPass: true),
+                    _buildField(
+                      "RE-CONFIRM PASSWORD", 
+                      _confirmPasswordController, 
+                      "••••••••", 
+                      isPass: true,
+                      isObscured: _isObscuredConfirm,
+                      onToggle: () => setState(() => _isObscuredConfirm = !_isObscuredConfirm),
+                    ),
                     const SizedBox(height: 30),
                     SizedBox(
                       width: double.infinity,
@@ -240,7 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false}) {
+  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false, bool isObscured = true, VoidCallback? onToggle}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -248,7 +263,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: isPass && _isObscured,
+          obscureText: isPass && isObscured,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
@@ -257,8 +272,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             suffixIcon: isPass 
               ? IconButton(
-                  icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
-                  onPressed: () => setState(() => _isObscured = !_isObscured),
+                  icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                  onPressed: onToggle,
                 ) 
               : null,
           ),
