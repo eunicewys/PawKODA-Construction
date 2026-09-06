@@ -20,27 +20,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   
   bool _isLoading = false;
   bool _isObscured = true;
 
   // Logic to register and create database entry
   Future<void> _handleRegister() async {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    // 1. Basic Validation: Check if fields are empty
+    if (_nameController.text.isEmpty || 
+        _emailController.text.isEmpty || 
+        _passwordController.text.isEmpty || 
+        _confirmPasswordController.text.isEmpty) {
       _showPawDialog("Error", "Please fill in all fields.", isError: true);
+      return;
+    }
+
+    // 2. Password Matching Validation
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showPawDialog(
+        "Password Mismatch", 
+        "The passwords you entered do not match. Please try again.", 
+        isError: true
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // 1. Firebase Authentication: Create user
+      // 3. Firebase Authentication: Create user
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 2. Firestore: Automatically create the USER document
+      // 4. Firestore: Automatically create the USER document
       const String defaultRole = 'owner';
       
       // We add a 10-second timeout. If it takes too long, we assume it succeeded 
@@ -53,7 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       }).timeout(const Duration(seconds: 10));
 
-      // 3. Update UserProvider and navigate to Home
+      // 5. Update UserProvider and navigate to Home
       if (mounted) {
         Provider.of<UserProvider>(context, listen: false).setUser(
           userCredential.user!.uid,
@@ -97,6 +112,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
    * Uses Muted Coral for errors and Sage Green for success.
    */
   void _showPawDialog(String title, String message, {required bool isError, VoidCallback? onConfirm}) {
+    // Morandi Success Color (Muted Sand) and Error Color (Deepened Coral)
+    final Color successColor = const Color(0xFFD4C2AD);
+    final Color errorColor = const Color(0xFFB56576); 
+    final Color darkText = const Color(0xFF2D3142);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -106,17 +126,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Icon(
               isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: isError ? const Color(0xFFE5989B) : const Color(0xFF759C86),
+              color: isError ? errorColor : successColor,
               size: 50,
             ),
             const SizedBox(height: 15),
-            Text(title, style: const TextStyle(color: Color(0xFF2D3142), fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(color: darkText, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFF2D3142)),
+          style: TextStyle(color: darkText),
         ),
         actions: [
           Center(
@@ -124,14 +144,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
               width: 120,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isError ? const Color(0xFFE5989B) : const Color(0xFF759C86),
+                  backgroundColor: isError ? errorColor : successColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
                 onPressed: () {
                   Navigator.pop(context);
                   if (onConfirm != null) onConfirm();
                 },
-                child: const Text("Okay", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                // White text for error button, dark text for success button
+                child: Text(
+                  "Okay",
+                  style: TextStyle(
+                    color: isError ? Colors.white : darkText,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ),
@@ -165,13 +193,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.65,
+              height: MediaQuery.of(context).size.height * 0.75, // Increased height for extra field
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
               ),
-              padding: const EdgeInsets.all(30),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 25),
               child: SingleChildScrollView(
                 child: Column(
                   children: [
@@ -183,13 +211,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       alignment: Alignment.centerLeft,
                       child: Text("Start to manage your pet's health today", style: TextStyle(color: Colors.grey, fontSize: 13)),
                     ),
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 20),
                     _buildField("FULL NAME", _nameController, "Sarah Lim"),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 12),
                     _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
-                    const SizedBox(height: 15),
-                    _buildField("PASSWORD", _passwordController, "••••••••", isPass: true),
-                    const SizedBox(height: 35),
+                    const SizedBox(height: 12),
+                    _buildField("CREATE PASSWORD", _passwordController, "••••••••", isPass: true),
+                    const SizedBox(height: 12),
+                    _buildField("RE-CONFIRM PASSWORD", _confirmPasswordController, "••••••••", isPass: true),
+                    const SizedBox(height: 30),
                     SizedBox(
                       width: double.infinity,
                       height: 55,
