@@ -84,6 +84,11 @@ class _LoginScreenState extends State<LoginScreen> {
    * _showPawDialog: A professional middle-of-screen dialog for messages.
    */
   void _showPawDialog(String title, String message, {required bool isError}) {
+    // Morandi Success Color (Muted Sand) and Error Color (Deepened Coral)
+    final Color successColor = const Color(0xFFD4C2AD);
+    final Color errorColor = const Color(0xFFB56576); 
+    final Color darkText = const Color(0xFF2D3142);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -93,17 +98,17 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Icon(
               isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: isError ? const Color(0xFFE5989B) : const Color(0xFF759C86),
+              color: isError ? errorColor : successColor,
               size: 50,
             ),
             const SizedBox(height: 15),
-            Text(title, style: const TextStyle(color: Color(0xFF2D3142), fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(color: darkText, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFF2D3142)),
+          style: TextStyle(color: darkText),
         ),
         actions: [
           Center(
@@ -111,11 +116,19 @@ class _LoginScreenState extends State<LoginScreen> {
               width: 120,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isError ? const Color(0xFFE5989B) : const Color(0xFF759C86),
+                  backgroundColor: isError ? errorColor : successColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Okay", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                // White text for error button, dark text for success button
+                child: Text(
+                  "Okay",
+                  style: TextStyle(
+                    color: isError ? Colors.white : darkText,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ),
