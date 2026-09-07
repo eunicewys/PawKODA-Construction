@@ -5,9 +5,7 @@ import 'firebase_options.dart';
 import 'providers/user_provider.dart';
 import 'screens/login_screen.dart';
 
-/**
- * main: The starting point of the app.
- */
+/// main: The starting point of the app.
 void main() async {
   // 1. Initialize Flutter and Firebase
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,7 +57,6 @@ class PawKODAApp extends StatelessWidget {
           secondary: lightBronze,
           surface: Colors.white,
           onSurface: softBlack,
-          background: powderPetal,
         ),
         
         // Define default text styles using dark grey/black as requested

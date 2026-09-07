@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-/**
- * UserProvider: This is the "Global Memory" of the app.
- * It stores the user's information after they login or register
- * so that all other screens can access it.
- */
+/// UserProvider: This is the "Global Memory" of the app.
+/// It stores the user's information after they login or register
+/// so that all other screens can access it.
 class UserProvider extends ChangeNotifier {
   String? _uid;
   String? _displayName;

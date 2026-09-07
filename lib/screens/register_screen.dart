@@ -5,10 +5,8 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'home_screen.dart';
 
-/**
- * RegisterScreen: Handles new user registration.
- * Updated with official Morandi Natural Palette.
- */
+/// RegisterScreen: Handles new user registration.
+/// Updated with official Morandi Natural Palette.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -26,24 +24,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isObscuredCreate = true;
   bool _isObscuredConfirm = true;
 
+  // Validation Error States
+  bool _emailError = false;
+  bool _passwordError = false;
+
   // Morandi Palette Constants
   final Color _dustyOlive = const Color(0xFF6B705C);
-  final Color _drySage = const Color(0xFFA5A58D);
   final Color _lightBronze = const Color(0xFFCB997E);
-  final Color _desertSand = const Color(0xFFDDBEA9);
   final Color _powderPetal = const Color(0xFFFFE8D6);
   final Color _ashGrey = const Color(0xFFB7B7A4);
   final Color _darkText = const Color(0xFF2D3142);
   final Color _errorCoral = const Color(0xFFB56576);
 
   Future<void> _handleRegister() async {
+    // Reset error states before starting validation
+    setState(() {
+      _emailError = false;
+      _passwordError = false;
+    });
+
+    // 1. Basic Validation: Check if fields are empty
     if (_nameController.text.isEmpty || _emailController.text.isEmpty || 
         _passwordController.text.isEmpty || _confirmPasswordController.text.isEmpty) {
       _showPawDialog("Error", "Please fill in all fields.", isError: true);
       return;
     }
 
+    // 2. Email Format Validation
+    final String email = _emailController.text.trim();
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() => _emailError = true);
+      _showPawDialog(
+        "Registration Error", 
+        "Please use a valid email address.", 
+        isError: true
+      );
+      return;
+    }
+
+    // 3. Password Matching Validation
     if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() => _passwordError = true);
       _showPawDialog("Password Mismatch", "The passwords do not match.", isError: true);
       return;
     }
@@ -204,7 +225,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 20),
                     _buildField("FULL NAME", _nameController, "Sarah Lim"),
                     const SizedBox(height: 12),
-                    _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
+                    _buildField(
+                      "EMAIL ADDRESS", 
+                      _emailController, 
+                      "hello@pawkoda.com",
+                      hasError: _emailError,
+                    ),
                     const SizedBox(height: 12),
                     _buildField(
                       "CREATE PASSWORD", 
@@ -213,6 +239,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       isPass: true,
                       isObscured: _isObscuredCreate,
                       onToggle: () => setState(() => _isObscuredCreate = !_isObscuredCreate),
+                      hasError: _passwordError,
                     ),
                     const SizedBox(height: 12),
                     _buildField(
@@ -222,6 +249,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       isPass: true,
                       isObscured: _isObscuredConfirm,
                       onToggle: () => setState(() => _isObscuredConfirm = !_isObscuredConfirm),
+                      hasError: _passwordError,
                     ),
                     const SizedBox(height: 30),
                     SizedBox(
@@ -252,7 +280,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false, bool isObscured = true, VoidCallback? onToggle}) {
+  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false, bool isObscured = true, VoidCallback? onToggle, bool hasError = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -267,7 +295,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
             hintStyle: TextStyle(color: _ashGrey.withAlpha(150), fontSize: 14),
             fillColor: _powderPetal.withAlpha(50),
             filled: true,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: hasError ? const BorderSide(color: Color(0xFFB56576), width: 1.5) : BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: hasError ? const BorderSide(color: Color(0xFFB56576), width: 1.5) : BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: hasError ? const Color(0xFFB56576) : _dustyOlive, 
+                width: 1.5
+              ),
+            ),
             suffixIcon: isPass 
               ? IconButton(
                   icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: _ashGrey),

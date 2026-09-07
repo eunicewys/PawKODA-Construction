@@ -6,10 +6,8 @@ import '../providers/user_provider.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
-/**
- * LoginScreen: The first screen the user sees.
- * Updated with official Morandi Natural Palette.
- */
+/// LoginScreen: The first screen the user sees.
+/// Updated with official Morandi Natural Palette.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -25,9 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Morandi Palette Constants
   final Color _dustyOlive = const Color(0xFF6B705C);
-  final Color _drySage = const Color(0xFFA5A58D);
   final Color _lightBronze = const Color(0xFFCB997E);
-  final Color _desertSand = const Color(0xFFDDBEA9);
   final Color _powderPetal = const Color(0xFFFFE8D6);
   final Color _ashGrey = const Color(0xFFB7B7A4);
   final Color _darkText = const Color(0xFF2D3142);

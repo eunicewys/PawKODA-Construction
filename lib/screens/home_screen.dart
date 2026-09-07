@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 
-/**
- * HomeScreen: The main dashboard featuring pet passports, quick actions, and reminders.
- * Updated with official Morandi Natural Palette.
- */
+/// HomeScreen: The main dashboard featuring pet passports, quick actions, and reminders.
+/// Updated with official Morandi Natural Palette.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
