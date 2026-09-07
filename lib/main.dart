@@ -29,29 +29,56 @@ void main() async {
 class PawKODAApp extends StatelessWidget {
   const PawKODAApp({super.key});
 
+  // Official Morandi Natural Palette
+  static const Color dustyOlive = Color(0xFF6B705C);
+  static const Color drySage = Color(0xFFA5A58D);
+  static const Color lightBronze = Color(0xFFCB997E);
+  static const Color desertSand = Color(0xFFDDBEA9);
+  static const Color powderPetal = Color(0xFFFFE8D6);
+  static const Color ashGrey = Color(0xFFB7B7A4);
+  
+  // Standard UI Colors
+  static const Color darkCharcoal = Color(0xFF2D3142);
+  static const Color softBlack = Color(0xFF1A1C22);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PawKODA',
       debugShowCheckedModeBanner: false, // Hides the debug tag
       
-      // 3. Set the "Morandi" Design Theme
+      // 3. Set the official "Morandi" Design Theme
       theme: ThemeData(
         useMaterial3: true,
-        primaryColor: const Color(0xFF759C86), // Sage Green
-        scaffoldBackgroundColor: const Color(0xFFF8F9F8), // Soft White Background
+        primaryColor: dustyOlive,
+        scaffoldBackgroundColor: powderPetal, // Soft nature-inspired background
         
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF759C86),
-          primary: const Color(0xFF759C86),
+          seedColor: dustyOlive,
+          primary: dustyOlive,
+          secondary: lightBronze,
           surface: Colors.white,
-          onSurface: const Color(0xFF2D3142), // Dark Charcoal Text
+          onSurface: softBlack,
+          background: powderPetal,
         ),
         
-        // Define default text styles
+        // Define default text styles using dark grey/black as requested
         textTheme: const TextTheme(
-          displayLarge: TextStyle(color: Color(0xFF2D3142), fontWeight: FontWeight.bold),
-          bodyLarge: TextStyle(color: Color(0xFF2D3142)),
+          displayLarge: TextStyle(color: softBlack, fontWeight: FontWeight.bold),
+          displayMedium: TextStyle(color: softBlack, fontWeight: FontWeight.bold),
+          bodyLarge: TextStyle(color: softBlack),
+          bodyMedium: TextStyle(color: darkCharcoal),
+          bodySmall: TextStyle(color: ashGrey),
+        ),
+        
+        // Consistent button styling
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: dustyOlive,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 0,
+          ),
         ),
       ),
       

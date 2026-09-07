@@ -8,6 +8,7 @@ import 'register_screen.dart';
 
 /**
  * LoginScreen: The first screen the user sees.
+ * Updated with official Morandi Natural Palette.
  */
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +23,16 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isObscured = true;
 
+  // Morandi Palette Constants
+  final Color _dustyOlive = const Color(0xFF6B705C);
+  final Color _drySage = const Color(0xFFA5A58D);
+  final Color _lightBronze = const Color(0xFFCB997E);
+  final Color _desertSand = const Color(0xFFDDBEA9);
+  final Color _powderPetal = const Color(0xFFFFE8D6);
+  final Color _ashGrey = const Color(0xFFB7B7A4);
+  final Color _darkText = const Color(0xFF2D3142);
+  final Color _errorCoral = const Color(0xFFB56576);
+
   // Logic to authenticate and fetch profile data
   Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -32,13 +43,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Firebase Auth: Sign In
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 2. Firestore: Fetch user document
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('USERS')
           .doc(userCredential.user!.uid)
@@ -50,7 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
         final String role = data['role'] ?? 'owner';
         final String name = data['displayName'] ?? 'User';
 
-        // 3. Save to UserProvider and go to Home
         if (mounted) {
           Provider.of<UserProvider>(context, listen: false).setUser(
             userCredential.user!.uid,
@@ -80,15 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /**
-   * _showPawDialog: A professional middle-of-screen dialog for messages.
-   */
   void _showPawDialog(String title, String message, {required bool isError}) {
-    // Morandi Success Color (Muted Sand) and Error Color (Deepened Coral)
-    final Color successColor = const Color(0xFFD4C2AD);
-    final Color errorColor = const Color(0xFFB56576); 
-    final Color darkText = const Color(0xFF2D3142);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -98,17 +98,17 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Icon(
               isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: isError ? errorColor : successColor,
+              color: isError ? _errorCoral : _lightBronze,
               size: 50,
             ),
             const SizedBox(height: 15),
-            Text(title, style: TextStyle(color: darkText, fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(color: _darkText, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: darkText),
+          style: TextStyle(color: _darkText),
         ),
         actions: [
           Center(
@@ -116,16 +116,15 @@ class _LoginScreenState extends State<LoginScreen> {
               width: 120,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isError ? errorColor : successColor,
+                  backgroundColor: isError ? _errorCoral : _lightBronze,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 onPressed: () => Navigator.pop(context),
-                // White text for error button, dark text for success button
                 child: Text(
                   "Okay",
                   style: TextStyle(
-                    color: isError ? Colors.white : darkText,
+                    color: isError ? Colors.white : _darkText,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -140,9 +139,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF759C86),
+      backgroundColor: _dustyOlive, // Primary structural color
       body: Stack(
         children: [
+          // Top section: Logo & App Name
           SafeArea(
             child: Column(
               children: [
@@ -150,16 +150,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white.withAlpha(51), borderRadius: BorderRadius.circular(24)),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(40),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
                     child: const Icon(Icons.pets, color: Colors.white, size: 64),
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text("PawKODA", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                const Text("Pet Health & Nutrition Platform", style: TextStyle(color: Colors.white70, fontSize: 14)),
+                const Text(
+                  "PawKODA",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                Text(
+                  "Pet Health & Nutrition Platform",
+                  style: TextStyle(color: _powderPetal.withAlpha(200), fontSize: 14),
+                ),
               ],
             ),
           ),
+          
+          // Bottom section: Curved White Sheet
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -167,29 +183,47 @@ class _LoginScreenState extends State<LoginScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
+                ),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Welcome back!", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D3142))),
-                    const Text("Sign in to manage your pet's health", style: TextStyle(color: Colors.grey, fontSize: 14)),
+                    Text(
+                      "Welcome back!",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkText),
+                    ),
+                    const Text(
+                      "Sign in to manage your pet's health",
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
                     const SizedBox(height: 30),
+                    
                     _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
                     const SizedBox(height: 20),
                     _buildField("PASSWORD", _passwordController, "••••••••", isPass: true),
                     const SizedBox(height: 40),
+                    
+                    // The Sign In Button (Dusty Olive)
                     SizedBox(
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF759C86), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dustyOlive,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: _isLoading 
+                          ? const CircularProgressIndicator(color: Colors.white) 
+                          : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
+                    
                     const SizedBox(height: 20),
                     Center(
                       child: TextButton(
@@ -198,7 +232,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextSpan(
                             text: "Don't have an account? ",
                             style: const TextStyle(color: Colors.grey),
-                            children: [TextSpan(text: "Create Account", style: TextStyle(color: const Color(0xFF759C86), fontWeight: FontWeight.bold))],
+                            children: [
+                              TextSpan(
+                                text: "Create Account",
+                                style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold),
+                              )
+                            ],
                           ),
                         ),
                       ),
@@ -217,20 +256,27 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: isPass && _isObscured,
+          style: TextStyle(color: _darkText),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-            fillColor: const Color(0xFFF0F4F2),
+            hintStyle: TextStyle(color: _ashGrey.withAlpha(150), fontSize: 14),
+            fillColor: _powderPetal.withAlpha(50),
             filled: true,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
             suffixIcon: isPass 
               ? IconButton(
-                  icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                  icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: _ashGrey),
                   onPressed: () => setState(() => _isObscured = !_isObscured),
                 ) 
               : null,

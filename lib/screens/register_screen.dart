@@ -7,6 +7,7 @@ import 'home_screen.dart';
 
 /**
  * RegisterScreen: Handles new user registration.
+ * Updated with official Morandi Natural Palette.
  */
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -16,7 +17,6 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // Input controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -26,41 +26,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isObscuredCreate = true;
   bool _isObscuredConfirm = true;
 
-  // Logic to register and create database entry
+  // Morandi Palette Constants
+  final Color _dustyOlive = const Color(0xFF6B705C);
+  final Color _drySage = const Color(0xFFA5A58D);
+  final Color _lightBronze = const Color(0xFFCB997E);
+  final Color _desertSand = const Color(0xFFDDBEA9);
+  final Color _powderPetal = const Color(0xFFFFE8D6);
+  final Color _ashGrey = const Color(0xFFB7B7A4);
+  final Color _darkText = const Color(0xFF2D3142);
+  final Color _errorCoral = const Color(0xFFB56576);
+
   Future<void> _handleRegister() async {
-    // 1. Basic Validation: Check if fields are empty
-    if (_nameController.text.isEmpty || 
-        _emailController.text.isEmpty || 
-        _passwordController.text.isEmpty || 
-        _confirmPasswordController.text.isEmpty) {
+    if (_nameController.text.isEmpty || _emailController.text.isEmpty || 
+        _passwordController.text.isEmpty || _confirmPasswordController.text.isEmpty) {
       _showPawDialog("Error", "Please fill in all fields.", isError: true);
       return;
     }
 
-    // 2. Password Matching Validation
     if (_passwordController.text != _confirmPasswordController.text) {
-      _showPawDialog(
-        "Password Mismatch", 
-        "The passwords you entered do not match. Please try again.", 
-        isError: true
-      );
+      _showPawDialog("Password Mismatch", "The passwords do not match.", isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // 3. Firebase Authentication: Create user
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 4. Firestore: Automatically create the USER document
       const String defaultRole = 'owner';
       
-      // We add a 10-second timeout. If it takes too long, we assume it succeeded 
-      // because Firestore will finish saving in the background.
       await FirebaseFirestore.instance.collection('USERS').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'displayName': _nameController.text.trim(),
@@ -69,7 +66,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       }).timeout(const Duration(seconds: 10));
 
-      // 5. Update UserProvider and navigate to Home
       if (mounted) {
         Provider.of<UserProvider>(context, listen: false).setUser(
           userCredential.user!.uid,
@@ -84,40 +80,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      // Handle common Firebase errors nicely
       String errorMsg = "Registration failed.";
       if (e.code == 'email-already-in-use') {
-        errorMsg = "This email is already in use. Please sign in or use another email.";
+        errorMsg = "This email is already in use.";
       } else if (e.code == 'weak-password') {
         errorMsg = "The password provided is too weak.";
       }
       _showPawDialog("Registration Error", errorMsg, isError: true);
     } catch (e) {
-      // If we hit a timeout or other error, we show the success message 
-      // because the user is likely already recorded in Firebase Auth.
       _showPawDialog(
         "Success!", 
         "Account successfully created! Please sign in to continue.", 
         isError: false,
-        onConfirm: () {
-          if (mounted) Navigator.pop(context); // Go back to Login page
-        }
+        onConfirm: () { if (mounted) Navigator.pop(context); }
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /**
-   * _showPawDialog: A professional middle-of-screen dialog for messages.
-   * Uses Muted Coral for errors and Sage Green for success.
-   */
   void _showPawDialog(String title, String message, {required bool isError, VoidCallback? onConfirm}) {
-    // Morandi Success Color (Muted Sand) and Error Color (Deepened Coral)
-    final Color successColor = const Color(0xFFD4C2AD);
-    final Color errorColor = const Color(0xFFB56576); 
-    final Color darkText = const Color(0xFF2D3142);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -127,17 +109,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Icon(
               isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: isError ? errorColor : successColor,
+              color: isError ? _errorCoral : _lightBronze,
               size: 50,
             ),
             const SizedBox(height: 15),
-            Text(title, style: TextStyle(color: darkText, fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(color: _darkText, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: darkText),
+          style: TextStyle(color: _darkText),
         ),
         actions: [
           Center(
@@ -145,19 +127,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               width: 120,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isError ? errorColor : successColor,
+                  backgroundColor: isError ? _errorCoral : _lightBronze,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
                 ),
                 onPressed: () {
                   Navigator.pop(context);
                   if (onConfirm != null) onConfirm();
                 },
-                // White text for error button, dark text for success button
                 child: Text(
                   "Okay",
                   style: TextStyle(
-                    color: isError ? Colors.white : darkText,
+                    color: isError ? Colors.white : _darkText,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -172,41 +152,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF759C86),
+      backgroundColor: _dustyOlive,
       body: Stack(
         children: [
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 50),
+                const SizedBox(height: 40),
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white.withAlpha(51), borderRadius: BorderRadius.circular(24)),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(40),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
                     child: const Icon(Icons.pets, color: Colors.white, size: 48),
                   ),
                 ),
-                const SizedBox(height: 15),
-                const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                const Text(
+                  "Create Account",
+                  style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.7, // Reduced from 0.75 to 0.7
+              height: MediaQuery.of(context).size.height * 0.7,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
+                ),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 25),
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: Text("Join PawKODA", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2D3142))),
+                      child: Text("Join PawKODA", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkText)),
                     ),
                     const Align(
                       alignment: Alignment.centerLeft,
@@ -240,11 +229,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       height: 55,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _handleRegister,
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF759C86), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dustyOlive,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: _isLoading 
+                          ? const CircularProgressIndicator(color: Colors.white) 
+                          : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text("Already have an account? Sign In", style: TextStyle(color: Color(0xFF759C86)))),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context), 
+                      child: Text("Already have an account? Sign In", style: TextStyle(color: _lightBronze)),
+                    ),
                   ],
                 ),
               ),
@@ -259,20 +256,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: isPass && isObscured,
+          style: TextStyle(color: _darkText),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-            fillColor: const Color(0xFFF0F4F2),
+            hintStyle: TextStyle(color: _ashGrey.withAlpha(150), fontSize: 14),
+            fillColor: _powderPetal.withAlpha(50),
             filled: true,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             suffixIcon: isPass 
               ? IconButton(
-                  icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                  icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: _ashGrey),
                   onPressed: onToggle,
                 ) 
               : null,
