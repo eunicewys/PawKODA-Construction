@@ -69,7 +69,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final String userName = userProvider.displayName ?? 'Friend';
 
     return Scaffold(
-      backgroundColor: _powderPetal,
+      backgroundColor: _drySage, // New natural background
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -84,28 +84,28 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_getGreeting(), style: TextStyle(color: _ashGrey, fontSize: 14)),
-                        Text("$userName 👋", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                        Text(_getGreeting(), style: const TextStyle(color: Colors.white, fontSize: 14)),
+                        Text("$userName 👋", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
                     ),
                     Row(
                       children: [
                         IconButton(
                           onPressed: () => _handleLogout(context),
-                          icon: Icon(Icons.logout_rounded, color: _dustyOlive),
+                          icon: const Icon(Icons.logout_rounded, color: Colors.white),
                         ),
                         Container(
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: _lightBronze.withAlpha(100), width: 2),
+                            border: Border.all(color: _powderPetal.withAlpha(100), width: 2),
                           ),
                           child: CircleAvatar(
                             radius: 22,
-                            backgroundColor: _dustyOlive.withAlpha(40),
+                            backgroundColor: Colors.white.withAlpha(50),
                             child: Text(
                               userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
-                              style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -121,20 +121,20 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(150),
+                    color: _powderPetal.withAlpha(40),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.health_and_safety, color: _dustyOlive, size: 20),
+                      const Icon(Icons.health_and_safety, color: Colors.white, size: 20),
                       const SizedBox(width: 8),
-                      Text(
+                      const Text(
                         "2 Pets Registered: ",
-                        style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.w600, fontSize: 12),
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
                       ),
-                      Text(
+                      const Text(
                         "1 Healthy, 1 Needs Attention",
-                        style: TextStyle(color: _ashGrey, fontSize: 12),
+                        style: TextStyle(color: Colors.white, fontSize: 12), // Changed to white
                       ),
                     ],
                   ),
@@ -143,16 +143,24 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
               const SizedBox(height: 30),
 
-              // 3. LAYERED PET PASSPORTS (MAIN FOCUS)
+              // 3. LAYERED PET PASSPORTS
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("My Pet Passports", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold)),
+                    const Text("My Pet Passports", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _darkCharcoal.withAlpha(180), // Dark box column
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: TextButton(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
                     ),
                   ],
                 ),
@@ -198,10 +206,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
               const SizedBox(height: 40),
 
-              // 4. QUICK ACTIONS GRID (Nutrition Priority)
+              // 4. QUICK ACTIONS GRID
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                child: const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
               const SizedBox(height: 16),
               Padding(
@@ -209,10 +217,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildActionItem(Icons.restaurant, "Nutrition", _lightBronze),
-                    _buildActionItem(Icons.medical_services, "Meds", _sageGreen()),
+                    _buildActionItem(Icons.restaurant, "Nutrition", _desertSand),
+                    _buildActionItem(Icons.medical_services, "Meds", _powderPetal),
                     _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand),
-                    _buildActionItem(Icons.assignment, "Records", _ashGrey),
+                    _buildActionItem(Icons.assignment, "Records", _powderPetal),
                   ],
                 ),
               ),
@@ -222,7 +230,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               // 5. REMINDERS SECTION
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text("Upcoming Reminders", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                child: const Text("Upcoming Reminders", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
               const SizedBox(height: 16),
               Padding(
@@ -390,18 +398,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           height: 65,
           width: 65,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [color.withAlpha(40), color.withAlpha(80)],
-            ),
+            color: color, // Using Powder Petal or Desert Sand directly
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [BoxShadow(color: color.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Icon(icon, color: _dustyOlive, size: 28),
         ),
         const SizedBox(height: 8),
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _darkCharcoal)),
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
       ],
     );
   }
@@ -436,6 +440,4 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       ],
     );
   }
-
-  Color _sageGreen() => const Color(0xFF759C86);
 }
