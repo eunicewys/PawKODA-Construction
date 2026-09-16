@@ -26,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _lightBronze = const Color(0xFFCB997E);
   final Color _powderPetal = const Color(0xFFFFE8D6);
-  final Color _ashGrey = const Color(0xFFB7B7A4);
+  final Color _ashGrey = const Color(0xFF8A8A7C); // Slightly darker than B7B7A4
   final Color _darkText = const Color(0xFF2D3142);
   final Color _errorCoral = const Color(0xFFB56576);
 
@@ -196,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const Text(
                       "Sign in to manage your pet's health",
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                      style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 14), // Darker grey
                     ),
                     const SizedBox(height: 30),
                     
@@ -264,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: TextStyle(color: _darkText),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: _ashGrey.withAlpha(150), fontSize: 14),
+            hintStyle: TextStyle(color: _ashGrey.withAlpha(180), fontSize: 14), // Darker hint
             fillColor: _powderPetal.withAlpha(50),
             filled: true,
             border: OutlineInputBorder(
