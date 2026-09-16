@@ -33,7 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _lightBronze = const Color(0xFFCB997E);
   final Color _powderPetal = const Color(0xFFFFE8D6);
-  final Color _ashGrey = const Color(0xFF8A8A7C); // Slightly darker than B7B7A4
+  final Color _ashGrey = const Color(0xFF8A8A7C); // Slightly darker
   final Color _darkText = const Color(0xFF2D3142);
   final Color _errorCoral = const Color(0xFFB56576);
 
@@ -226,7 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text("Start to manage your pet's health today", style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 13)),
+                      child: Text("Start to manage your pet's health today", style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 13)), // Darker grey
                     ),
                     const SizedBox(height: 20),
                     _buildField("FULL NAME", _nameController, "Sarah Lim"),

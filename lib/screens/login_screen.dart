@@ -26,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _lightBronze = const Color(0xFFCB997E);
   final Color _powderPetal = const Color(0xFFFFE8D6);
-  final Color _ashGrey = const Color(0xFF8A8A7C); // Slightly darker than B7B7A4
+  final Color _ashGrey = const Color(0xFF8A8A7C); // Slightly darker
   final Color _darkText = const Color(0xFF2D3142);
   final Color _errorCoral = const Color(0xFFB56576);
 

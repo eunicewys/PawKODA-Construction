@@ -30,7 +30,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.85)
+    _pageController = PageController(viewportFraction: 0.8) // Reduced from 0.85 to make cards narrower
       ..addListener(() {
         setState(() {
           _currentPage = _pageController.page!;
@@ -69,7 +69,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final String userName = userProvider.displayName ?? 'Friend';
 
     return Scaffold(
-      backgroundColor: _drySage, // New natural background
+      backgroundColor: _drySage, // Nature background
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -84,8 +84,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_getGreeting(), style: const TextStyle(color: Colors.white, fontSize: 14)),
-                        Text("$userName 👋", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(_getGreeting(), style: const TextStyle(color: Colors.white, fontSize: 17)),
+                        Text(userName, style: const TextStyle(fontSize: 29, fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
                     ),
                     Row(
@@ -95,17 +95,17 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           icon: const Icon(Icons.logout_rounded, color: Colors.white),
                         ),
                         Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: _powderPetal.withAlpha(100), width: 2),
+                            color: Colors.white, 
                           ),
                           child: CircleAvatar(
                             radius: 22,
-                            backgroundColor: Colors.white.withAlpha(50),
+                            backgroundColor: _powderPetal, 
                             child: Text(
                               userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -121,20 +121,28 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: _powderPetal.withAlpha(40),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withAlpha(204), // Increased to 80% opacity
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.health_and_safety, color: Colors.white, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "2 Pets Registered: ",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
-                      ),
-                      const Text(
-                        "1 Healthy, 1 Needs Attention",
-                        style: TextStyle(color: Colors.white, fontSize: 12), // Changed to white
+                      Icon(Icons.health_and_safety, color: _dustyOlive, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "2 registered:",
+                              style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            Text(
+                              "1 healthy; 1 needs attention",
+                              style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -149,17 +157,22 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("My Pet Passports", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const Text("My Pet Passports", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: Colors.white)),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _darkCharcoal.withAlpha(180), // Dark box column
+                        color: _darkCharcoal,
                         borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)],
                       ),
                       child: TextButton(
                         onPressed: () {},
-                        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero, 
+                          minimumSize: Size.zero, 
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                        ),
+                        child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 17)),
                       ),
                     ),
                   ],
@@ -169,12 +182,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               const SizedBox(height: 10),
               
               SizedBox(
-                height: 380,
+                height: 350, // Reduced from 370 to 350 to fit on smaller screens
                 child: PageView.builder(
                   controller: _pageController,
-                  itemCount: 2, // Mock for 2 pets
+                  itemCount: 2, 
                   itemBuilder: (context, index) {
-                    // Animation logic for layered scaling
                     double scale = (1 - ((_currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
                     
                     if (index == 0) {
@@ -209,7 +221,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               // 4. QUICK ACTIONS GRID
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: const Text("Quick Actions", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
               const SizedBox(height: 16),
               Padding(
@@ -230,7 +242,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               // 5. REMINDERS SECTION
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: const Text("Upcoming Reminders", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: const Text("Upcoming Reminders", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
               const SizedBox(height: 16),
               Padding(
@@ -247,15 +259,15 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(color: _lightBronze.withAlpha(30), shape: BoxShape.circle),
-                        child: Icon(Icons.vaccines, color: _lightBronze, size: 24),
+                        child: Icon(Icons.vaccines, color: _lightBronze, size: 26),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Bordetella Vaccine Due", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal)),
-                            Text("Buddy • 5 Nov 2024", style: TextStyle(color: _ashGrey, fontSize: 13)),
+                            Text("Bordetella Vaccine Due", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _darkCharcoal)),
+                            Text("Buddy • 5 Nov 2024", style: TextStyle(color: _ashGrey, fontSize: 16)),
                           ],
                         ),
                       ),
@@ -265,7 +277,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 ),
               ),
               
-              const SizedBox(height: 100), // Bottom padding
+              const SizedBox(height: 100), 
             ],
           ),
         ),
@@ -291,13 +303,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: _ashGrey.withAlpha(50), width: 1.5),
           boxShadow: [
             BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 20, offset: const Offset(0, 10)),
           ],
         ),
         child: Column(
           children: [
-            // Image with rounded corners and health badge
             Expanded(
               flex: 3,
               child: Stack(
@@ -309,7 +321,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover),
                     ),
                   ),
-                  // Health Badge (Lecturer Request)
                   Positioned(
                     top: 20,
                     right: 20,
@@ -340,28 +351,27 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 ],
               ),
             ),
-            // Pet Details
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8), // Further reduced padding
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                        Text(species, style: TextStyle(color: _ashGrey, fontWeight: FontWeight.w600)),
+                        Text(name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkCharcoal)), // Reduced from 27 to 24
+                        Text(species, style: TextStyle(color: _ashGrey, fontWeight: FontWeight.w600, fontSize: 14)), // Reduced from 16 to 14
                       ],
                     ),
-                    Text(breed, style: TextStyle(color: _ashGrey, fontSize: 14)),
-                    const Spacer(),
+                    Text(breed, style: TextStyle(color: _ashGrey, fontSize: 15)), // Reduced from 17 to 15
+                    const SizedBox(height: 4), // Reduced from 12 to 4 to cut space
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildInfoChip("Age", age, _lightBronze),
-                        _buildInfoChip("Weight", weight, _drySage),
+                        Expanded(child: _buildInfoChip("Age", age)),
+                        const SizedBox(width: 12), // Balanced gap
+                        Expanded(child: _buildInfoChip("Weight", weight)),
                       ],
                     ),
                   ],
@@ -374,18 +384,21 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 
-  Widget _buildInfoChip(String label, String value, Color color) {
+  Widget _buildInfoChip(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), // Reduced height from 10 to 6
       decoration: BoxDecoration(
-        color: color.withAlpha(20),
+        color: _ashGrey.withAlpha(140), 
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
-          Text(value, style: TextStyle(fontSize: 14, color: _darkCharcoal, fontWeight: FontWeight.bold)),
+          Text(
+            label, 
+            style: TextStyle(fontSize: 12, color: _dustyOlive, fontWeight: FontWeight.bold) // Reduced from 13 to 12
+          ),
+          Text(value, style: TextStyle(fontSize: 15, color: _darkCharcoal, fontWeight: FontWeight.bold)), // Reduced from 17 to 15
         ],
       ),
     );
@@ -395,17 +408,17 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     return Column(
       children: [
         Container(
-          height: 65,
-          width: 65,
+          height: 70,
+          width: 70,
           decoration: BoxDecoration(
-            color: color, // Using Powder Petal or Desert Sand directly
+            color: color,
             borderRadius: BorderRadius.circular(22),
             boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4))],
           ),
-          child: Icon(icon, color: _dustyOlive, size: 28),
+          child: Icon(icon, color: _dustyOlive, size: 30),
         ),
         const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+        Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
       ],
     );
   }
