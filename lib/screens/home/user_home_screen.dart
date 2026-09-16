@@ -4,22 +4,45 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../login_screen.dart';
 
-/**
- * UserHomeScreen: Dashboard for Pet Owners.
- * Uses the Morandi Nature Palette (Green/Bronze/Sand).
- */
-class UserHomeScreen extends StatelessWidget {
+/// UserHomeScreen: Redesigned dashboard for Pet Owners.
+/// Features a "Modern Layered" pet passport experience and prioritized actions.
+class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});
 
-  // Morandi Nature Palette
-  final Color _sageGreen = const Color(0xFF759C86);
-  final Color _lightBronze = const Color(0xFFCB997E);
-  final Color _drySage = const Color(0xFFA5A58D);
+  @override
+  State<UserHomeScreen> createState() => _UserHomeScreenState();
+}
+
+class _UserHomeScreenState extends State<UserHomeScreen> {
+  // Official Morandi Natural Palette
   final Color _dustyOlive = const Color(0xFF6B705C);
-  final Color _desertSand = const Color(0xFFDDBEA9);
   final Color _powderPetal = const Color(0xFFFFE8D6);
-  final Color _darkCharcoal = const Color(0xFF2D3142);
+  final Color _lightBronze = const Color(0xFFCB997E);
+  final Color _desertSand = const Color(0xFFDDBEA9);
+  final Color _drySage = const Color(0xFFA5A58D);
   final Color _ashGrey = const Color(0xFFB7B7A4);
+  final Color _darkCharcoal = const Color(0xFF2D3142);
+
+  // Controller for the layered pet cards
+  late PageController _pageController;
+  double _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.85)
+      ..addListener(() {
+        setState(() {
+          _currentPage = _pageController.page!;
+        });
+      });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -28,7 +51,6 @@ class UserHomeScreen extends StatelessWidget {
     return "Good evening,";
   }
 
-  // Logout Logic
   Future<void> _handleLogout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     if (context.mounted) {
@@ -47,244 +69,373 @@ class UserHomeScreen extends StatelessWidget {
     final String userName = userProvider.displayName ?? 'Friend';
 
     return Scaffold(
-      backgroundColor: _powderPetal, // Soft background
+      backgroundColor: _powderPetal,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header: Greeting & Avatar
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_getGreeting(), style: TextStyle(color: _ashGrey, fontSize: 14)),
-                      Text("$userName 👋", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => _handleLogout(context),
-                        icon: Icon(Icons.logout_rounded, color: _dustyOlive),
-                        tooltip: "Logout",
-                      ),
-                      CircleAvatar(
-                        radius: 26, 
-                        backgroundColor: _sageGreen.withAlpha(50), 
-                        child: Text(
-                          userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?', 
-                          style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 18)
-                        )
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // 2. Overview Card: Summarizing registered pets
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: _sageGreen, 
-                  borderRadius: BorderRadius.circular(24), 
-                  boxShadow: [BoxShadow(color: _sageGreen.withAlpha(60), blurRadius: 15, offset: const Offset(0, 5))]
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              // 1. HEADER SECTION
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("PET HEALTH OVERVIEW", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                    const SizedBox(height: 8),
-                    const Text("2 Pets Registered", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_getGreeting(), style: TextStyle(color: _ashGrey, fontSize: 14)),
+                        Text("$userName 👋", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                      ],
+                    ),
                     Row(
                       children: [
-                        _statusDot(Colors.greenAccent, "1 Healthy"),
-                        const SizedBox(width: 16),
-                        _statusDot(Colors.orangeAccent, "1 Needs Attention"),
+                        IconButton(
+                          onPressed: () => _handleLogout(context),
+                          icon: Icon(Icons.logout_rounded, color: _dustyOlive),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _lightBronze.withAlpha(100), width: 2),
+                          ),
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: _dustyOlive.withAlpha(40),
+                            child: Text(
+                              userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
+                              style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
 
-              // 3. Passports Section: Horizontal List
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("My Pet Passports", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                  TextButton(
-                    onPressed: () {}, 
-                    child: Text("+ Add Pet", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold))
+              // 2. MINI OVERVIEW CARD
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(150),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Icon(Icons.health_and_safety, color: _dustyOlive, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        "2 Pets Registered: ",
+                        style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                      Text(
+                        "1 Healthy, 1 Needs Attention",
+                        style: TextStyle(color: _ashGrey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 210,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
+
+              const SizedBox(height: 30),
+
+              // 3. LAYERED PET PASSPORTS (MAIN FOCUS)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _petPassportCard("Buddy", "Dog", "Golden Retriever", "3 yrs", "28.5 kg", "https://images.unsplash.com/photo-1552053831-71594a27632d?w=200", _lightBronze),
-                    _petPassportCard("Luna", "Cat", "Persian", "2 yrs", "4.2 kg", "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200", _drySage),
+                    Text("My Pet Passports", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                    TextButton(
+                      onPressed: () {},
+                      child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
-
-              // 4. Quick Actions Grid
-              Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-              const SizedBox(height: 16),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                children: [
-                  _actionButton(Icons.medical_services, "Meds", _lightBronze.withAlpha(60)),
-                  _actionButton(Icons.calendar_today, "Book Vet", _desertSand.withAlpha(80)),
-                  _actionButton(Icons.restaurant, "Nutrition", _drySage.withAlpha(60)),
-                  _actionButton(Icons.assignment, "Records", _ashGrey.withAlpha(60)),
-                ],
+              
+              const SizedBox(height: 10),
+              
+              SizedBox(
+                height: 380,
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: 2, // Mock for 2 pets
+                  itemBuilder: (context, index) {
+                    // Animation logic for layered scaling
+                    double scale = (1 - ((_currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
+                    
+                    if (index == 0) {
+                      return _buildPetCard(
+                        scale: scale,
+                        name: "Buddy",
+                        species: "Dog",
+                        breed: "Golden Retriever",
+                        age: "3 yrs",
+                        weight: "28.5 kg",
+                        isHealthy: true,
+                        imageUrl: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=400",
+                      );
+                    } else {
+                      return _buildPetCard(
+                        scale: scale,
+                        name: "Luna",
+                        species: "Cat",
+                        breed: "Persian",
+                        age: "2 yrs",
+                        weight: "4.2 kg",
+                        isHealthy: false,
+                        imageUrl: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400",
+                      );
+                    }
+                  },
+                ),
               ),
-              const SizedBox(height: 32),
 
-              // 5. Reminders List
-              Text("Upcoming Reminders", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-              const SizedBox(height: 12),
-              _reminderTile("Bordetella Vaccine Due", "Buddy • 5 Nov 2024", _lightBronze),
-              const SizedBox(height: 80), 
+              const SizedBox(height: 40),
+
+              // 4. QUICK ACTIONS GRID (Nutrition Priority)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildActionItem(Icons.restaurant, "Nutrition", _lightBronze),
+                    _buildActionItem(Icons.medical_services, "Meds", _sageGreen()),
+                    _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand),
+                    _buildActionItem(Icons.assignment, "Records", _ashGrey),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              // 5. REMINDERS SECTION
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text("Upcoming Reminders", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: _lightBronze.withAlpha(30), shape: BoxShape.circle),
+                        child: Icon(Icons.vaccines, color: _lightBronze, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Bordetella Vaccine Due", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal)),
+                            Text("Buddy • 5 Nov 2024", style: TextStyle(color: _ashGrey, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: _ashGrey),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 100), // Bottom padding
             ],
           ),
         ),
       ),
-      // 6. Bottom Navigation Bar
-      bottomNavigationBar: Container(
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildPetCard({
+    required double scale,
+    required String name,
+    required String species,
+    required String breed,
+    required String age,
+    required String weight,
+    required bool isHealthy,
+    required String imageUrl,
+  }) {
+    return Transform.scale(
+      scale: scale,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white, 
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
-          boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10)]
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 20, offset: const Offset(0, 10)),
+          ],
         ),
-        child: BottomNavigationBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: _dustyOlive,
-          unselectedItemColor: _ashGrey,
-          currentIndex: 0,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: "Home"),
-            BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: "Health"),
-            BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), label: "Bookings"),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profile"),
+        child: Column(
+          children: [
+            // Image with rounded corners and health badge
+            Expanded(
+              flex: 3,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover),
+                    ),
+                  ),
+                  // Health Badge (Lecturer Request)
+                  Positioned(
+                    top: 20,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(220),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 5)],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(radius: 4, backgroundColor: isHealthy ? Colors.green : Colors.red),
+                          const SizedBox(width: 6),
+                          Text(
+                            isHealthy ? "Healthy" : "Needs Attention",
+                            style: TextStyle(
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold, 
+                              color: isHealthy ? Colors.green : Colors.red
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Pet Details
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                        Text(species, style: TextStyle(color: _ashGrey, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    Text(breed, style: TextStyle(color: _ashGrey, fontSize: 14)),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildInfoChip("Age", age, _lightBronze),
+                        _buildInfoChip("Weight", weight, _drySage),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _statusDot(Color color, String label) {
-    return Row(
-      children: [
-        CircleAvatar(radius: 4, backgroundColor: color),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _petPassportCard(String name, String species, String breed, String age, String weight, String url, Color accent) {
+  Widget _buildInfoChip(String label, String value, Color color) {
     return Container(
-      width: 170,
-      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white, 
-        borderRadius: BorderRadius.circular(24), 
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 8, offset: const Offset(0, 4))]
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(24)), child: Image.network(url, height: 100, width: double.infinity, fit: BoxFit.cover)),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal)),
-                Text("$species • $breed", style: TextStyle(color: _ashGrey, fontSize: 10)),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _infoChip(age, accent),
-                    _infoChip(weight, accent),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+          Text(value, style: TextStyle(fontSize: 14, color: _darkCharcoal, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _infoChip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), 
-      decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(8)), 
-      child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold))
-    );
-  }
-
-  Widget _actionButton(IconData icon, String label, Color color) {
+  Widget _buildActionItem(IconData icon, String label, Color color) {
     return Column(
       children: [
         Container(
-          height: 55, width: 55, 
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)), 
-          child: Icon(icon, color: _dustyOlive, size: 26)
+          height: 65,
+          width: 65,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [color.withAlpha(40), color.withAlpha(80)],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [BoxShadow(color: color.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4))],
+          ),
+          child: Icon(icon, color: _dustyOlive, size: 28),
         ),
-        const SizedBox(height: 6),
-        Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _darkCharcoal)),
       ],
     );
   }
 
-  Widget _reminderTile(String title, String subtitle, Color color) {
+  Widget _buildBottomNav() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      height: 85,
       decoration: BoxDecoration(
-        color: Colors.white, 
-        borderRadius: BorderRadius.circular(20), 
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10)]
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 15)],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10), 
-            decoration: BoxDecoration(color: color.withAlpha(30), shape: BoxShape.circle), 
-            child: Icon(Icons.notifications_active_outlined, color: color, size: 22)
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, 
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _darkCharcoal)), 
-                Text(subtitle, style: TextStyle(color: _ashGrey, fontSize: 12))
-              ]
-            )
-          ),
+          _navIcon(Icons.home_filled, "Home", true),
+          _navIcon(Icons.favorite_border, "Health", false),
+          _navIcon(Icons.calendar_month_outlined, "Bookings", false),
+          _navIcon(Icons.person_outline, "Profile", false),
         ],
       ),
     );
   }
+
+  Widget _navIcon(IconData icon, String label, bool isActive) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: isActive ? _dustyOlive : _ashGrey, size: 26),
+        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 10, color: isActive ? _dustyOlive : _ashGrey, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+      ],
+    );
+  }
+
+  Color _sageGreen() => const Color(0xFF759C86);
 }
