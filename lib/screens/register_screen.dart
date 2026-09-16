@@ -1,3 +1,4 @@
+import 'dart:async'; // Required for TimeoutException
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,11 +25,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isObscuredCreate = true;
   bool _isObscuredConfirm = true;
 
-  // Validation Error States
+  //validate for error
   bool _emailError = false;
   bool _passwordError = false;
 
-  // Morandi Palette Constants
+  //colour
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _lightBronze = const Color(0xFFCB997E);
   final Color _powderPetal = const Color(0xFFFFE8D6);
@@ -108,13 +109,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         errorMsg = "The password provided is too weak.";
       }
       _showPawDialog("Registration Error", errorMsg, isError: true);
-    } catch (e) {
+    } on TimeoutException {
+      // If we hit a timeout, we show the success message 
+      // because the user is likely already recorded in Firebase Auth.
       _showPawDialog(
         "Success!", 
         "Account successfully created! Please sign in to continue.", 
         isError: false,
         onConfirm: () { if (mounted) Navigator.pop(context); }
       );
+    } catch (e) {
+      // Show real error if it's not a timeout
+      _showPawDialog("Access Error", "Database denied: $e", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -266,9 +272,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context), 
-                      child: Text("Already have an account? Sign In", style: TextStyle(color: _lightBronze)),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text.rich(
+                          TextSpan(
+                            text: "Already have an account? ",
+                            style: const TextStyle(color: Colors.grey),
+                            children: [
+                              TextSpan(
+                                text: "Sign In",
+                                style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
