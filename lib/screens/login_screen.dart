@@ -1,4 +1,3 @@
-import 'dart:async'; // Required for TimeoutException
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -48,8 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('USERS')
           .doc(userCredential.user!.uid)
-          .get()
-          .timeout(const Duration(seconds: 10));
+          .get();
 
       if (userDoc.exists) {
         final data = userDoc.data() as Map<String, dynamic>;
@@ -79,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       _showPawDialog("Login Error", errorMsg, isError: true);
     } catch (e) {
-      _showPawDialog("Connection Error", "The network is slow. Please try again in a few seconds.", isError: true);
+      _showPawDialog("Login Error", "Something went wrong. Please check your connection and try again.", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

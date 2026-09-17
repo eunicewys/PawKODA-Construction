@@ -1,4 +1,3 @@
-import 'dart:async'; // Required for TimeoutException
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -86,7 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'email': _emailController.text.trim(),
         'role': defaultRole,
         'createdAt': FieldValue.serverTimestamp(),
-      }).timeout(const Duration(seconds: 10));
+      });
 
       if (mounted) {
         Provider.of<UserProvider>(context, listen: false).setUser(
@@ -109,17 +108,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         errorMsg = "The password provided is too weak.";
       }
       _showPawDialog("Registration Error", errorMsg, isError: true);
-    } on TimeoutException {
-      // If we hit a timeout, we show the success message 
-      // because the user is likely already recorded in Firebase Auth.
-      _showPawDialog(
-        "Success!", 
-        "Account successfully created! Please sign in to continue.", 
-        isError: false,
-        onConfirm: () { if (mounted) Navigator.pop(context); }
-      );
     } catch (e) {
-      // Show real error if it's not a timeout
+      // Show real error
       _showPawDialog("Access Error", "Database denied: $e", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
