@@ -82,7 +82,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("Nutrition Engine", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18)),
-            Text("${pet.name.toUpperCase()} • ${pet.breed.toUpperCase()}", style: TextStyle(color: _ashGrey, fontSize: 10)),
+            Text("${pet.name.toUpperCase()} • ${pet.breed.toUpperCase()}", style: TextStyle(color: _ashGrey, fontSize: 11, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -121,6 +121,11 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   }
 
   Widget _buildMetabolicHeader(PetProfile pet, NutritionalProvider provider) {
+    String conditionLabel = pet.condition.name.toUpperCase();
+    if (pet.gender == Gender.female && pet.condition == PetCondition.intact) {
+      conditionLabel = "INTACT";
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -136,8 +141,8 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _profileStat("Met. Weight", "${pet.weightKg} kg"),
-              _profileStat("Age", "${(pet.ageInMonths / 12).toStringAsFixed(1)} yrs"),
-              _profileStat("Activity", pet.activityLevel.name.toUpperCase()),
+              _profileStat("Gender", pet.gender.name.toUpperCase()),
+              _profileStat("Status", conditionLabel),
             ],
           ),
           const SizedBox(height: 20),

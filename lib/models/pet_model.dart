@@ -1,5 +1,7 @@
 enum Species { dog, cat }
 
+enum Gender { male, female }
+
 enum PetCondition {
   neutered,
   intact,
@@ -15,6 +17,7 @@ class PetProfile {
   final String id;
   final String name;
   final Species species;
+  final Gender gender; // New field
   final double weightKg;
   final DateTime birthDate; // Use DateTime for precise age tracking
   final PetCondition condition;
@@ -28,6 +31,7 @@ class PetProfile {
     required this.id,
     required this.name,
     required this.species,
+    required this.gender,
     required this.weightKg,
     required this.birthDate,
     required this.condition,
@@ -51,6 +55,7 @@ class PetProfile {
       'id': id,
       'name': name,
       'species': species.name,
+      'gender': gender.name,
       'weightKg': weightKg,
       'birthDate': birthDate.toIso8601String(),
       'condition': condition.name,
@@ -67,6 +72,7 @@ class PetProfile {
       id: docId,
       name: map['name'] ?? '',
       species: Species.values.firstWhere((e) => e.name == map['species'], orElse: () => Species.dog),
+      gender: Gender.values.firstWhere((e) => e.name == map['gender'], orElse: () => Gender.male),
       weightKg: (map['weightKg'] ?? 0.0).toDouble(),
       birthDate: map['birthDate'] != null 
           ? DateTime.parse(map['birthDate']) 

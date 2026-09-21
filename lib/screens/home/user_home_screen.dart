@@ -95,7 +95,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     if (pets.isNotEmpty) {
       _showPetSelectionSheet(pets);
     } else {
-      _showComingSoon("Quick Input Form");
+      _showQuickInputForm();
     }
   }
 
@@ -135,7 +135,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             Provider.of<NutritionalProvider>(context, listen: false).setSelectedPet(pet);
             Navigator.push(context, MaterialPageRoute(builder: (context) => const NutritionEngineScreen()));
           } else {
-            _showComingSoon("Quick Input Form");
+            _showQuickInputForm();
           }
         },
       ),
@@ -143,6 +143,357 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   // --- INTERACTIVE DIALOGS ---
+
+  void _showQuickInputForm() {
+    final TextEditingController weightCtrl = TextEditingController(text: "1.0");
+    final TextEditingController otherAllergenCtrl = TextEditingController();
+    
+    Species? selectedSpecies;
+    Gender? selectedGender;
+    String? selectedReproductive; // "Neutered/Spayed" or "Intact"
+    bool isPregnant = false;
+    bool isNursing = false;
+    String? selectedBreed;
+    DateTime? selectedBirthDate;
+    List<String> selectedAllergens = [];
+    bool hasNoAllergies = false;
+
+    final List<String> commonAllergens = ["Chicken", "Beef", "Fish", "Egg", "Grain", "Dairy"];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setMState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.9,
+            decoration: BoxDecoration(
+              color: _desertSand,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  Text("Quick Calculator", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                  const SizedBox(height: 8),
+                  Text("Enter details for a temporary calculation.", style: TextStyle(color: _darkCharcoal.withAlpha(200), fontSize: 14)),
+                  const SizedBox(height: 32),
+                  
+                  _buildFormLabel("SPECIES"),
+                  Row(
+                    children: [
+                      _buildSpeciesChip("Dog", Species.dog, selectedSpecies, (s) {
+                        setMState(() {
+                          selectedSpecies = s;
+                          selectedBreed = null;
+                        });
+                      }),
+                      const SizedBox(width: 12),
+                      _buildSpeciesChip("Cat", Species.cat, selectedSpecies, (s) {
+                        setMState(() {
+                          selectedSpecies = s;
+                          selectedBreed = null;
+                        });
+                      }),
+                    ],
+                  ),
+
+                  if (selectedSpecies != null) ...[
+                    const SizedBox(height: 20),
+                    _buildFormLabel("BREED"),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(180),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedBreed, isExpanded: true, 
+                          hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120))),
+                          items: (_breedData[selectedSpecies!.name] as List<dynamic>?)?.map((b) => DropdownMenuItem<String>(
+                            value: b.toString(),
+                            child: Text(b.toString()),
+                          )).toList() ?? [],
+                          onChanged: (val) => setMState(() => selectedBreed = val),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+                  _buildFormLabel("GENDER"),
+                  Row(
+                    children: [
+                      ChoiceChip(
+                        label: const Text("Male"),
+                        selected: selectedGender == Gender.male,
+                        onSelected: (val) => setMState(() {
+                          selectedGender = Gender.male;
+                          isPregnant = false;
+                          isNursing = false;
+                        }),
+                      ),
+                      const SizedBox(width: 12),
+                      ChoiceChip(
+                        label: const Text("Female"),
+                        selected: selectedGender == Gender.female,
+                        onSelected: (val) => setMState(() => selectedGender = Gender.female),
+                      ),
+                    ],
+                  ),
+
+                  if (selectedGender != null) ...[
+                    const SizedBox(height: 20),
+                    _buildFormLabel("STATUS"),
+                    Row(
+                      children: [
+                        ChoiceChip(
+                          label: Text(selectedGender == Gender.male ? "Neutered" : "Spayed"),
+                          selected: selectedReproductive == "Neutered/Spayed",
+                          onSelected: (val) => setMState(() {
+                            selectedReproductive = "Neutered/Spayed";
+                            isPregnant = false;
+                            isNursing = false;
+                          }),
+                        ),
+                        const SizedBox(width: 12),
+                        ChoiceChip(
+                          label: const Text("Intact"),
+                          selected: selectedReproductive == "Intact",
+                          onSelected: (val) => setMState(() => selectedReproductive = "Intact"),
+                        ),
+                      ],
+                    ),
+                    
+                    if (selectedGender == Gender.female && selectedReproductive == "Intact") ...[
+                      const SizedBox(height: 12),
+                      CheckboxListTile(
+                        title: const Text("Is Pregnant?", style: TextStyle(fontSize: 14)),
+                        value: isPregnant,
+                        onChanged: (val) => setMState(() => isPregnant = val!),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      CheckboxListTile(
+                        title: const Text("Is Nursing?", style: TextStyle(fontSize: 14)),
+                        value: isNursing,
+                        onChanged: (val) => setMState(() => isNursing = val!),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ],
+
+                  const SizedBox(height: 20),
+                  _buildFormLabel("WEIGHT (KG)"),
+                  Row(
+                    children: [
+                      _buildStepperButton(Icons.remove, () {
+                        double val = double.tryParse(weightCtrl.text) ?? 0.0;
+                        if (val > 1.0) setMState(() => weightCtrl.text = (val - 1.0).toStringAsFixed(1));
+                      }),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: weightCtrl,
+                          textAlign: TextAlign.center,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            fillColor: Colors.white.withAlpha(180),
+                            filled: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 18),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildStepperButton(Icons.add, () {
+                        double val = double.tryParse(weightCtrl.text) ?? 0.0;
+                        setMState(() => weightCtrl.text = (val + 1.0).toStringAsFixed(1));
+                      }),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+                  _buildFormLabel("BIRTHDATE"),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) setMState(() => selectedBirthDate = picked);
+                      },
+                      icon: Icon(Icons.calendar_month, color: _dustyOlive),
+                      label: Text(
+                        selectedBirthDate == null ? "Choose Date" : DateFormat('dd MMM yyyy').format(selectedBirthDate!), 
+                        style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16)
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: _darkCharcoal, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                  _buildFormLabel("ALLERGIES"),
+                  Wrap(
+                    children: commonAllergens.map((allergen) => SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.4, // Approx half width
+                      child: CheckboxListTile(
+                        title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 16, fontWeight: FontWeight.w600)),
+                        value: selectedAllergens.contains(allergen) && !hasNoAllergies,
+                        onChanged: hasNoAllergies ? null : (val) {
+                          setMState(() {
+                            if (val!) {
+                              selectedAllergens.add(allergen);
+                            } else {
+                              selectedAllergens.remove(allergen);
+                            }
+                          });
+                        },
+                        activeColor: _dustyOlive,
+                        checkColor: Colors.white,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    )).toList(),
+                  ),
+                  CheckboxListTile(
+                    title: Row(
+                      children: [
+                        const Text("Others: ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        Expanded(
+                          child: TextField(
+                            controller: otherAllergenCtrl,
+                            enabled: !hasNoAllergies,
+                            decoration: InputDecoration(
+                              hintText: "Specify...", 
+                              hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)),
+                              isDense: true, 
+                              border: InputBorder.none
+                            ),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    value: selectedAllergens.contains("Other") && !hasNoAllergies,
+                    onChanged: hasNoAllergies ? null : (val) {
+                      setMState(() {
+                        if (val!) {
+                          selectedAllergens.add("Other");
+                        } else {
+                          selectedAllergens.remove("Other");
+                        }
+                      });
+                    },
+                    activeColor: _dustyOlive,
+                    checkColor: Colors.white,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(100),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      title: const Text("No Allergies", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                      leading: Radio<bool>(
+                        value: true,
+                        groupValue: hasNoAllergies,
+                        activeColor: _dustyOlive,
+                        onChanged: (val) {
+                          setMState(() {
+                            hasNoAllergies = val!;
+                            if (hasNoAllergies) selectedAllergens.clear();
+                          });
+                        },
+                      ),
+                      onTap: () {
+                        setMState(() {
+                          hasNoAllergies = !hasNoAllergies;
+                          if (hasNoAllergies) selectedAllergens.clear();
+                        });
+                      },
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 60,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Validation
+                        if (selectedSpecies == null || selectedBreed == null || 
+                            selectedGender == null || selectedReproductive == null ||
+                            selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty && otherAllergenCtrl.text.isEmpty)) {
+                          _showPawDialog("Missing Information", "Please fill in all sections to start calculation.", isError: true);
+                          return;
+                        }
+
+                        PetCondition finalCond = selectedReproductive == "Neutered/Spayed" ? PetCondition.neutered : PetCondition.intact;
+                        if (isNursing) finalCond = PetCondition.nursing;
+                        else if (isPregnant) finalCond = PetCondition.pregnant;
+
+                        List<String> allergens = List.from(selectedAllergens);
+                        if (allergens.contains("Other") && otherAllergenCtrl.text.isNotEmpty) {
+                          allergens.remove("Other");
+                          allergens.add(otherAllergenCtrl.text.trim());
+                        }
+
+                        final tempPet = PetProfile(
+                          id: "temp_${DateTime.now().millisecondsSinceEpoch}", 
+                          name: "It", // Default as requested
+                          species: selectedSpecies!,
+                          gender: selectedGender!,
+                          weightKg: double.tryParse(weightCtrl.text) ?? 0.0,
+                          birthDate: selectedBirthDate!,
+                          condition: finalCond,
+                          allergens: allergens,
+                          breed: selectedBreed!,
+                          imageUrl: null,
+                        );
+
+                        Provider.of<NutritionalProvider>(context, listen: false).setSelectedPet(tempPet);
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const NutritionEngineScreen()));
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _dustyOlive,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text("Calculate Now", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                    ),
+                  ),
+                  const SizedBox(height: 50),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   void _showComingSoon(String feature) {
     showDialog(
@@ -167,6 +518,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final TextEditingController otherAllergenCtrl = TextEditingController();
     
     Species? selectedSpecies;
+    Gender? selectedGender;
+    String? selectedReproductive; // "Neutered/Spayed" or "Intact"
+    bool isPregnant = false;
+    bool isNursing = false;
     String? selectedBreed;
     DateTime? selectedBirthDate;
     XFile? petImage;
@@ -264,6 +619,72 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         ),
                       ),
                     ),
+                  ],
+
+                  const SizedBox(height: 20),
+                  _buildFormLabel("GENDER"),
+                  Row(
+                    children: [
+                      ChoiceChip(
+                        label: const Text("Male"),
+                        selected: selectedGender == Gender.male,
+                        onSelected: (val) => setMState(() {
+                          selectedGender = Gender.male;
+                          isPregnant = false;
+                          isNursing = false;
+                        }),
+                      ),
+                      const SizedBox(width: 12),
+                      ChoiceChip(
+                        label: const Text("Female"),
+                        selected: selectedGender == Gender.female,
+                        onSelected: (val) => setMState(() => selectedGender = Gender.female),
+                      ),
+                    ],
+                  ),
+
+                  if (selectedGender != null) ...[
+                    const SizedBox(height: 20),
+                    _buildFormLabel("STATUS"),
+                    Row(
+                      children: [
+                        ChoiceChip(
+                          label: Text(selectedGender == Gender.male ? "Neutered" : "Spayed"),
+                          selected: selectedReproductive == "Neutered/Spayed",
+                          onSelected: (val) => setMState(() {
+                            selectedReproductive = "Neutered/Spayed";
+                            isPregnant = false;
+                            isNursing = false;
+                          }),
+                        ),
+                        const SizedBox(width: 12),
+                        ChoiceChip(
+                          label: const Text("Intact"),
+                          selected: selectedReproductive == "Intact",
+                          onSelected: (val) => setMState(() => selectedReproductive = "Intact"),
+                        ),
+                      ],
+                    ),
+                    
+                    if (selectedGender == Gender.female && selectedReproductive == "Intact") ...[
+                      const SizedBox(height: 12),
+                      CheckboxListTile(
+                        title: const Text("Is Pregnant?", style: TextStyle(fontSize: 14)),
+                        value: isPregnant,
+                        onChanged: (val) => setMState(() => isPregnant = val!),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      CheckboxListTile(
+                        title: const Text("Is Nursing?", style: TextStyle(fontSize: 14)),
+                        value: isNursing,
+                        onChanged: (val) => setMState(() => isNursing = val!),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
                   ],
 
                   const SizedBox(height: 20),
@@ -422,6 +843,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       onPressed: isSaving ? null : () async {
                         // Validation: All sections required
                         if (nameCtrl.text.isEmpty || selectedSpecies == null || selectedBreed == null || 
+                            selectedGender == null || selectedReproductive == null ||
                             selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty && otherAllergenCtrl.text.isEmpty)) {
                           _showPawDialog("Missing Information", "Please fill in all sections to create a passport.", isError: true);
                           return;
@@ -435,6 +857,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           return;
                         }
                         
+                        PetCondition finalCond = selectedReproductive == "Neutered/Spayed" ? PetCondition.neutered : PetCondition.intact;
+                        if (isNursing) finalCond = PetCondition.nursing;
+                        else if (isPregnant) finalCond = PetCondition.pregnant;
+
                         List<String> allergens = List.from(selectedAllergens);
                         if (allergens.contains("Other")) {
                           allergens.remove("Other");
@@ -447,9 +873,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           id: "", 
                           name: nameCtrl.text.trim(),
                           species: selectedSpecies!,
+                          gender: selectedGender!,
                           weightKg: double.tryParse(weightCtrl.text) ?? 0.0,
                           birthDate: selectedBirthDate!,
-                          condition: PetCondition.neutered,
+                          condition: finalCond,
                           allergens: allergens,
                           breed: selectedBreed!,
                           imageUrl: petImage?.path,
@@ -736,7 +1163,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Quick Actions", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
             const SizedBox(height: 16),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              _buildActionItem(Icons.restaurant, "Nutrition", _lightBronze, () => _handleNutritionTap(pets)),
+              _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets)),
               _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1)),
               _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() => _selectedIndex = 2)),
               _buildActionItem(Icons.assignment, "Records", _powderPetal, () => setState(() => _selectedIndex = 1)),
