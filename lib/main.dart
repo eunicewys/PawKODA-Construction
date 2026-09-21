@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'providers/user_provider.dart';
+import 'providers/nutritional_provider.dart';
 import 'screens/login_screen.dart';
 
 /// main: The starting point of the app.
@@ -13,11 +14,12 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 2. Wrap the entire app in MultiProvider to share data (UserProvider)
+  // 2. Wrap the entire app in MultiProvider to share data
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => NutritionalProvider()),
       ],
       child: const PawKODAApp(),
     ),

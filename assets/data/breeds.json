@@ -1,0 +1,36 @@
+{
+  "dog": [
+    "Golden Retriever",
+    "Labrador Retriever",
+    "German Shepherd",
+    "French Bulldog",
+    "Beagle",
+    "Poodle",
+    "Rottweiler",
+    "Yorkshire Terrier",
+    "Dachshund",
+    "Pembroke Welsh Corgi",
+    "Siberian Husky",
+    "Great Dane",
+    "Doberman Pinscher",
+    "Shih Tzu",
+    "Boston Terrier"
+  ],
+  "cat": [
+    "Persian",
+    "Maine Coon",
+    "Ragdoll",
+    "British Shorthair",
+    "Abyssinian",
+    "American Shorthair",
+    "Sphynx",
+    "Siamese",
+    "Scottish Fold",
+    "Bengal",
+    "Russian Blue",
+    "Norwegian Forest Cat",
+    "Birman",
+    "Oriental Shorthair",
+    "Devon Rex"
+  ]
+}

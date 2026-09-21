@@ -74,10 +74,13 @@ class _LoginScreenState extends State<LoginScreen> {
       String errorMsg = "Login failed.";
       if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
         errorMsg = "Invalid email or password. Please try again.";
+      } else {
+        errorMsg = e.message ?? "An auth error occurred.";
       }
       _showPawDialog("Login Error", errorMsg, isError: true);
     } catch (e) {
-      _showPawDialog("Login Error", "Something went wrong. Please check your connection and try again.", isError: true);
+      // Show the actual technical error to help us debug
+      _showPawDialog("Login Error", "Technical detail: $e", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

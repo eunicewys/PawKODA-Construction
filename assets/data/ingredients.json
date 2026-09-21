@@ -1,10 +1,12 @@
 [
   {
     "ingredientId": "ing_chicken_breast_raw",
-    "name": "Chicken Breast (Raw, Skinless)",
+    "name": "Chicken Breast (Raw, With Skin)",
     "category": "Poultry",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 120.0,
       "proteinGrams": 22.5,
@@ -12,6 +14,8 @@
       "carbsGrams": 0.0,
       "calciumMg": 11.0,
       "phosphorusMg": 210.0,
+      "vitaminsGrams": 0.01,
+      "mineralsGrams": 0.05,
       "moistureGrams": 74.8
     },
     "allergenTags": ["chicken", "poultry"]
@@ -22,6 +26,8 @@
     "category": "Organ Meat",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 135.0,
       "proteinGrams": 20.4,
@@ -29,6 +35,8 @@
       "carbsGrams": 3.9,
       "calciumMg": 5.0,
       "phosphorusMg": 387.0,
+      "vitaminsGrams": 0.08,
+      "mineralsGrams": 0.1,
       "moistureGrams": 70.9
     },
     "allergenTags": ["beef"]
@@ -39,6 +47,8 @@
     "category": "Poultry",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 189.0,
       "proteinGrams": 24.6,
@@ -46,26 +56,11 @@
       "carbsGrams": 0.0,
       "calciumMg": 14.0,
       "phosphorusMg": 198.0,
+      "vitaminsGrams": 0.02,
+      "mineralsGrams": 0.04,
       "moistureGrams": 65.6
     },
     "allergenTags": ["turkey", "poultry"]
-  },
-  {
-    "ingredientId": "ing_lamb_lean_raw",
-    "name": "Lamb (Raw, Lean)",
-    "category": "Red Meat",
-    "safeForDogs": true,
-    "safeForCats": true,
-    "nutrientsPer100g": {
-      "kcal": 160.0,
-      "proteinGrams": 19.0,
-      "fatGrams": 9.0,
-      "carbsGrams": 0.0,
-      "calciumMg": 10.0,
-      "phosphorusMg": 180.0,
-      "moistureGrams": 71.0
-    },
-    "allergenTags": ["lamb"]
   },
   {
     "ingredientId": "ing_atlantic_salmon_raw",
@@ -73,6 +68,8 @@
     "category": "Fish",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 208.0,
       "proteinGrams": 20.4,
@@ -80,6 +77,8 @@
       "carbsGrams": 0.0,
       "calciumMg": 9.0,
       "phosphorusMg": 240.0,
+      "vitaminsGrams": 0.05,
+      "mineralsGrams": 0.06,
       "moistureGrams": 64.8
     },
     "allergenTags": ["fish", "salmon"]
@@ -90,6 +89,8 @@
     "category": "Protein",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 143.0,
       "proteinGrams": 12.6,
@@ -97,6 +98,8 @@
       "carbsGrams": 0.7,
       "calciumMg": 56.0,
       "phosphorusMg": 198.0,
+      "vitaminsGrams": 0.04,
+      "mineralsGrams": 0.03,
       "moistureGrams": 76.1
     },
     "allergenTags": ["egg"]
@@ -107,6 +110,8 @@
     "category": "Vegetable",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 34.0,
       "proteinGrams": 2.8,
@@ -114,6 +119,8 @@
       "carbsGrams": 6.6,
       "calciumMg": 47.0,
       "phosphorusMg": 66.0,
+      "vitaminsGrams": 0.03,
+      "mineralsGrams": 0.04,
       "moistureGrams": 89.3
     },
     "allergenTags": []
@@ -124,6 +131,8 @@
     "category": "Vegetable",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 34.0,
       "proteinGrams": 1.1,
@@ -131,6 +140,8 @@
       "carbsGrams": 8.1,
       "calciumMg": 26.0,
       "phosphorusMg": 30.0,
+      "vitaminsGrams": 0.02,
+      "mineralsGrams": 0.02,
       "moistureGrams": 89.9
     },
     "allergenTags": []
@@ -141,6 +152,8 @@
     "category": "Vegetable",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 41.0,
       "proteinGrams": 0.9,
@@ -148,6 +161,8 @@
       "carbsGrams": 9.6,
       "calciumMg": 33.0,
       "phosphorusMg": 35.0,
+      "vitaminsGrams": 0.03,
+      "mineralsGrams": 0.03,
       "moistureGrams": 88.3
     },
     "allergenTags": []
@@ -158,6 +173,8 @@
     "category": "Vegetable",
     "safeForDogs": true,
     "safeForCats": true,
+    "isToxicToDogs": false,
+    "isToxicToCats": false,
     "nutrientsPer100g": {
       "kcal": 90.0,
       "proteinGrams": 2.0,
@@ -165,42 +182,52 @@
       "carbsGrams": 20.7,
       "calciumMg": 38.0,
       "phosphorusMg": 54.0,
+      "vitaminsGrams": 0.02,
+      "mineralsGrams": 0.02,
       "moistureGrams": 75.8
     },
     "allergenTags": []
   },
   {
-    "ingredientId": "ing_sardines_canned_water",
-    "name": "Sardines (Canned in Water)",
-    "category": "Fish",
-    "safeForDogs": true,
-    "safeForCats": true,
+    "ingredientId": "ing_chocolate_dark",
+    "name": "Dark Chocolate",
+    "category": "Toxic",
+    "safeForDogs": false,
+    "safeForCats": false,
+    "isToxicToDogs": true,
+    "isToxicToCats": true,
     "nutrientsPer100g": {
-      "kcal": 185.0,
-      "proteinGrams": 24.6,
-      "fatGrams": 11.4,
-      "carbsGrams": 0.0,
-      "calciumMg": 382.0,
-      "phosphorusMg": 490.0,
-      "moistureGrams": 62.7
+      "kcal": 546.0,
+      "proteinGrams": 4.9,
+      "fatGrams": 31.3,
+      "carbsGrams": 61.2,
+      "calciumMg": 73.0,
+      "phosphorusMg": 308.0,
+      "vitaminsGrams": 0.0,
+      "mineralsGrams": 0.0,
+      "moistureGrams": 1.0
     },
-    "allergenTags": ["fish"]
+    "allergenTags": ["chocolate"]
   },
   {
-    "ingredientId": "ing_beef_heart_raw",
-    "name": "Beef Heart (Raw)",
-    "category": "Organ Meat",
-    "safeForDogs": true,
-    "safeForCats": true,
+    "ingredientId": "ing_grapes_raw",
+    "name": "Grapes (Raw)",
+    "category": "Toxic",
+    "safeForDogs": false,
+    "safeForCats": false,
+    "isToxicToDogs": true,
+    "isToxicToCats": true,
     "nutrientsPer100g": {
-      "kcal": 112.0,
-      "proteinGrams": 17.7,
-      "fatGrams": 3.9,
-      "carbsGrams": 0.1,
-      "calciumMg": 7.0,
-      "phosphorusMg": 212.0,
-      "moistureGrams": 77.2
+      "kcal": 69.0,
+      "proteinGrams": 0.7,
+      "fatGrams": 0.2,
+      "carbsGrams": 18.1,
+      "calciumMg": 10.0,
+      "phosphorusMg": 20.0,
+      "vitaminsGrams": 0.01,
+      "mineralsGrams": 0.02,
+      "moistureGrams": 80.5
     },
-    "allergenTags": ["beef"]
+    "allergenTags": ["grapes"]
   }
 ]
