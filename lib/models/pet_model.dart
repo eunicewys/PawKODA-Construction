@@ -68,17 +68,35 @@ class PetProfile {
   }
 
   factory PetProfile.fromMap(Map<String, dynamic> map, String docId) {
+    // Strict Validation Checklist
+    final requiredFields = ['name', 'species', 'gender', 'weightKg', 'birthDate', 'condition'];
+    for (var field in requiredFields) {
+      if (map[field] == null) {
+        throw FormatException("Pet profile '$docId' is missing mandatory field: $field");
+      }
+    }
+
     return PetProfile(
       id: docId,
-      name: map['name'] ?? '',
-      species: Species.values.firstWhere((e) => e.name == map['species'], orElse: () => Species.dog),
-      gender: Gender.values.firstWhere((e) => e.name == map['gender'], orElse: () => Gender.male),
-      weightKg: (map['weightKg'] ?? 0.0).toDouble(),
-      birthDate: map['birthDate'] != null 
-          ? DateTime.parse(map['birthDate']) 
-          : DateTime.now(),
-      condition: PetCondition.values.firstWhere((e) => e.name == map['condition'], orElse: () => PetCondition.neutered),
-      activityLevel: ActivityLevel.values.firstWhere((e) => e.name == map['activityLevel'], orElse: () => ActivityLevel.moderate),
+      name: map['name'],
+      species: Species.values.firstWhere(
+        (e) => e.name == map['species'], 
+        orElse: () => throw FormatException("Invalid species '${map['species']}' for pet $docId")
+      ),
+      gender: Gender.values.firstWhere(
+        (e) => e.name == map['gender'], 
+        orElse: () => throw FormatException("Invalid gender '${map['gender']}' for pet $docId")
+      ),
+      weightKg: (map['weightKg'] as num).toDouble(),
+      birthDate: DateTime.parse(map['birthDate']),
+      condition: PetCondition.values.firstWhere(
+        (e) => e.name == map['condition'], 
+        orElse: () => throw FormatException("Invalid condition '${map['condition']}' for pet $docId")
+      ),
+      activityLevel: ActivityLevel.values.firstWhere(
+        (e) => e.name == (map['activityLevel'] ?? 'moderate'), 
+        orElse: () => ActivityLevel.moderate
+      ),
       allergens: List<String>.from(map['allergens'] ?? []),
       breed: map['breed'] ?? 'Unknown',
       imageUrl: map['imageUrl'],

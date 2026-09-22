@@ -34,4 +34,28 @@ class PetService {
         .doc(petId)
         .delete();
   }
+
+  /// Updates an existing pet in the user's Firestore collection.
+  Future<void> updatePet(String userId, String petId, PetProfile pet) async {
+    await _db
+        .collection('USERS')
+        .doc(userId)
+        .collection('PETS')
+        .doc(petId)
+        .update(pet.toMap());
+  }
+
+  /// Streams a single pet's data from Firestore.
+  Stream<PetProfile?> streamPet(String userId, String petId) {
+    return _db
+        .collection('USERS')
+        .doc(userId)
+        .collection('PETS')
+        .doc(petId)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists || snapshot.data() == null) return null;
+          return PetProfile.fromMap(snapshot.data()!, snapshot.id);
+        });
+  }
 }

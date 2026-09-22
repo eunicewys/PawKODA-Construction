@@ -12,6 +12,7 @@ import '../../models/pet_model.dart';
 import '../../services/pet_service.dart';
 import '../login_screen.dart';
 import '../nutrition/nutrition_engine_screen.dart';
+import '../pet/pet_details_screen.dart';
 
 /// UserHomeScreen: Redesigned dashboard for Pet Owners.
 /// Features a "Modern Layered" pet passport experience and functional navigation.
@@ -186,16 +187,16 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   _buildFormLabel("SPECIES"),
                   Row(
                     children: [
-                      _buildSpeciesChip("Dog", Species.dog, selectedSpecies, (s) {
+                      _buildSelectionChip("Dog", selectedSpecies == Species.dog, () {
                         setMState(() {
-                          selectedSpecies = s;
+                          selectedSpecies = Species.dog;
                           selectedBreed = null;
                         });
                       }),
                       const SizedBox(width: 12),
-                      _buildSpeciesChip("Cat", Species.cat, selectedSpecies, (s) {
+                      _buildSelectionChip("Cat", selectedSpecies == Species.cat, () {
                         setMState(() {
-                          selectedSpecies = s;
+                          selectedSpecies = Species.cat;
                           selectedBreed = null;
                         });
                       }),
@@ -229,21 +230,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   _buildFormLabel("GENDER"),
                   Row(
                     children: [
-                      ChoiceChip(
-                        label: const Text("Male"),
-                        selected: selectedGender == Gender.male,
-                        onSelected: (val) => setMState(() {
-                          selectedGender = Gender.male;
-                          isPregnant = false;
-                          isNursing = false;
-                        }),
-                      ),
+                      _buildSelectionChip("Male", selectedGender == Gender.male, () => setMState(() {
+                        selectedGender = Gender.male;
+                        isPregnant = false;
+                        isNursing = false;
+                      })),
                       const SizedBox(width: 12),
-                      ChoiceChip(
-                        label: const Text("Female"),
-                        selected: selectedGender == Gender.female,
-                        onSelected: (val) => setMState(() => selectedGender = Gender.female),
-                      ),
+                      _buildSelectionChip("Female", selectedGender == Gender.female, () => setMState(() => selectedGender = Gender.female)),
                     ],
                   ),
 
@@ -252,21 +245,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     _buildFormLabel("STATUS"),
                     Row(
                       children: [
-                        ChoiceChip(
-                          label: Text(selectedGender == Gender.male ? "Neutered" : "Spayed"),
-                          selected: selectedReproductive == "Neutered/Spayed",
-                          onSelected: (val) => setMState(() {
-                            selectedReproductive = "Neutered/Spayed";
-                            isPregnant = false;
-                            isNursing = false;
-                          }),
-                        ),
+                        _buildSelectionChip(selectedGender == Gender.male ? "Neutered" : "Spayed", selectedReproductive == "Neutered/Spayed", () => setMState(() {
+                          selectedReproductive = "Neutered/Spayed";
+                          isPregnant = false;
+                          isNursing = false;
+                        })),
                         const SizedBox(width: 12),
-                        ChoiceChip(
-                          label: const Text("Intact"),
-                          selected: selectedReproductive == "Intact",
-                          onSelected: (val) => setMState(() => selectedReproductive = "Intact"),
-                        ),
+                        _buildSelectionChip("Intact", selectedReproductive == "Intact", () => setMState(() => selectedReproductive = "Intact")),
                       ],
                     ),
                     
@@ -582,16 +567,16 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   _buildFormLabel("SPECIES"),
                   Row(
                     children: [
-                      _buildSpeciesChip("Dog", Species.dog, selectedSpecies, (s) {
+                      _buildSelectionChip("Dog", selectedSpecies == Species.dog, () {
                         setMState(() {
-                          selectedSpecies = s;
+                          selectedSpecies = Species.dog;
                           selectedBreed = null;
                         });
                       }),
                       const SizedBox(width: 12),
-                      _buildSpeciesChip("Cat", Species.cat, selectedSpecies, (s) {
+                      _buildSelectionChip("Cat", selectedSpecies == Species.cat, () {
                         setMState(() {
-                          selectedSpecies = s;
+                          selectedSpecies = Species.cat;
                           selectedBreed = null;
                         });
                       }),
@@ -625,21 +610,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   _buildFormLabel("GENDER"),
                   Row(
                     children: [
-                      ChoiceChip(
-                        label: const Text("Male"),
-                        selected: selectedGender == Gender.male,
-                        onSelected: (val) => setMState(() {
-                          selectedGender = Gender.male;
-                          isPregnant = false;
-                          isNursing = false;
-                        }),
-                      ),
+                      _buildSelectionChip("Male", selectedGender == Gender.male, () => setMState(() {
+                        selectedGender = Gender.male;
+                        isPregnant = false;
+                        isNursing = false;
+                      })),
                       const SizedBox(width: 12),
-                      ChoiceChip(
-                        label: const Text("Female"),
-                        selected: selectedGender == Gender.female,
-                        onSelected: (val) => setMState(() => selectedGender = Gender.female),
-                      ),
+                      _buildSelectionChip("Female", selectedGender == Gender.female, () => setMState(() => selectedGender = Gender.female)),
                     ],
                   ),
 
@@ -648,21 +625,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     _buildFormLabel("STATUS"),
                     Row(
                       children: [
-                        ChoiceChip(
-                          label: Text(selectedGender == Gender.male ? "Neutered" : "Spayed"),
-                          selected: selectedReproductive == "Neutered/Spayed",
-                          onSelected: (val) => setMState(() {
-                            selectedReproductive = "Neutered/Spayed";
-                            isPregnant = false;
-                            isNursing = false;
-                          }),
-                        ),
+                        _buildSelectionChip(selectedGender == Gender.male ? "Neutered" : "Spayed", selectedReproductive == "Neutered/Spayed", () => setMState(() {
+                          selectedReproductive = "Neutered/Spayed";
+                          isPregnant = false;
+                          isNursing = false;
+                        })),
                         const SizedBox(width: 12),
-                        ChoiceChip(
-                          label: const Text("Intact"),
-                          selected: selectedReproductive == "Intact",
-                          onSelected: (val) => setMState(() => selectedReproductive = "Intact"),
-                        ),
+                        _buildSelectionChip("Intact", selectedReproductive == "Intact", () => setMState(() => selectedReproductive = "Intact")),
                       ],
                     ),
                     
@@ -889,9 +858,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           debugPrint("Error creating pet: $e");
                           if (context.mounted) {
                             setMState(() => isSaving = false);
+                            // Show the technical detail to identify if it's permission or connection
                             _showPawDialog(
-                              "Connection Issue", 
-                              "Unable to reach the database. Please check your internet connection and try again.", 
+                              "Creation Error", 
+                              "Technical detail: $e", 
                               isError: true
                             );
                           }
@@ -1058,8 +1028,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   Widget _buildFormLabel(String label) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal)));
   Widget _buildTextField(TextEditingController ctrl, String hint) => TextField(controller: ctrl, style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold), decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)), fillColor: Colors.white.withAlpha(180), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
   
-  Widget _buildSpeciesChip(String label, Species species, Species? selected, Function(Species) onSelect) {
-    bool isSelected = selected == species;
+  Widget _buildSelectionChip(String label, bool isSelected, VoidCallback onSelect) {
     return ChoiceChip(
       label: Text(label, style: TextStyle(color: isSelected ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 15)),
       selected: isSelected,
@@ -1067,7 +1036,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       backgroundColor: Colors.white.withAlpha(150),
       showCheckmark: false,
       avatar: isSelected ? const Icon(Icons.check_circle, color: Colors.white, size: 22) : null,
-      onSelected: (v) => onSelect(species),
+      onSelected: (v) => onSelect(),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide.none),
     );
   }
@@ -1079,10 +1048,60 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final uid = context.watch<UserProvider>().uid ?? "";
+
+    if (uid.isEmpty) {
+      debugPrint("DEBUG: User UID is empty, waiting for Provider...");
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return StreamBuilder<List<PetProfile>>(
       stream: _petService.streamUserPets(uid),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          debugPrint("DEBUG: Stream connecting to USERS/$uid/PETS...");
+          return Scaffold(
+            backgroundColor: _drySage,
+            body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            backgroundColor: _drySage,
+            body: Center(
+              child: Container(
+                margin: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: _errorCoral, size: 50),
+                    const SizedBox(height: 16),
+                    Text("Profile Incomplete", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${snapshot.error}",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _ashGrey, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => setState(() {}), 
+                      style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive),
+                      child: const Text("Refresh Dashboard"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         final pets = snapshot.data ?? [];
+        debugPrint("DEBUG: uid=$uid, petsCount=${pets.length}");
         final views = [
           _buildDashboard(context, pets),
           _buildPlaceholderView("Health Records", Icons.favorite, _drySage),
@@ -1146,17 +1165,20 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 double scale = (1 - ((_currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
                 final pet = pets[index];
                 int y = (pet.ageInMonths / 12).floor(); int m = pet.ageInMonths % 12;
-                return _buildPetCard(
-                  scale: scale, 
-                  id: pet.id,
-                  name: pet.name, 
-                  species: pet.species.name.toUpperCase(), 
-                  breed: pet.breed, 
-                  age: "${y}y, ${m}m", 
-                  weight: "${pet.weightKg} kg", 
-                  isHealthy: pet.isHealthy, 
-                  imageUrl: pet.imageUrl,
-                  context: context,
+                return GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PetDetailsScreen(petId: pet.id))),
+                  child: _buildPetCard(
+                    scale: scale, 
+                    id: pet.id,
+                    name: pet.name, 
+                    species: pet.species.name.toUpperCase(), 
+                    breed: pet.breed, 
+                    age: "${y}y, ${m}m", 
+                    weight: "${pet.weightKg} kg", 
+                    isHealthy: pet.isHealthy, 
+                    imageUrl: pet.imageUrl,
+                    context: context,
+                  ),
                 );
               })),
             const SizedBox(height: 40),
@@ -1250,7 +1272,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     child: imgProvider == null 
                       ? Center(
                           child: Icon(
-                            species.toLowerCase() == 'dog' ? Icons.pets : Icons.pets, 
+                            species.toLowerCase() == 'cat' ? Icons.pets : Icons.pets, 
                             size: 80, 
                             color: _ashGrey.withAlpha(150)
                           ),
