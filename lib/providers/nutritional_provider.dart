@@ -7,11 +7,9 @@ class NutritionalProvider extends ChangeNotifier {
   final NutritionCalculatorService _calculator = NutritionCalculatorService();
   
   PetProfile? _selectedPet;
-  double _mealMassGrams = 200.0;
   List<BowlIngredient> _bowl = [];
 
   PetProfile? get selectedPet => _selectedPet;
-  double get mealMassGrams => _mealMassGrams;
   List<BowlIngredient> get bowl => _bowl;
 
   void setSelectedPet(PetProfile pet) {
@@ -20,26 +18,20 @@ class NutritionalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setMealMass(double grams) {
-    _mealMassGrams = grams;
-    // Update all ingredients in the bowl with the new mass
-    _bowl = _bowl.map((item) => BowlIngredient(
-      ingredient: item.ingredient,
-      massGrams: _mealMassGrams
-    )).toList();
-    notifyListeners();
-  }
-
-  void addIngredient(Ingredient item) {
+  void addIngredient(Ingredient item, double massGrams) {
     if (_selectedPet == null) return;
     
-    // Safety check is handled by UI calling checkIngredientSafety first
-    _bowl.add(BowlIngredient(ingredient: item, massGrams: _mealMassGrams));
+    _bowl.add(BowlIngredient(ingredient: item, massGrams: massGrams));
     notifyListeners();
   }
 
   void removeIngredient(String ingredientId) {
     _bowl.removeWhere((item) => item.ingredient.ingredientId == ingredientId);
+    notifyListeners();
+  }
+
+  void clearBowl() {
+    _bowl = [];
     notifyListeners();
   }
 
