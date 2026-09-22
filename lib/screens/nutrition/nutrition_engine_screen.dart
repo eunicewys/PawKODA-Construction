@@ -70,19 +70,19 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
     if (pet == null) return const Scaffold(body: Center(child: Text("No pet selected")));
 
     return Scaffold(
-      backgroundColor: _powderPetal,
+      backgroundColor: _desertSand, // Changed back to Desert Sand
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: _darkCharcoal),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Nutrition Engine", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18)),
-            Text("${pet.name.toUpperCase()} • ${pet.breed.toUpperCase()}", style: TextStyle(color: _ashGrey, fontSize: 11, fontWeight: FontWeight.bold)),
+            const Text("Nutrition Engine", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text("${pet.name.toUpperCase()} • ${pet.breed.toUpperCase()}", style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 11, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -135,7 +135,17 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
       ),
       child: Column(
         children: [
-          const Text("METABOLIC PROFILE", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("METABOLIC PROFILE", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => _showMetabolicInfo(),
+                child: const Icon(Icons.info_outline_rounded, color: Colors.white70, size: 14),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -145,16 +155,50 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
               _profileStat("Status", conditionLabel),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: _bigStatBox("RER (Resting)", "${provider.currentRER.toInt()} kcal/day")),
-              const SizedBox(width: 12),
-              Expanded(child: _bigStatBox("DER (Daily Target)", "${provider.targetDER.toInt()} kcal/day")),
-            ],
+          const SizedBox(height: 24),
+          // Highlighted Daily Goal
+          _bigStatBox("DAILY ENERGY GOAL (DER)", "${provider.targetDER.toInt()} kcal/day", isPrimary: true),
+          const SizedBox(height: 12),
+          // Supporting Resting Baseline
+          _bigStatBox("RESTING BASELINE (RER)", "${provider.currentRER.toInt()} kcal/day", isPrimary: false),
+        ],
+      ),
+    );
+  }
+
+  void _showMetabolicInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Metabolic Information", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoItem("Daily Energy Goal (DER)", "The actual calories your pet needs based on its weight, age, and reproductive status."),
+            const SizedBox(height: 16),
+            _infoItem("Resting Baseline (RER)", "The energy needed to maintain basic life functions (heartbeat, breathing) while at rest."),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Got it", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _infoItem(String title, String desc) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: _dustyOlive, fontSize: 16)),
+        const SizedBox(height: 4),
+        Text(desc, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+      ],
     );
   }
 
@@ -168,15 +212,20 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
     );
   }
 
-  Widget _bigStatBox(String label, String value) {
+  Widget _bigStatBox(String label, String value, {required bool isPrimary}) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(16)),
-      child: Column(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: isPrimary ? 16 : 10, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isPrimary ? Colors.white.withAlpha(50) : Colors.white.withAlpha(20), 
+        borderRadius: BorderRadius.circular(16),
+        border: isPrimary ? Border.all(color: Colors.white.withAlpha(40), width: 1.5) : null,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+          Text(label, style: TextStyle(color: isPrimary ? Colors.white : Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+          Text(value, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: isPrimary ? 18 : 14)),
         ],
       ),
     );
@@ -291,10 +340,10 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.local_fire_department, color: Colors.orange, size: 24),
+            const Icon(Icons.local_fire_department, color: Colors.orange, size: 28),
             const SizedBox(width: 8),
-            const Text("TOTAL CALORIES ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.grey)),
-            Text("${provider.totalNutrients.kcal.toInt()} kcal", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.orange)),
+            const Text("TOTAL CALORIES ", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white70)),
+            Text("${provider.totalNutrients.kcal.toInt()} kcal", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 28, color: Colors.white)),
           ],
         ),
         const SizedBox(height: 12),
