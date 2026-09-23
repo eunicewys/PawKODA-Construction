@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../models/pet_model.dart';
 import '../../models/ingredient_model.dart';
 import '../../providers/nutritional_provider.dart';
+import '../widgets/fringe_header.dart';
 import 'widgets/caloric_status_banner.dart';
 import 'widgets/safety_alert_dialog.dart';
 
@@ -20,6 +21,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _powderPetal = const Color(0xFFFFE8D6);
   final Color _desertSand = const Color(0xFFDDBEA9);
+  final Color _errorCoral = const Color(0xFFB56576); 
   final Color _ashGrey = const Color(0xFFB7B7A4);
   final Color _darkCharcoal = const Color(0xFF2D3142);
 
@@ -134,53 +136,46 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
 
     return Scaffold(
       backgroundColor: _desertSand, 
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Nutrition Engine", 
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 0.5)
+      body: Column(
+        children: [
+          FringeHeader(
+            title: "Nutrition Engine",
+            subtitle: "${pet.name} • ${pet.breed}",
+            onBack: () => Navigator.pop(context),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. METABOLIC PROFILE HEADER
+                  _buildMetabolicHeader(pet, provider),
+                  const SizedBox(height: 24),
+
+                  // 2. INTERACTIVE BOWL WIDGET
+                  _buildFeedingBowl(provider),
+                  const SizedBox(height: 24),
+
+                  // 4. NUTRIENT ANALYSIS PROGRESS BARS
+                  _buildNutrientAnalysis(provider),
+                  
+                  // 5 & 6. STATUS BANNER
+                  if (provider.bowl.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildCaloricDisplay(provider),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // 7. ADD INGREDIENTS SECTION
+                  _buildAddIngredientsSection(),
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
-            Text(
-              "${pet.name.toUpperCase()} • ${pet.breed.toUpperCase()}", 
-              style: TextStyle(color: Colors.white.withAlpha(220), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.3)
-            ),
-          ],
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. METABOLIC PROFILE HEADER
-            _buildMetabolicHeader(pet, provider),
-            const SizedBox(height: 24),
-
-            // 2. INTERACTIVE BOWL WIDGET
-            _buildFeedingBowl(provider),
-            const SizedBox(height: 32),
-
-            // 4. NUTRIENT ANALYSIS PROGRESS BARS
-            _buildNutrientAnalysis(provider),
-            const SizedBox(height: 32),
-
-            // 5 & 6. TOTAL CALORIES & STATUS BANNER
-            _buildCaloricDisplay(provider),
-            const SizedBox(height: 32),
-
-            // 7. ADD INGREDIENTS SECTION
-            _buildAddIngredientsSection(),
-            const SizedBox(height: 100),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -299,15 +294,90 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   Widget _buildFeedingBowl(NutritionalProvider provider) {
     return Container(
       width: double.infinity,
-      height: 220,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10)]),
+      height: 300, // Slightly taller for the "pile up" effect
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(220), 
+        borderRadius: BorderRadius.circular(32), 
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 15)]
+      ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Visual Bowl Placeholder
-          Image.network("https://cdn-icons-png.flaticon.com/512/3047/3047120.png", height: 120, color: _ashGrey.withAlpha(100)),
+          // 1. BOWL BASE SHADOW (Depth)
+          Positioned(
+            bottom: 60,
+            child: Container(
+              width: 220,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(30),
+                borderRadius: const BorderRadius.all(Radius.elliptical(110, 20)),
+              ),
+            ),
+          ),
+
+          // 2. MAIN BOWL BODY (3D Slanted Side View)
+          Positioned(
+            bottom: 70,
+            child: Container(
+              width: 200,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_dustyOlive, _dustyOlive.withAlpha(200)],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(80),
+                  top: Radius.circular(20),
+                ),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 8, offset: const Offset(0, 4))],
+              ),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Icon(Icons.pets, color: Colors.white.withAlpha(100), size: 40),
+                ),
+              ),
+            ),
+          ),
+
+          // 3. THE BOWL OPENING (The Inner Circle where food sits)
+          Positioned(
+            bottom: 170,
+            child: Container(
+              width: 190,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _ashGrey.withAlpha(100),
+                borderRadius: const BorderRadius.all(Radius.elliptical(95, 20)),
+                border: Border.all(color: Colors.white.withAlpha(200), width: 2),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)],
+              ),
+            ),
+          ),
+
+          // 4. FOOD PILE (Realistic High-Density Stacking)
+          Positioned(
+            bottom: 180,
+            child: SizedBox(
+              width: 180,
+              height: 120,
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                clipBehavior: Clip.none,
+                children: [
+                  if (provider.bowl.isEmpty)
+                    Text("Bowl is empty", style: TextStyle(color: _ashGrey.withAlpha(150), fontSize: 12, fontStyle: FontStyle.italic))
+                  else
+                    ..._buildPiledFood(provider.bowl),
+                ],
+              ),
+            ),
+          ),
           
-          // Reset Button
+          // 5. RESET BUTTON (Top Right)
           Positioned(
             top: 16,
             right: 16,
@@ -316,7 +386,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _desertSand.withAlpha(30),
+                  color: _dustyOlive.withAlpha(40),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -330,22 +400,125 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             ),
           ),
 
+          // 6. INGREDIENT CHIPS (Horizontal list at the very bottom)
           Positioned(
-            bottom: 20,
-            child: Wrap(
-              spacing: 8,
-              children: provider.bowl.map((item) => Chip(
-                label: Text("${item.ingredient.name} (${item.massGrams.toInt()}g)", style: TextStyle(fontSize: 10, color: _dustyOlive)),
-                backgroundColor: _powderPetal,
-                onDeleted: () => provider.removeIngredient(item.ingredient.ingredientId),
-              )).toList(),
+            bottom: 12,
+            child: SizedBox(
+              width: 300,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: provider.bowl.map((item) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Chip(
+                      label: Text("${item.ingredient.name} (${item.massGrams.toInt()}g)", style: TextStyle(fontSize: 10, color: _darkCharcoal)),
+                      backgroundColor: _getFoodColor(item.ingredient.category).withAlpha(40),
+                      onDeleted: () => provider.removeIngredient(item.ingredient.ingredientId),
+                      deleteIconColor: _darkCharcoal.withAlpha(150),
+                    ),
+                  )).toList(),
+                ),
+              ),
             ),
           ),
-          if (provider.bowl.isEmpty)
-            Text("Bowl is empty. Add ingredients below!", style: TextStyle(color: _ashGrey, fontSize: 12, fontStyle: FontStyle.italic)),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildPiledFood(List<BowlIngredient> bowl) {
+    List<Widget> bits = [];
+    int globalIdx = 0;
+    const int rowSize = 5; // Slightly narrower row for tighter gathering
+    const double xSpacing = 30.0;
+    const double ySpacing = 20.0;
+    const double startX = 25.0;
+
+    for (var item in bowl) {
+      // New Logic: 10-50g=2, 51-100g=4, 101-150g=6, 151-200g=8
+      int numBits = (item.massGrams / 50).ceil() * 2;
+      
+      for (int i = 0; i < numBits; i++) {
+        int row = globalIdx ~/ rowSize;
+        int col = globalIdx % rowSize;
+        
+        // Offset every other row for a more natural "staggered" pile
+        double xOffset = (col * xSpacing) + (row % 2 == 0 ? 0 : 15);
+        double yOffset = (row * ySpacing);
+        
+        bits.add(
+          Positioned(
+            bottom: yOffset,
+            left: startX + xOffset,
+            child: _buildFoodBit(item.ingredient),
+          ),
+        );
+        globalIdx++;
+      }
+    }
+    return bits;
+  }
+
+  Widget _buildFoodBit(Ingredient ingredient) {
+    Color baseColor = _getFoodColor(ingredient.category);
+    IconData icon;
+    String cat = ingredient.category.toLowerCase();
+
+    if (cat.contains('meat') || cat.contains('poultry') || cat.contains('beef') || cat.contains('chicken')) {
+      icon = Icons.favorite_rounded;
+    } else if (cat.contains('veg') || cat.contains('green') || cat.contains('leafy')) {
+      icon = Icons.eco_rounded;
+    } else if (cat.contains('fruit') || cat.contains('berry')) {
+      icon = Icons.circle_rounded;
+    } else {
+      icon = Icons.grain_rounded;
+    }
+
+    return Container(
+      width: 36, // Increased from 32 for a fuller look with fewer bits
+      height: 36,
+      decoration: BoxDecoration(
+        color: baseColor,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(100),
+            blurRadius: 5,
+            offset: const Offset(1, 2),
+          )
+        ],
+        gradient: RadialGradient(
+          colors: [baseColor, baseColor.withAlpha(200)],
+          center: const Alignment(-0.3, -0.3),
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          icon, 
+          color: Colors.white.withAlpha(180), 
+          size: 18
+        ),
+      ),
+    );
+  }
+
+  Color _getFoodColor(String category) {
+    String c = category.toLowerCase();
+    // High-Contrast Colors (Vibrant and distinct from Desert Sand/White)
+    if (c.contains('meat') || c.contains('poultry') || c.contains('beef') || c.contains('chicken')) {
+      return const Color(0xFF4E342E); // Dark Chocolate Brown
+    }
+    if (c.contains('veg') || c.contains('green') || c.contains('leafy')) {
+      return const Color(0xFF2E7D32); // Vibrant Forest Green
+    }
+    if (c.contains('fruit') || c.contains('berry')) {
+      return const Color(0xFFC62828); // Bright Cherry Red
+    }
+    if (c.contains('grain') || c.contains('carb') || c.contains('rice')) {
+      return const Color(0xFFFF8F00); // Deep Golden Amber
+    }
+    return const Color(0xFF455A64); // Blue Grey for others
   }
 
   Widget _buildNutrientAnalysis(NutritionalProvider provider) {
@@ -363,6 +536,22 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
           _nutrientBar("CALCIUM", n.calciumMg / 1000, 2, Colors.purple),
           _nutrientBar("VITAMINS", n.vitaminsGrams, 1, Colors.pink),
           _nutrientBar("MINERALS", n.mineralsGrams, 1, Colors.blueGrey),
+          
+          const Divider(height: 32, thickness: 1),
+          
+          Row(
+            children: [
+              const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 28),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("TOTAL CALORIES", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFB7B7A4), letterSpacing: 0.5)),
+                  Text("${provider.totalNutrients.kcal.toInt()} kcal", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: _darkCharcoal)),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -389,38 +578,8 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   }
 
   Widget _buildCaloricDisplay(NutritionalProvider provider) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 28),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("TOTAL CALORIES", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFB7B7A4), letterSpacing: 0.5)),
-                  Text("${provider.totalNutrients.kcal.toInt()} kcal", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: _darkCharcoal)),
-                ],
-              ),
-            ],
-          ),
-        ),
-        if (provider.bowl.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          CaloricStatusBanner(status: provider.adequacyStatus, petName: provider.selectedPet?.name ?? "Pet"),
-        ],
-      ],
-    );
+    if (provider.bowl.isEmpty) return const SizedBox.shrink();
+    return CaloricStatusBanner(status: provider.adequacyStatus, petName: provider.selectedPet?.name ?? "Pet");
   }
 
   Widget _buildAddIngredientsSection() {

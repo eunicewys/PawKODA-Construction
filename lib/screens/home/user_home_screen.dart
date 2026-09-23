@@ -13,6 +13,7 @@ import '../../services/pet_service.dart';
 import '../login_screen.dart';
 import '../nutrition/nutrition_engine_screen.dart';
 import '../pet/pet_details_screen.dart';
+import '../widgets/fringe_header.dart';
 
 /// UserHomeScreen: Redesigned dashboard for Pet Owners.
 /// Features a "Modern Layered" pet passport experience and functional navigation.
@@ -1206,7 +1207,37 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 
-  Widget _buildPlaceholderView(String t, IconData i, Color c) => Container(color: c, child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(i, size: 80, color: Colors.white.withAlpha(150)), const SizedBox(height: 20), Text(t, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)), const SizedBox(height: 10), const Text("Coming Soon", style: TextStyle(color: Colors.white70)), const SizedBox(height: 30), ElevatedButton(onPressed: () => setState(() => _selectedIndex = 0), style: ElevatedButton.styleFrom(backgroundColor: _darkCharcoal), child: const Text("Back to Dashboard", style: TextStyle(color: Colors.white)))])));
+  Widget _buildPlaceholderView(String t, IconData i, Color c) => Scaffold(
+    backgroundColor: _powderPetal,
+    body: Column(
+      children: [
+        FringeHeader(
+          title: t,
+          onBack: () => setState(() => _selectedIndex = 0),
+        ),
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center, 
+              children: [
+                Icon(i, size: 80, color: _dustyOlive.withAlpha(100)), 
+                const SizedBox(height: 20), 
+                Text(t, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkCharcoal)), 
+                const SizedBox(height: 10), 
+                const Text("Coming Soon", style: TextStyle(color: Colors.grey)), 
+                const SizedBox(height: 30), 
+                ElevatedButton(
+                  onPressed: () => setState(() => _selectedIndex = 0), 
+                  style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive), 
+                  child: const Text("Back to Dashboard", style: TextStyle(color: Colors.white))
+                )
+              ]
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildProfileView(BuildContext context) {
     final up = context.watch<UserProvider>();
