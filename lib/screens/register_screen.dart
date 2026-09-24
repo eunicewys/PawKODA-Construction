@@ -170,121 +170,127 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _dustyOlive,
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top Section: Logo & Title (Compact)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(40),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 48),
+                    child: const Icon(Icons.pets, color: Colors.white, size: 36),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Create Account",
+                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Bottom Section: Curved White Card filling remaining height
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(36),
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  "Create Account",
-                  style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 25),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text("Join PawKODA", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkText)),
-                    ),
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text("Start to manage your pet's health today", style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 13)), // Darker grey
-                    ),
-                    const SizedBox(height: 20),
-                    _buildField("FULL NAME", _nameController, "Sarah Lim"),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      "EMAIL ADDRESS", 
-                      _emailController, 
-                      "hello@pawkoda.com",
-                      hasError: _emailError,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      "CREATE PASSWORD", 
-                      _passwordController, 
-                      "••••••••", 
-                      isPass: true,
-                      isObscured: _isObscuredCreate,
-                      onToggle: () => setState(() => _isObscuredCreate = !_isObscuredCreate),
-                      hasError: _passwordError,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      "RE-CONFIRM PASSWORD", 
-                      _confirmPasswordController, 
-                      "••••••••", 
-                      isPass: true,
-                      isObscured: _isObscuredConfirm,
-                      onToggle: () => setState(() => _isObscuredConfirm = !_isObscuredConfirm),
-                      hasError: _passwordError,
-                    ),
-                    const SizedBox(height: 30),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleRegister,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _dustyOlive,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: _isLoading 
-                          ? const CircularProgressIndicator(color: Colors.white) 
-                          : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Column(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text("Join PawKODA", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _darkText)),
                       ),
-                    ),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text.rich(
-                          TextSpan(
-                            text: "Already have an account? ",
-                            style: const TextStyle(color: Colors.grey),
-                            children: [
-                              TextSpan(
-                                text: "Sign In",
-                                style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text("Start to manage your pet's health today", style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 12)),
+                      ),
+                      const SizedBox(height: 14),
+                      _buildField("FULL NAME", _nameController, "Sarah Lim"),
+                      const SizedBox(height: 10),
+                      _buildField(
+                        "EMAIL ADDRESS", 
+                        _emailController, 
+                        "hello@pawkoda.com",
+                        hasError: _emailError,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildField(
+                        "CREATE PASSWORD", 
+                        _passwordController, 
+                        "••••••••", 
+                        isPass: true,
+                        isObscured: _isObscuredCreate,
+                        onToggle: () => setState(() => _isObscuredCreate = !_isObscuredCreate),
+                        hasError: _passwordError,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildField(
+                        "RE-CONFIRM PASSWORD", 
+                        _confirmPasswordController, 
+                        "••••••••", 
+                        isPass: true,
+                        isObscured: _isObscuredConfirm,
+                        onToggle: () => setState(() => _isObscuredConfirm = !_isObscuredConfirm),
+                        hasError: _passwordError,
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleRegister,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _dustyOlive,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: _isLoading 
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                              )
+                            : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text.rich(
+                            TextSpan(
+                              text: "Already have an account? ",
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                              children: [
+                                TextSpan(
+                                  text: "Sign In",
+                                  style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

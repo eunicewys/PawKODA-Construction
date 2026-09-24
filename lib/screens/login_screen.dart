@@ -138,114 +138,118 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _dustyOlive, // Primary structural color
-      body: Stack(
-        children: [
-          // Top section: Logo & App Name
-          SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 70),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top section: Logo & App Name (Compact & Mobile Responsive)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(40),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 64),
+                    child: const Icon(Icons.pets, color: Colors.white, size: 44),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  "PawKODA",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
+                  const SizedBox(height: 8),
+                  const Text(
+                    "PawKODA",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
                   ),
-                ),
-                Text(
-                  "Pet Health & Nutrition Platform",
-                  style: TextStyle(color: _powderPetal.withAlpha(200), fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          
-          // Bottom section: Curved White Sheet
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.55,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
+                  Text(
+                    "Pet Health & Nutrition Platform",
+                    style: TextStyle(color: _powderPetal.withAlpha(200), fontSize: 13),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Welcome back!",
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkText),
-                    ),
-                    const Text(
-                      "Sign in to manage your pet's health",
-                      style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 14), // Darker grey
-                    ),
-                    const SizedBox(height: 30),
-                    
-                    _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
-                    const SizedBox(height: 20),
-                    _buildField("PASSWORD", _passwordController, "••••••••", isPass: true),
-                    const SizedBox(height: 40),
-                    
-                    // The Sign In Button (Dusty Olive)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _dustyOlive,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: _isLoading 
-                          ? const CircularProgressIndicator(color: Colors.white) 
-                          : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            
+            // Bottom section: Curved White Sheet filling remaining height
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(36),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Welcome back!",
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkText),
                       ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
-                        child: Text.rich(
-                          TextSpan(
-                            text: "Don't have an account? ",
-                            style: const TextStyle(color: Colors.grey),
-                            children: [
-                              TextSpan(
-                                text: "Create Account",
-                                style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "Sign in to manage your pet's health",
+                        style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 13), // Darker grey
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
+                      const SizedBox(height: 14),
+                      _buildField("PASSWORD", _passwordController, "••••••••", isPass: true),
+                      const SizedBox(height: 24),
+                      
+                      // The Sign In Button (Dusty Olive)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _dustyOlive,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: _isLoading 
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                               )
-                            ],
+                            : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
+                          child: Text.rich(
+                            TextSpan(
+                              text: "Don't have an account? ",
+                              style: const TextStyle(color: Colors.grey, fontSize: 14),
+                              children: [
+                                TextSpan(
+                                  text: "Create Account",
+                                  style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 14),
+                                )
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

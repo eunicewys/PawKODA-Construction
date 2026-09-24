@@ -1153,16 +1153,31 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             const SizedBox(height: 30),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text("My Pet Passports", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: Colors.white)),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6), decoration: BoxDecoration(color: _darkCharcoal, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)]), child: InkWell(onTap: _showAddPetDialog, child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 17)))),
-              ]),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("My Pet Passports", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6), 
+                      decoration: BoxDecoration(color: _darkCharcoal, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)]), 
+                      child: InkWell(
+                        onTap: _showAddPetDialog, 
+                        child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 17)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             if (pets.isEmpty)
               Padding(padding: const EdgeInsets.symmetric(vertical: 40), child: Center(child: Text("No pets registered yet.\nTap + Add Pet to start!", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 16))))
             else
-              SizedBox(height: 390, child: PageView.builder(controller: _pageController, itemCount: pets.length, itemBuilder: (context, index) {
+              SizedBox(height: 350, child: PageView.builder(controller: _pageController, itemCount: pets.length, itemBuilder: (context, index) {
                 double scale = (1 - ((_currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
                 final pet = pets[index];
                 int y = (pet.ageInMonths / 12).floor(); int m = pet.ageInMonths % 12;
@@ -1182,16 +1197,22 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   ),
                 );
               })),
-            const SizedBox(height: 40),
+            const SizedBox(height: 30),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Quick Actions", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
             const SizedBox(height: 16),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets)),
-              _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1)),
-              _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() => _selectedIndex = 2)),
-              _buildActionItem(Icons.assignment, "Records", _powderPetal, () => setState(() => _selectedIndex = 1)),
-            ])),
-            const SizedBox(height: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16), 
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly, 
+                children: [
+                  Flexible(child: _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets))),
+                  Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1))),
+                  Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() => _selectedIndex = 2))),
+                  Flexible(child: _buildActionItem(Icons.assignment, "Records", _powderPetal, () => setState(() => _selectedIndex = 1))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Upcoming Reminders", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
             const SizedBox(height: 16),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: InkWell(onTap: () => _showComingSoon("Reminders"), child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))]), child: Row(children: [
@@ -1200,7 +1221,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Vaccine Checkup", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _darkCharcoal)), Text(pets.isNotEmpty ? "${pets.first.name} • 5 Nov 2024" : "Add a pet to set reminders", style: TextStyle(color: _ashGrey, fontSize: 16))])),
               Icon(Icons.chevron_right, color: _ashGrey),
             ])))),
-            const SizedBox(height: 100),
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -1355,27 +1376,42 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             Expanded(
               flex: 2, 
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8), 
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, 
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 6), 
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 260,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start, 
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkCharcoal)), 
-                        Text(species, style: TextStyle(color: _ashGrey, fontWeight: FontWeight.w600, fontSize: 14)),
-                      ],
-                    ), 
-                    Text(breed, style: TextStyle(color: _ashGrey, fontSize: 15)), 
-                    const SizedBox(height: 4), 
-                    Row(
-                      children: [
-                        Expanded(child: _buildInfoChip("Age", age)), 
-                        const SizedBox(width: 12), 
-                        Expanded(child: _buildInfoChip("Weight", weight)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name, 
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ), 
+                            const SizedBox(width: 8),
+                            Text(species, style: TextStyle(color: _ashGrey, fontWeight: FontWeight.w600, fontSize: 13)),
+                          ],
+                        ), 
+                        Text(breed, style: TextStyle(color: _ashGrey, fontSize: 14), overflow: TextOverflow.ellipsis), 
+                        const SizedBox(height: 4), 
+                        Row(
+                          children: [
+                            Expanded(child: _buildInfoChip("Age", age)), 
+                            const SizedBox(width: 8), 
+                            Expanded(child: _buildInfoChip("Weight", weight)),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1385,8 +1421,22 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 
-  Widget _buildInfoChip(String l, String v) => Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: _ashGrey.withAlpha(140), borderRadius: BorderRadius.circular(12)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(l, style: TextStyle(fontSize: 13, color: _dustyOlive, fontWeight: FontWeight.bold)), Text(v, style: TextStyle(fontSize: 17, color: _darkCharcoal, fontWeight: FontWeight.bold))]));
-  Widget _buildActionItem(IconData i, String l, Color c, VoidCallback o) => InkWell(onTap: o, borderRadius: BorderRadius.circular(22), child: Column(children: [Container(height: 70, width: 70, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4))]), child: Icon(i, color: _dustyOlive, size: 30)), const SizedBox(height: 8), Text(l, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white))]));
-  Widget _buildBottomNav() => Container(height: 85, decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)), boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 15)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_navIcon(Icons.home_filled, "Home", 0), _navIcon(Icons.favorite_border, "Health", 1), _navIcon(Icons.calendar_month_outlined, "Bookings", 2), _navIcon(Icons.person_outline, "Profile", 3)]));
+  Widget _buildInfoChip(String l, String v) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), 
+    decoration: BoxDecoration(color: _ashGrey.withAlpha(140), borderRadius: BorderRadius.circular(12)), 
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, 
+        children: [
+          Text(l, style: TextStyle(fontSize: 11, color: _dustyOlive, fontWeight: FontWeight.bold)), 
+          Text(v, style: TextStyle(fontSize: 15, color: _darkCharcoal, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    ),
+  );
+  Widget _buildActionItem(IconData i, String l, Color c, VoidCallback o) => InkWell(onTap: o, borderRadius: BorderRadius.circular(18), child: Column(mainAxisSize: MainAxisSize.min, children: [Container(height: 60, width: 60, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 8, offset: const Offset(0, 3))]), child: Icon(i, color: _dustyOlive, size: 26)), const SizedBox(height: 6), Text(l, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis)]));
+  Widget _buildBottomNav() => Container(height: 75, decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)), boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 15)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_navIcon(Icons.home_filled, "Home", 0), _navIcon(Icons.favorite_border, "Health", 1), _navIcon(Icons.calendar_month_outlined, "Bookings", 2), _navIcon(Icons.person_outline, "Profile", 3)]));
   Widget _navIcon(IconData i, String l, int idx) => InkWell(onTap: () => setState(() => _selectedIndex = idx), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(i, color: _selectedIndex == idx ? _dustyOlive : _ashGrey, size: 26), const SizedBox(height: 4), Text(l, style: TextStyle(fontSize: 10, color: _selectedIndex == idx ? _dustyOlive : _ashGrey, fontWeight: _selectedIndex == idx ? FontWeight.bold : FontWeight.normal))]));
 }

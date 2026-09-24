@@ -15,97 +15,117 @@ class FringeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color dustyOlive = Color(0xFF6B705C);
+    const Color powderPetal = Color(0xFFFFE8D6);
 
-    return ClipPath(
-      clipper: _ArtisticFringeClipper(),
-      child: Container(
-        height: 125, // Slightly increased for breathing room
-        width: double.infinity,
-        color: dustyOlive,
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0), // Minimal top padding
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start, // Align to top
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
-                  onPressed: onBack,
-                  padding: const EdgeInsets.only(top: 8), // Small adjustment for arrow
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12), // Tuck text high up
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (subtitle != null)
-                          Text(
-                            subtitle!.toUpperCase(),
-                            style: TextStyle(
-                              color: Colors.white.withAlpha(220), // Brighter
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    return SizedBox(
+      height: 112,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // 1. Soft Background Accent Wave (smooths out desert sand gaps)
+          ClipPath(
+            clipper: _SmoothWaveClipper(isBackground: true),
+            child: Container(
+              height: 112,
+              width: double.infinity,
+              color: dustyOlive.withAlpha(90),
             ),
           ),
-        ),
+
+          // 2. Primary Solid Header Wave
+          ClipPath(
+            clipper: _SmoothWaveClipper(isBackground: false),
+            child: Container(
+              height: 106,
+              width: double.infinity,
+              color: dustyOlive,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 16, 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                        onPressed: onBack,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (subtitle != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  subtitle!.toUpperCase(),
+                                  style: TextStyle(
+                                    color: powderPetal.withAlpha(230),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.6,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ArtisticFringeClipper extends CustomClipper<Path> {
+class _SmoothWaveClipper extends CustomClipper<Path> {
+  final bool isBackground;
+
+  _SmoothWaveClipper({required this.isBackground});
+
   @override
   Path getClip(Size size) {
     Path path = Path();
-    path.lineTo(0, size.height - 15); // Start lower on the left
+    double h = size.height;
+    double w = size.width;
 
-    // Artistic imbalanced wave: Much shallower to stay away from text
-    // Deep dip on the left (but not rising high)
-    var firstControlPoint = Offset(size.width * 0.35, size.height + 15);
-    var firstEndPoint = Offset(size.width * 0.6, size.height - 5);
-    
-    // Very shallow ripple on the right
-    var secondControlPoint = Offset(size.width * 0.8, size.height - 15);
-    var secondEndPoint = Offset(size.width, size.height - 5);
+    if (isBackground) {
+      // Soft secondary wave layer sitting slightly below primary
+      path.lineTo(0, h - 8);
+      path.cubicTo(
+        w * 0.32, h, 
+        w * 0.65, h - 26, 
+        w, h - 8,
+      );
+    } else {
+      // Silky smooth continuous S-wave strictly within bounds (no hard cuts)
+      path.lineTo(0, h - 14);
+      path.cubicTo(
+        w * 0.32, h - 2, 
+        w * 0.62, h - 24, 
+        w, h - 12,
+      );
+    }
 
-    path.quadraticBezierTo(
-      firstControlPoint.dx,
-      firstControlPoint.dy,
-      firstEndPoint.dx,
-      firstEndPoint.dy,
-    );
-    path.quadraticBezierTo(
-      secondControlPoint.dx,
-      secondControlPoint.dy,
-      secondEndPoint.dx,
-      secondEndPoint.dy,
-    );
-
-    path.lineTo(size.width, 0);
+    path.lineTo(w, 0);
     path.close();
     return path;
   }

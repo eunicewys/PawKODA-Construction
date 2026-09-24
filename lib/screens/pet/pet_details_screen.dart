@@ -252,19 +252,23 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
   Widget _detailChip(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFFFBFBFB), // Creamy white
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 5, offset: const Offset(0, 2))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, style: TextStyle(fontSize: 10, color: _ashGrey, fontWeight: FontWeight.bold)),
-          Text(value, style: TextStyle(fontSize: 16, color: _darkCharcoal, fontWeight: FontWeight.bold)),
-        ],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(label, style: TextStyle(fontSize: 10, color: _ashGrey, fontWeight: FontWeight.bold)),
+            Text(value, style: TextStyle(fontSize: 15, color: _darkCharcoal, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
