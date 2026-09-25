@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../models/pet_model.dart';
 import '../../models/ingredient_model.dart';
 import '../../providers/nutritional_provider.dart';
+import '../home_screen.dart';
 import '../widgets/fringe_header.dart';
 import 'widgets/caloric_status_banner.dart';
 import 'widgets/safety_alert_dialog.dart';
@@ -180,6 +181,74 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                   const SizedBox(height: 100),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context) {
+    return Container(
+      height: 75,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 15,
+          )
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _navIcon(context, Icons.home_filled, "Home", 0),
+          _navIcon(context, Icons.favorite_border, "Health", 1),
+          _navIcon(context, Icons.calendar_month_outlined, "Bookings", 2),
+          _navIcon(context, Icons.person_outline, "Profile", 3),
+        ],
+      ),
+    );
+  }
+
+  Widget _navIcon(BuildContext context, IconData icon, String label, int targetIndex) {
+    return InkWell(
+      onTap: () {
+        if (targetIndex == 0) {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen(initialIndex: 0)),
+              (route) => false,
+            );
+          }
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => HomeScreen(initialIndex: targetIndex)),
+            (route) => false,
+          );
+        }
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: _ashGrey, size: 26),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: _ashGrey,
+              fontWeight: FontWeight.normal,
             ),
           ),
         ],

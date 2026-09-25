@@ -96,6 +96,128 @@ class FringeHeader extends StatelessWidget {
   }
 }
 
+class DashboardFringeHeader extends StatelessWidget {
+  final String greeting;
+  final String userName;
+  final VoidCallback onLogout;
+
+  const DashboardFringeHeader({
+    super.key,
+    required this.greeting,
+    required this.userName,
+    required this.onLogout,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const Color dustyOlive = Color(0xFF6B705C);
+    const Color powderPetal = Color(0xFFFFE8D6);
+
+    return SizedBox(
+      height: 120,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // 1. Soft Background Accent Wave Layer
+          ClipPath(
+            clipper: _SmoothWaveClipper(isBackground: true),
+            child: Container(
+              height: 120,
+              width: double.infinity,
+              color: dustyOlive.withAlpha(90),
+            ),
+          ),
+
+          // 2. Primary Solid Header Wave
+          ClipPath(
+            clipper: _SmoothWaveClipper(isBackground: false),
+            child: Container(
+              height: 114,
+              width: double.infinity,
+              color: dustyOlive,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Left Side: Greeting & User Name
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              greeting,
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(220),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                userName,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Right Side: Logout Button & User Avatar
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: onLogout,
+                            icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 22),
+                            tooltip: "Logout",
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: powderPetal,
+                              child: Text(
+                                userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
+                                style: const TextStyle(
+                                  color: dustyOlive,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SmoothWaveClipper extends CustomClipper<Path> {
   final bool isBackground;
 

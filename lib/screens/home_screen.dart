@@ -11,7 +11,8 @@ import 'home/admin_home_screen.dart';
  * from UserProvider and displays the correct Dashboard (Owner, Vet, or Admin).
  */
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final int initialIndex;
+  const HomeScreen({super.key, this.initialIndex = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +27,7 @@ class HomeScreen extends StatelessWidget {
       return const VetHomeScreen();
     } else {
       // Default is the Pet Owner (User) Dashboard
-      return const UserHomeScreen();
+      return UserHomeScreen(initialIndex: initialIndex);
     }
   }
 }

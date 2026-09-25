@@ -18,7 +18,8 @@ import '../widgets/fringe_header.dart';
 /// UserHomeScreen: Redesigned dashboard for Pet Owners.
 /// Features a "Modern Layered" pet passport experience and functional navigation.
 class UserHomeScreen extends StatefulWidget {
-  const UserHomeScreen({super.key});
+  final int initialIndex;
+  const UserHomeScreen({super.key, this.initialIndex = 0});
 
   @override
   State<UserHomeScreen> createState() => _UserHomeScreenState();
@@ -38,7 +39,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   final PetService _petService = PetService();
   final ImagePicker _picker = ImagePicker();
 
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   late PageController _pageController;
   double _currentPage = 0;
   Map<String, dynamic> _breedData = {};
@@ -46,6 +47,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
     _loadBreedData();
     _pageController = PageController(viewportFraction: 0.8)
       ..addListener(() {
@@ -1117,114 +1119,113 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   Widget _buildDashboard(BuildContext context, List<PetProfile> pets) {
     final userName = context.watch<UserProvider>().displayName ?? 'Friend';
     final healthyCount = pets.where((p) => p.isHealthy).length;
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_getGreeting(), style: const TextStyle(color: Colors.white, fontSize: 17)), Text(userName, style: const TextStyle(fontSize: 29, fontWeight: FontWeight.bold, color: Colors.white))]),
-                  Row(children: [
-                    IconButton(onPressed: () => _handleLogout(context), icon: const Icon(Icons.logout_rounded, color: Colors.white)),
-                    Container(padding: const EdgeInsets.all(2), decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white), child: CircleAvatar(radius: 22, backgroundColor: _powderPetal, child: Text(userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?', style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold)))),
-                  ]),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(color: Colors.white.withAlpha(204), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white, width: 1.5)),
-                child: Row(children: [
-                  Icon(Icons.health_and_safety, color: _dustyOlive, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text("${pets.length} registered:", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text("$healthyCount healthy; ${pets.length - healthyCount} needs attention", style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14, fontWeight: FontWeight.w500)),
-                  ])),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 30),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("My Pet Passports", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(width: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6), 
-                      decoration: BoxDecoration(color: _darkCharcoal, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)]), 
-                      child: InkWell(
-                        onTap: _showAddPetDialog, 
-                        child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 17)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            if (pets.isEmpty)
-              Padding(padding: const EdgeInsets.symmetric(vertical: 40), child: Center(child: Text("No pets registered yet.\nTap + Add Pet to start!", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 16))))
-            else
-              SizedBox(height: 350, child: PageView.builder(controller: _pageController, itemCount: pets.length, itemBuilder: (context, index) {
-                double scale = (1 - ((_currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
-                final pet = pets[index];
-                int y = (pet.ageInMonths / 12).floor(); int m = pet.ageInMonths % 12;
-                return GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PetDetailsScreen(petId: pet.id))),
-                  child: _buildPetCard(
-                    scale: scale, 
-                    id: pet.id,
-                    name: pet.name, 
-                    species: pet.species.name.toUpperCase(), 
-                    breed: pet.breed, 
-                    age: "${y}y, ${m}m", 
-                    weight: "${pet.weightKg} kg", 
-                    isHealthy: pet.isHealthy, 
-                    imageUrl: pet.imageUrl,
-                    context: context,
-                  ),
-                );
-              })),
-            const SizedBox(height: 30),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Quick Actions", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16), 
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly, 
-                children: [
-                  Flexible(child: _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets))),
-                  Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1))),
-                  Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() => _selectedIndex = 2))),
-                  Flexible(child: _buildActionItem(Icons.assignment, "Records", _powderPetal, () => setState(() => _selectedIndex = 1))),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Upcoming Reminders", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
-            const SizedBox(height: 16),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: InkWell(onTap: () => _showComingSoon("Reminders"), child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))]), child: Row(children: [
-              Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _lightBronze.withAlpha(30), shape: BoxShape.circle), child: Icon(Icons.vaccines, color: _lightBronze, size: 26)),
-              const SizedBox(width: 16),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Vaccine Checkup", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _darkCharcoal)), Text(pets.isNotEmpty ? "${pets.first.name} • 5 Nov 2024" : "Add a pet to set reminders", style: TextStyle(color: _ashGrey, fontSize: 16))])),
-              Icon(Icons.chevron_right, color: _ashGrey),
-            ])))),
-            const SizedBox(height: 80),
-          ],
+    return Column(
+      children: [
+        // Static Top Wave Fringe Header (pinned at top)
+        DashboardFringeHeader(
+          greeting: _getGreeting(),
+          userName: userName,
+          onLogout: () => _handleLogout(context),
         ),
-      ),
+        // Scrollable Body Content
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(color: Colors.white.withAlpha(204), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white, width: 1.5)),
+                    child: Row(children: [
+                      Icon(Icons.health_and_safety, color: _dustyOlive, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text("${pets.length} registered:", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text("$healthyCount healthy; ${pets.length - healthyCount} needs attention", style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14, fontWeight: FontWeight.w500)),
+                      ])),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("My Pet Passports", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: Colors.white)),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6), 
+                          decoration: BoxDecoration(color: _darkCharcoal, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)]), 
+                          child: InkWell(
+                            onTap: _showAddPetDialog, 
+                            child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 17)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (pets.isEmpty)
+                  Padding(padding: const EdgeInsets.symmetric(vertical: 40), child: Center(child: Text("No pets registered yet.\nTap + Add Pet to start!", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 16))))
+                else
+                  SizedBox(height: 350, child: PageView.builder(controller: _pageController, itemCount: pets.length, itemBuilder: (context, index) {
+                    double scale = (1 - ((_currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
+                    final pet = pets[index];
+                    int y = (pet.ageInMonths / 12).floor(); int m = pet.ageInMonths % 12;
+                    return GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PetDetailsScreen(petId: pet.id))),
+                      child: _buildPetCard(
+                        scale: scale, 
+                        id: pet.id,
+                        name: pet.name, 
+                        species: pet.species.name.toUpperCase(), 
+                        breed: pet.breed, 
+                        age: "${y}y, ${m}m", 
+                        weight: "${pet.weightKg} kg", 
+                        isHealthy: pet.isHealthy, 
+                        imageUrl: pet.imageUrl,
+                        context: context,
+                      ),
+                    );
+                  })),
+                const SizedBox(height: 30),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Quick Actions", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16), 
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly, 
+                    children: [
+                      Flexible(child: _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets))),
+                      Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1))),
+                      Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() => _selectedIndex = 2))),
+                      Flexible(child: _buildActionItem(Icons.assignment, "Records", _powderPetal, () => setState(() => _selectedIndex = 1))),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Upcoming Reminders", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
+                const SizedBox(height: 16),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: InkWell(onTap: () => _showComingSoon("Reminders"), child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))]), child: Row(children: [
+                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _lightBronze.withAlpha(30), shape: BoxShape.circle), child: Icon(Icons.vaccines, color: _lightBronze, size: 26)),
+                  const SizedBox(width: 16),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Vaccine Checkup", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _darkCharcoal)), Text(pets.isNotEmpty ? "${pets.first.name} • 5 Nov 2024" : "Add a pet to set reminders", style: TextStyle(color: _ashGrey, fontSize: 16))])),
+                  Icon(Icons.chevron_right, color: _ashGrey),
+                ])))),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
