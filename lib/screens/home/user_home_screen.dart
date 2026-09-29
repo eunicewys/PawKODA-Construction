@@ -10,6 +10,7 @@ import '../../providers/user_provider.dart';
 import '../../providers/nutritional_provider.dart';
 import '../../models/pet_model.dart';
 import '../../services/pet_service.dart';
+import '../../utils/image_helper.dart';
 import '../login_screen.dart';
 import '../nutrition/nutrition_engine_screen.dart';
 import '../pet/pet_details_screen.dart';
@@ -841,6 +842,15 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           }
                         }
 
+                        // Save image to permanent app documents storage so OS won't clean it up from temp cache
+                        String? permanentPath;
+                        if (petImage != null) {
+                          permanentPath = await ImageHelper.saveImagePermanently(
+                            petImage!.path, 
+                            DateTime.now().millisecondsSinceEpoch.toString()
+                          );
+                        }
+
                         final newPet = PetProfile(
                           id: "", 
                           name: nameCtrl.text.trim(),
@@ -851,7 +861,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           condition: finalCond,
                           allergens: allergens,
                           breed: selectedBreed!,
-                          imageUrl: petImage?.path,
+                          imageUrl: permanentPath,
                         );
 
                         try {

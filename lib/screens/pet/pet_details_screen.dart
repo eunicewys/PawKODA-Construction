@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/pet_model.dart';
 import '../../services/pet_service.dart';
 import '../../providers/user_provider.dart';
+import '../../utils/image_helper.dart';
 
 class PetDetailsScreen extends StatefulWidget {
   final String petId;
@@ -487,10 +488,19 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                         allergens.add(otherAllergenCtrl.text.trim());
                       }
 
+                      // Save image to permanent app documents storage if a new image was picked
+                      String? permanentPath = pet.imageUrl;
+                      if (petImage != null) {
+                        permanentPath = await ImageHelper.saveImagePermanently(
+                          petImage!.path, 
+                          pet.id,
+                        );
+                      }
+
                       final updatedPet = PetProfile(
                         id: pet.id, name: nameCtrl.text.trim(), species: selectedSpecies!, gender: selectedGender!,
                         weightKg: double.tryParse(weightCtrl.text) ?? 0.0, birthDate: selectedBirthDate!,
-                        condition: finalCond, allergens: allergens, breed: selectedBreed!, imageUrl: petImage?.path ?? pet.imageUrl,
+                        condition: finalCond, allergens: allergens, breed: selectedBreed!, imageUrl: permanentPath,
                       );
 
                       try {
