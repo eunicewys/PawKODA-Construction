@@ -165,6 +165,10 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                   _buildFeedingBowl(provider),
                   const SizedBox(height: 24),
 
+                  // 3. ADD INGREDIENTS SECTION (Placed right below bowl for instant visual feedback)
+                  _buildAddIngredientsSection(),
+                  const SizedBox(height: 24),
+
                   // 4. NUTRIENT ANALYSIS PROGRESS BARS
                   _buildNutrientAnalysis(provider),
                   
@@ -174,10 +178,6 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                     _buildCaloricDisplay(provider),
                   ],
 
-                  const SizedBox(height: 24),
-
-                  // 7. ADD INGREDIENTS SECTION
-                  _buildAddIngredientsSection(),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -401,104 +401,44 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   Widget _buildFeedingBowl(NutritionalProvider provider) {
     return Container(
       width: double.infinity,
-      height: 300, // Slightly taller for the "pile up" effect
+      height: 340,
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(220), 
-        borderRadius: BorderRadius.circular(32), 
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 15)]
+        color: Colors.white.withAlpha(230), 
+        borderRadius: BorderRadius.circular(28), 
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 15, offset: const Offset(0, 4))]
       ),
       child: Stack(
-        alignment: Alignment.center,
         children: [
-          // 1. BOWL BASE SHADOW (Depth)
+          // 1. VECTOR BOWL & ORGANIC FOOD MOUND PAINTER (Matching Screenshots 2 & 3)
           Positioned(
-            bottom: 60,
-            child: Container(
-              width: 220,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha(30),
-                borderRadius: const BorderRadius.all(Radius.elliptical(110, 20)),
-              ),
-            ),
-          ),
-
-          // 2. MAIN BOWL BODY (3D Slanted Side View)
-          Positioned(
-            bottom: 70,
-            child: Container(
-              width: 200,
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_dustyOlive, _dustyOlive.withAlpha(200)],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(80),
-                  top: Radius.circular(20),
-                ),
-                boxShadow: [BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 8, offset: const Offset(0, 4))],
-              ),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 40),
-                  child: Icon(Icons.pets, color: Colors.white.withAlpha(100), size: 40),
-                ),
-              ),
-            ),
-          ),
-
-          // 3. THE BOWL OPENING (The Inner Circle where food sits)
-          Positioned(
-            bottom: 170,
-            child: Container(
-              width: 190,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _ashGrey.withAlpha(100),
-                borderRadius: const BorderRadius.all(Radius.elliptical(95, 20)),
-                border: Border.all(color: Colors.white.withAlpha(200), width: 2),
-                boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)],
-              ),
-            ),
-          ),
-
-          // 4. FOOD PILE (Realistic High-Density Stacking)
-          Positioned(
-            bottom: 180,
-            child: SizedBox(
-              width: 180,
-              height: 120,
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                clipBehavior: Clip.none,
-                children: [
-                  if (provider.bowl.isEmpty)
-                    Text("Bowl is empty", style: TextStyle(color: _ashGrey.withAlpha(150), fontSize: 12, fontStyle: FontStyle.italic))
-                  else
-                    ..._buildPiledFood(provider.bowl),
-                ],
+            top: 10,
+            left: 10,
+            right: 10,
+            height: 195,
+            child: CustomPaint(
+              painter: PetFoodBowlPainter(
+                bowl: provider.bowl,
+                bowlColor: _dustyOlive,
               ),
             ),
           ),
           
-          // 5. RESET BUTTON (Top Right)
+          // 2. RESET BUTTON (Top Right)
           Positioned(
-            top: 16,
-            right: 16,
+            top: 12,
+            right: 12,
             child: InkWell(
               onTap: () => provider.clearBowl(),
+              borderRadius: BorderRadius.circular(14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: _dustyOlive.withAlpha(40),
-                  borderRadius: BorderRadius.circular(20),
+                  color: _dustyOlive.withAlpha(30),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.refresh_rounded, size: 14, color: _dustyOlive),
+                    Icon(Icons.refresh_rounded, size: 13, color: _dustyOlive),
                     const SizedBox(width: 4),
                     Text("RESET", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 10)),
                   ],
@@ -507,100 +447,93 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             ),
           ),
 
-          // 6. INGREDIENT CHIPS (Horizontal list at the very bottom)
+          // 3. SELECTED INGREDIENTS VERTICAL LIST (3-4 viewable items)
           Positioned(
-            bottom: 12,
-            child: SizedBox(
-              width: 300,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: provider.bowl.map((item) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Chip(
-                      label: Text("${item.ingredient.name} (${item.massGrams.toInt()}g)", style: TextStyle(fontSize: 10, color: _darkCharcoal)),
-                      backgroundColor: _getFoodColor(item.ingredient.category).withAlpha(40),
-                      onDeleted: () => provider.removeIngredient(item.ingredient.ingredientId),
-                      deleteIconColor: _darkCharcoal.withAlpha(150),
-                    ),
-                  )).toList(),
-                ),
+            bottom: 10,
+            left: 12,
+            right: 12,
+            child: Container(
+              height: 125,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.withAlpha(18),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.grey.withAlpha(40), width: 1),
               ),
+              child: provider.bowl.isEmpty
+                ? Center(
+                    child: Text(
+                      "Selected ingredients will appear here",
+                      style: TextStyle(color: _ashGrey, fontSize: 11, fontStyle: FontStyle.italic),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: provider.bowl.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 4),
+                    itemBuilder: (context, index) {
+                      final item = provider.bowl[index];
+                      final style = _getFoodBitStyle(item.ingredient.category);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: style.mainColor.withAlpha(25),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: style.mainColor.withAlpha(60), width: 0.8),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: style.mainColor.withAlpha(50),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(style.icon, size: 10, color: style.mainColor),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                item.ingredient.name,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: _darkCharcoal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              "${item.massGrams.toInt()}g",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: style.mainColor,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => provider.removeIngredient(item.ingredient.ingredientId),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 14,
+                                  color: _darkCharcoal.withAlpha(160),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
             ),
           ),
         ],
       ),
     );
-  }
-
-  List<Widget> _buildPiledFood(List<BowlIngredient> bowl) {
-    List<Widget> bits = [];
-
-    // Tight squeeze offsets for bits belonging to a single ingredient pile
-    // Small step increments ensure bits overlap closely into one unified mound
-    const List<Offset> squeezeOffsets = [
-      Offset(0, 0),        // Bit 0: Base center
-      Offset(-7, 4),       // Bit 1: Slightly left & up
-      Offset(7, 4),        // Bit 2: Slightly right & up
-      Offset(-1, 10),      // Bit 3: Stacked center
-      Offset(-9, 15),      // Bit 4: Upper left
-      Offset(9, 15),       // Bit 5: Upper right
-      Offset(0, 20),       // Bit 6: Peak center
-      Offset(-6, 25),      // Bit 7: Peak left
-      Offset(6, 25),       // Bit 8: Peak right
-      Offset(0, 29),       // Bit 9: Topmost
-    ];
-
-    int totalItems = bowl.length;
-
-    for (int itemIdx = 0; itemIdx < totalItems; itemIdx++) {
-      var item = bowl[itemIdx];
-
-      // Determine cluster center X and Y for this ingredient group
-      double clusterCenterX;
-      double clusterCenterY;
-
-      if (totalItems == 1) {
-        clusterCenterX = 90;
-        clusterCenterY = 10;
-      } else if (totalItems == 2) {
-        clusterCenterX = itemIdx == 0 ? 55 : 125;
-        clusterCenterY = 10;
-      } else if (totalItems == 3) {
-        clusterCenterX = itemIdx == 0 ? 40 : (itemIdx == 1 ? 90 : 140);
-        clusterCenterY = itemIdx == 1 ? 16 : 10; // Middle group slightly behind
-      } else if (totalItems == 4) {
-        clusterCenterX = 32 + (itemIdx * 38);
-        clusterCenterY = itemIdx % 2 == 1 ? 16 : 10;
-      } else {
-        // 5+ items arranged in wrap slots
-        int row = itemIdx ~/ 3;
-        int col = itemIdx % 3;
-        clusterCenterX = 40 + (col * 50);
-        clusterCenterY = 8 + (row * 22);
-      }
-
-      // Calculate number of bits based on weight: 10-50g=2, 51-100g=4, 101-150g=6
-      int numBits = (item.massGrams / 50).ceil() * 2;
-
-      for (int i = 0; i < numBits; i++) {
-        Offset offset = squeezeOffsets[i % squeezeOffsets.length];
-
-        double bitX = clusterCenterX + offset.dx - 15; // 15 is half bit width (30)
-        double bitY = clusterCenterY + offset.dy;
-
-        bits.add(
-          Positioned(
-            bottom: bitY,
-            left: bitX,
-            child: _buildFoodBit(item.ingredient),
-          ),
-        );
-      }
-    }
-
-    return bits;
   }
 
   Widget _buildFoodBit(Ingredient ingredient) {
@@ -818,11 +751,10 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   List<Ingredient> get _filteredIngredients {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) {
-      return _allIngredients.take(6).toList(); // Top 6 suggested ingredients
+      return _allIngredients; // Show all suggested ingredients scrollable
     }
     return _allIngredients
         .where((i) => i.name.toLowerCase().contains(query) || i.category.toLowerCase().contains(query))
-        .take(9)
         .toList();
   }
 
@@ -864,57 +796,54 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey),
           ),
           const SizedBox(height: 8),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final double availableWidth = constraints.maxWidth;
-              // 3 per row on standard phone screens (> 300px), else 2
-              final int numColumns = availableWidth > 300 ? 3 : 2;
-              const double spacing = 6.0;
-              final double itemWidth = (availableWidth - (spacing * (numColumns - 1))) / numColumns;
-
-              final displayedList = _filteredIngredients;
-
-              if (displayedList.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text("No matching ingredients found.", style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
-                );
-              }
-
-              return Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                children: displayedList.map((item) {
-                  final style = _getFoodBitStyle(item.category);
-                  return SizedBox(
-                    width: itemWidth,
-                    child: InkWell(
+          Container(
+            height: 150,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey.withAlpha(12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.withAlpha(30), width: 1),
+            ),
+            child: _filteredIngredients.isEmpty
+              ? const Center(
+                  child: Text(
+                    "No matching ingredients found.", 
+                    style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  itemCount: _filteredIngredients.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 6),
+                  itemBuilder: (context, index) {
+                    final item = _filteredIngredients[index];
+                    final style = _getFoodBitStyle(item.category);
+                    return InkWell(
                       onTap: () => _handleIngredientTap(item),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
                           color: style.mainColor.withAlpha(20),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: style.mainColor.withAlpha(50), width: 1),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(3),
+                              padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: style.mainColor.withAlpha(40),
+                                color: style.mainColor.withAlpha(50),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(style.icon, size: 10, color: style.mainColor),
+                              child: Icon(style.icon, size: 12, color: style.mainColor),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 item.name,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: _darkCharcoal,
                                 ),
@@ -922,14 +851,17 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            Icon(
+                              Icons.add_circle_outline_rounded,
+                              size: 18,
+                              color: style.mainColor,
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
-              );
-            },
+                    );
+                  },
+                ),
           ),
         ],
       ),
@@ -949,4 +881,389 @@ class _FoodBitStyle {
     required this.borderRadius,
     required this.icon,
   });
+}
+
+enum _KibbleShape { oval, sphere, leaf }
+
+class _KibblePiece {
+  final double x;
+  final double y;
+  final double angle;
+  final double width;
+  final double height;
+  final Color lightColor;
+  final Color darkColor;
+  final Color outlineColor;
+  final _KibbleShape shape;
+
+  _KibblePiece({
+    required this.x,
+    required this.y,
+    required this.angle,
+    required this.width,
+    required this.height,
+    required this.lightColor,
+    required this.darkColor,
+    required this.outlineColor,
+    required this.shape,
+  });
+}
+
+class _KibbleStyle {
+  final Color lightColor;
+  final Color darkColor;
+  final Color outlineColor;
+  final _KibbleShape shape;
+  final double width;
+  final double height;
+
+  const _KibbleStyle({
+    required this.lightColor,
+    required this.darkColor,
+    required this.outlineColor,
+    required this.shape,
+    required this.width,
+    required this.height,
+  });
+}
+
+class PetFoodBowlPainter extends CustomPainter {
+  final List<BowlIngredient> bowl;
+  final Color bowlColor;
+
+  PetFoodBowlPainter({
+    required this.bowl,
+    required this.bowlColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cx = size.width / 2;
+    final double cy = size.height * 0.40; // Center of bowl rim opening
+
+    final double bowlWidth = size.width * 0.74; // ~210px
+    final double bowlHeight = size.height * 0.52; // ~98px (taller, deeper 3D bowl!)
+    final double openingRx = bowlWidth / 2;
+    final double openingRy = bowlHeight * 0.26; // ~25px
+
+    // 1. Base Shadow under bowl
+    final Paint shadowPaint = Paint()
+      ..color = Colors.black.withAlpha(25)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx, cy + bowlHeight + 6),
+        width: bowlWidth * 0.88,
+        height: 22,
+      ),
+      shadowPaint,
+    );
+
+    // 2. Bowl Outer Body Path (Taller & Deeper Profile)
+    final Path bowlBodyPath = Path();
+    bowlBodyPath.moveTo(cx - openingRx, cy);
+    bowlBodyPath.cubicTo(
+      cx - openingRx * 0.90, cy + bowlHeight * 1.05,
+      cx + openingRx * 0.90, cy + bowlHeight * 1.05,
+      cx + openingRx, cy,
+    );
+    bowlBodyPath.close();
+
+    // Fill Bowl Body using Dusty Olive Morandi Color Gradient
+    final Paint bodyFillPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [bowlColor, _darkenColor(bowlColor, 0.22)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(cx - openingRx, cy, bowlWidth, bowlHeight));
+    canvas.drawPath(bowlBodyPath, bodyFillPaint);
+
+    // Deep Warm Morandi Outline for Bowl Body
+    final Paint outlinePaint = Paint()
+      ..color = _darkenColor(bowlColor, 0.38)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4;
+    canvas.drawPath(bowlBodyPath, outlinePaint);
+
+    // 3. Paw Print Emblem on Front
+    _drawPawEmblem(canvas, Offset(cx, cy + bowlHeight * 0.52));
+
+    // 4. Inner Bowl Cavity Ellipse (Slightly lighter warm grey-olive interior)
+    final Rect openingRect = Rect.fromCenter(
+      center: Offset(cx, cy),
+      width: openingRx * 2,
+      height: openingRy * 2,
+    );
+
+    final Paint cavityPaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 0.9,
+        colors: [
+          _darkenColor(bowlColor, 0.14), // Lighter warm slate-grey center
+          _darkenColor(bowlColor, 0.26), // Soft depth shadow towards rim
+        ],
+      ).createShader(openingRect);
+    canvas.drawOval(openingRect, cavityPaint);
+
+    // Inner Cavity Rim Stroke
+    final Paint innerRimPaint = Paint()
+      ..color = Colors.white.withAlpha(160) // Soft glossy rim highlight
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawOval(openingRect, innerRimPaint);
+
+    // 5. Draw Food Pieces (Organic Kibble Mound inside bowl cavity)
+    if (bowl.isNotEmpty) {
+      final List<_KibblePiece> pieces = _generateKibbles(bowl, cx, cy, openingRx, openingRy);
+
+      // Sort by Y position (back to front depth ordering)
+      pieces.sort((a, b) => a.y.compareTo(b.y));
+
+      for (var piece in pieces) {
+        _drawKibblePiece(canvas, piece);
+      }
+    } else {
+      // Empty bowl label inside cavity
+      final TextPainter tp = TextPainter(
+        text: TextSpan(
+          text: "Bowl is empty",
+          style: TextStyle(
+            color: Colors.white.withAlpha(140),
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2));
+    }
+
+    // 6. Draw Front Rim Lip over base food layer for realistic depth!
+    final Path frontRimPath = Path();
+    frontRimPath.addArc(openingRect, 0, 3.14159); // Bottom half of opening ellipse
+    final Paint frontRimPaint = Paint()
+      ..color = _darkenColor(bowlColor, 0.38)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4;
+    canvas.drawPath(frontRimPath, frontRimPaint);
+  }
+
+  void _drawPawEmblem(Canvas canvas, Offset center) {
+    final Paint emblemPaint = Paint()
+      ..color = Colors.white.withAlpha(180)
+      ..style = PaintingStyle.fill;
+
+    // Main pad
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(center.dx, center.dy + 3), width: 14, height: 11),
+      emblemPaint,
+    );
+    // Toe pads
+    canvas.drawCircle(Offset(center.dx - 8, center.dy - 4), 3, emblemPaint);
+    canvas.drawCircle(Offset(center.dx - 3, center.dy - 8), 3, emblemPaint);
+    canvas.drawCircle(Offset(center.dx + 3, center.dy - 8), 3, emblemPaint);
+    canvas.drawCircle(Offset(center.dx + 8, center.dy - 4), 3, emblemPaint);
+  }
+
+  void _drawKibblePiece(Canvas canvas, _KibblePiece piece) {
+    canvas.save();
+    canvas.translate(piece.x, piece.y);
+    canvas.rotate(piece.angle);
+
+    final double rx = piece.width / 2;
+    final double ry = piece.height / 2;
+    final Rect kibbleRect = Rect.fromLTRB(-rx, -ry, rx, ry);
+
+    // 3D fill gradient with specular highlight
+    final Paint fillPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.35, -0.35),
+        radius: 0.85,
+        colors: [piece.lightColor, piece.darkColor],
+      ).createShader(kibbleRect);
+
+    // Dark vector outline (Screenshot 2 & 3 style)
+    final Paint outlinePaint = Paint()
+      ..color = piece.outlineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+
+    if (piece.shape == _KibbleShape.oval) {
+      canvas.drawOval(kibbleRect, fillPaint);
+      canvas.drawOval(kibbleRect, outlinePaint);
+    } else if (piece.shape == _KibbleShape.leaf) {
+      final Path leafPath = Path();
+      leafPath.moveTo(0, -ry);
+      leafPath.quadraticBezierTo(rx * 1.2, -ry * 0.2, rx, ry * 0.8);
+      leafPath.quadraticBezierTo(0, ry * 1.2, -rx, ry * 0.8);
+      leafPath.quadraticBezierTo(-rx * 1.2, -ry * 0.2, 0, -ry);
+      leafPath.close();
+
+      canvas.drawPath(leafPath, fillPaint);
+      canvas.drawPath(leafPath, outlinePaint);
+    } else {
+      // Sphere / Meatball kibble
+      final RRect rrect = RRect.fromRectAndRadius(kibbleRect, Radius.circular(rx * 0.6));
+      canvas.drawRRect(rrect, fillPaint);
+      canvas.drawRRect(rrect, outlinePaint);
+    }
+
+    // Top highlight specular spot
+    final Paint spotPaint = Paint()
+      ..color = Colors.white.withAlpha(90)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(-rx * 0.3, -ry * 0.3), rx * 0.25, spotPaint);
+
+    canvas.restore();
+  }
+
+  List<_KibblePiece> _generateKibbles(
+    List<BowlIngredient> bowl,
+    double cx,
+    double cy,
+    double rx,
+    double ry,
+  ) {
+    List<_KibblePiece> list = [];
+
+    int globalPieceIndex = 0;
+
+    for (var item in bowl) {
+      final style = _getKibbleStyle(item.ingredient.category);
+
+      // Number of kibbles based on mass (min 3, max 14 per ingredient)
+      int numPieces = (item.massGrams / 15).ceil().clamp(3, 14);
+
+      // Deterministic hash seed based on ingredient ID for position stability
+      int seed = item.ingredient.ingredientId.hashCode;
+
+      for (int i = 0; i < numPieces; i++) {
+        // Pseudo-random deterministic offsets
+        double pseudo1 = (((seed + i * 17) % 100) / 100.0) - 0.5; // -0.5 to +0.5
+        double pseudo2 = (((seed + i * 31) % 100) / 100.0) - 0.5; // -0.5 to +0.5
+
+        // Layer mounding logic
+        int layer = i ~/ 4;
+        
+        double xOffset = (pseudo1 * 1.2 * rx) * (1.0 - (layer * 0.15));
+        double yOffset = (pseudo2 * 0.6 * ry) - (layer * 9.0) + (globalPieceIndex % 3 == 0 ? -4 : 2);
+
+        xOffset = xOffset.clamp(-rx * 0.8, rx * 0.8);
+
+        double angle = (-0.35 + (((seed + i * 13) % 70) / 100.0));
+
+        list.add(_KibblePiece(
+          x: cx + xOffset,
+          y: cy + yOffset,
+          angle: angle,
+          width: style.width,
+          height: style.height,
+          lightColor: style.lightColor,
+          darkColor: style.darkColor,
+          outlineColor: style.outlineColor,
+          shape: style.shape,
+        ));
+
+        globalPieceIndex++;
+      }
+    }
+
+    return list;
+  }
+
+  _KibbleStyle _getKibbleStyle(String category) {
+    String c = category.toLowerCase();
+
+    // 1. VEGETABLES / LEAFY (Broccoli, Carrots, Sweet Potato)
+    if (c.contains('veg') || c.contains('green') || c.contains('leafy') || c.contains('broccoli')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFF66BB6A), // Fresh leaf green
+        darkColor: Color(0xFF2E7D32),  // Deep forest green
+        outlineColor: Color(0xFF1B5E20), // Dark green outline
+        shape: _KibbleShape.leaf,
+        width: 26,
+        height: 18,
+      );
+    }
+
+    // 2. POULTRY / CHICKEN / TURKEY
+    if (c.contains('poultry') || c.contains('chicken') || c.contains('turkey')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFFFA726), // Golden warm chicken
+        darkColor: Color(0xFFE65100),  // Roasted amber
+        outlineColor: Color(0xFF8D4000), // Dark outline
+        shape: _KibbleShape.oval,
+        width: 28,
+        height: 18,
+      );
+    }
+
+    // 3. MEAT / BEEF / ORGAN MEAT
+    if (c.contains('meat') || c.contains('beef') || c.contains('organ')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFF8D6E63), // Rich beef roast
+        darkColor: Color(0xFF4E342E),  // Deep chocolate brown
+        outlineColor: Color(0xFF2C1B18), // Dark outline
+        shape: _KibbleShape.sphere,
+        width: 24,
+        height: 20,
+      );
+    }
+
+    // 4. FISH / SALMON
+    if (c.contains('fish') || c.contains('salmon') || c.contains('seafood')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFFF8A65), // Tender coral salmon
+        darkColor: Color(0xFFD84315),  // Deep salmon red
+        outlineColor: Color(0xFF801A00), // Dark outline
+        shape: _KibbleShape.oval,
+        width: 26,
+        height: 16,
+      );
+    }
+
+    // 5. PROTEIN / EGG
+    if (c.contains('egg') || c.contains('protein')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFFFE082), // Sunny egg yolk
+        darkColor: Color(0xFFFFB300),  // Deep golden yolk
+        outlineColor: Color(0xFFB27B00), // Outline
+        shape: _KibbleShape.sphere,
+        width: 22,
+        height: 22,
+      );
+    }
+
+    // 6. FRUIT / BERRY
+    if (c.contains('fruit') || c.contains('berry')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFEF9A9A), // Ruby berry
+        darkColor: Color(0xFFC62828),  // Deep berry red
+        outlineColor: Color(0xFF7F0000), // Dark outline
+        shape: _KibbleShape.sphere,
+        width: 20,
+        height: 20,
+      );
+    }
+
+    // DEFAULT / GRAINS
+    return const _KibbleStyle(
+      lightColor: Color(0xFFFFCC80), // Warm wheat grain
+      darkColor: Color(0xFFFB8C00),  // Amber grain
+      outlineColor: Color(0xFF9E4700), // Outline
+      shape: _KibbleShape.oval,
+      width: 24,
+      height: 16,
+    );
+  }
+
+  Color _darkenColor(Color c, double amount) {
+    final hsl = HSLColor.fromColor(c);
+    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+    return hslDark.toColor();
+  }
+
+  @override
+  bool shouldRepaint(covariant PetFoodBowlPainter oldDelegate) => true;
 }
