@@ -9,6 +9,7 @@ import '../../models/pet_model.dart';
 import '../../services/pet_service.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/image_helper.dart';
+import '../health/health_issues_screen.dart';
 
 class PetDetailsScreen extends StatefulWidget {
   final String petId;
@@ -22,7 +23,6 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
   // Morandi Palette
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _powderPetal = const Color(0xFFFFE8D6);
-  final Color _lightBronze = const Color(0xFFCB997E);
   final Color _desertSand = const Color(0xFFDDBEA9);
   final Color _drySage = const Color(0xFFA5A58D);
   final Color _ashGrey = const Color(0xFFB7B7A4);
@@ -93,6 +93,8 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                 _buildProfileSection(pet),
                 const SizedBox(height: 32),
                 _buildAllergySection(pet),
+                const SizedBox(height: 32),
+                _buildHealthIssuesSection(uid, pet),
                 const SizedBox(height: 32),
                 _buildMedicalHistoryPlaceholder(),
                 const SizedBox(height: 50),
@@ -215,6 +217,69 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                   child: Text(a, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                 )).toList(),
               ),
+      ],
+    );
+  }
+
+  Widget _buildHealthIssuesSection(String uid, PetProfile pet) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _sectionTitle("HEALTH ISSUES"),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HealthIssuesScreen(pet: pet),
+                  ),
+                );
+              },
+              child: Text("View All", style: TextStyle(color: _powderPetal, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBFBFB), // Creamy white
+            borderRadius: BorderRadius.circular(24), 
+            border: Border.all(color: Colors.white.withAlpha(50)),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.monitor_heart_rounded, size: 40, color: _ashGrey.withAlpha(100)),
+              const SizedBox(height: 12),
+              Text(
+                "Track ongoing health conditions, symptoms, and vet advice here.", 
+                textAlign: TextAlign.center, 
+                style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14)
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HealthIssuesScreen(pet: pet),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: const Text("Log Health Issue", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _dustyOlive,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -448,7 +513,13 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 16, fontWeight: FontWeight.w600)),
                       value: selectedAllergens.contains(allergen) && !hasNoAllergies,
                       onChanged: hasNoAllergies ? null : (val) {
-                        setMState(() { if (val!) selectedAllergens.add(allergen); else selectedAllergens.remove(allergen); });
+                        setMState(() { 
+                          if (val!) {
+                            selectedAllergens.add(allergen); 
+                          } else {
+                            selectedAllergens.remove(allergen);
+                          }
+                        });
                       },
                       activeColor: _dustyOlive, checkColor: Colors.white, controlAffinity: ListTileControlAffinity.leading, dense: true, contentPadding: EdgeInsets.zero,
                     ),
@@ -458,7 +529,13 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                   title: Row(children: [const Text("Others: ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), Expanded(child: TextField(controller: otherAllergenCtrl, enabled: !hasNoAllergies, decoration: InputDecoration(hintText: "Specify...", hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)), isDense: true, border: InputBorder.none), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)))]),
                   value: selectedAllergens.contains("Other") && !hasNoAllergies,
                   onChanged: hasNoAllergies ? null : (val) {
-                    setMState(() { if (val!) selectedAllergens.add("Other"); else selectedAllergens.remove("Other"); });
+                    setMState(() { 
+                      if (val!) {
+                        selectedAllergens.add("Other"); 
+                      } else {
+                        selectedAllergens.remove("Other");
+                      }
+                    });
                   },
                   activeColor: _dustyOlive, checkColor: Colors.white, controlAffinity: ListTileControlAffinity.leading, dense: true, contentPadding: EdgeInsets.zero,
                 ),
@@ -479,8 +556,11 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       final uid = Provider.of<UserProvider>(context, listen: false).uid;
                       
                       PetCondition finalCond = selectedReproductive == "Neutered/Spayed" ? PetCondition.neutered : PetCondition.intact;
-                      if (isNursing) finalCond = PetCondition.nursing;
-                      else if (isPregnant) finalCond = PetCondition.pregnant;
+                      if (isNursing) {
+                        finalCond = PetCondition.nursing;
+                      } else if (isPregnant) {
+                        finalCond = PetCondition.pregnant;
+                      }
 
                       List<String> allergens = List.from(selectedAllergens);
                       if (allergens.contains("Other") && otherAllergenCtrl.text.isNotEmpty) {
@@ -543,11 +623,15 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             const SizedBox(height: 30),
             _sourceTile(Icons.camera_alt_rounded, "Take a Photo", () async {
               final image = await _picker.pickImage(source: ImageSource.camera);
-              onImagePicked(image); setMState(() {}); Navigator.pop(context);
+              onImagePicked(image); 
+              setMState(() {}); 
+              if (context.mounted) Navigator.pop(context);
             }),
             _sourceTile(Icons.photo_library_rounded, "Choose from Gallery", () async {
               final image = await _picker.pickImage(source: ImageSource.gallery);
-              onImagePicked(image); setMState(() {}); Navigator.pop(context);
+              onImagePicked(image); 
+              setMState(() {}); 
+              if (context.mounted) Navigator.pop(context);
             }),
             const SizedBox(height: 10),
             TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16))),
