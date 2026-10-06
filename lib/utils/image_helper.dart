@@ -1,31 +1,42 @@
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'dart:convert';
+import 'package:flutter/material.dart';
 
 class ImageHelper {
-  /// Copies a temporary image file picked by ImagePicker into permanent app storage
-  /// so that Android / iOS operating systems do not clean it up from temporary cache.
-  static Future<String?> saveImagePermanently(String? tempPath, String petId) async {
-    if (tempPath == null || tempPath.isEmpty) return null;
+  /// Converts an image file to a base64 string so it can be stored directly
+  /// in Firestore, allowing it to sync across all devices easily.
+  static Future<String?> imageToBase64(String? imagePath) async {
+    if (imagePath == null || imagePath.isEmpty) return null;
+    
+    // If it's already a base64 string or a network URL, just return it
+    if (imagePath.startsWith('data:image') || imagePath.startsWith('http')) {
+      return imagePath;
+    }
 
-    final tempFile = File(tempPath);
-    if (!await tempFile.exists()) return tempPath;
+    final file = File(imagePath);
+    if (!await file.exists()) return imagePath;
 
     try {
-      final Directory appDocDir = await getApplicationDocumentsDirectory();
-      final Directory petPhotosDir = Directory('${appDocDir.path}/pet_photos');
-
-      if (!await petPhotosDir.exists()) {
-        await petPhotosDir.create(recursive: true);
-      }
-
-      final String fileName = 'pet_${petId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final String permanentPath = '${petPhotosDir.path}/$fileName';
-
-      final File permanentFile = await tempFile.copy(permanentPath);
-      return permanentFile.path;
+      final bytes = await file.readAsBytes();
+      final base64Str = base64Encode(bytes);
+      return 'data:image/jpeg;base64,$base64Str';
     } catch (e) {
-      // Fallback to original path if copy fails
-      return tempPath;
+      return imagePath;
+    }
+  }
+
+  /// Returns the appropriate ImageProvider (Memory, Network, or File)
+  /// based on the imageUrl string format.
+  static ImageProvider? getImageProvider(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return null;
+
+    if (imageUrl.startsWith('data:image')) {
+      final base64Str = imageUrl.split(',').last;
+      return MemoryImage(base64Decode(base64Str));
+    } else if (imageUrl.startsWith('http')) {
+      return NetworkImage(imageUrl);
+    } else {
+      return FileImage(File(imageUrl));
     }
   }
 }

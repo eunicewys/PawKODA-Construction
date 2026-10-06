@@ -107,14 +107,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
   }
 
   Widget _buildHeader(PetProfile pet) {
-    ImageProvider? imgProvider;
-    if (pet.imageUrl != null && pet.imageUrl!.isNotEmpty) {
-      if (pet.imageUrl!.startsWith('http')) {
-        imgProvider = NetworkImage(pet.imageUrl!);
-      } else {
-        imgProvider = FileImage(File(pet.imageUrl!));
-      }
-    }
+    ImageProvider? imgProvider = ImageHelper.getImageProvider(pet.imageUrl);
 
     return Container(
       width: double.infinity,
@@ -365,8 +358,68 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setMState) => Container(
-          height: MediaQuery.of(context).size.height * 0.9,
+        builder: (context, setMState) {
+          bool checkUnsavedChanges() {
+            if (nameCtrl.text.trim() != pet.name) return true;
+            if (selectedSpecies != pet.species) return true;
+            if (selectedBreed != pet.breed) return true;
+            if (selectedGender != pet.gender) return true;
+            if ((double.tryParse(weightCtrl.text) ?? 0.0) != pet.weightKg) return true;
+            if (selectedBirthDate != pet.birthDate) return true;
+            if (petImage != null) return true;
+
+            PetCondition finalCond = selectedReproductive == "Neutered/Spayed" ? PetCondition.neutered : PetCondition.intact;
+            if (isNursing) {
+              finalCond = PetCondition.nursing;
+            } else if (isPregnant) {
+              finalCond = PetCondition.pregnant;
+            }
+            if (finalCond != pet.condition) return true;
+
+            List<String> allergens = List.from(selectedAllergens);
+            if (allergens.contains("Other") && otherAllergenCtrl.text.isNotEmpty) {
+              allergens.remove("Other");
+              allergens.add(otherAllergenCtrl.text.trim());
+            }
+            if (allergens.length != pet.allergens.length) return true;
+            for (var a in allergens) {
+              if (!pet.allergens.contains(a)) return true;
+            }
+            return false;
+          }
+
+          return PopScope(
+            canPop: false,
+            onPopInvoked: (didPop) async {
+              if (didPop) return;
+              if (isSaving || !checkUnsavedChanges()) {
+                Navigator.of(context).pop();
+                return;
+              }
+              final bool? shouldPop = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  title: Text("Unsaved Changes", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
+                  content: const Text("You have unsaved changes. Are you sure you want to discard them?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text("Keep Editing", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold)),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text("Discard", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              );
+              if (shouldPop == true && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.9,
           decoration: BoxDecoration(color: _desertSand, borderRadius: const BorderRadius.vertical(top: Radius.circular(40))),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
           child: SingleChildScrollView(
@@ -384,7 +437,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                         color: Colors.white, shape: BoxShape.circle, border: Border.all(color: _ashGrey, width: 2),
                         image: petImage != null 
                             ? DecorationImage(image: FileImage(File(petImage!.path)), fit: BoxFit.cover)
-                            : (pet.imageUrl != null ? DecorationImage(image: pet.imageUrl!.startsWith('http') ? NetworkImage(pet.imageUrl!) : FileImage(File(pet.imageUrl!)) as ImageProvider, fit: BoxFit.cover) : null),
+                            : (pet.imageUrl != null ? DecorationImage(image: ImageHelper.getImageProvider(pet.imageUrl)!, fit: BoxFit.cover) : null),
                       ),
                       child: (petImage == null && pet.imageUrl == null) ? Icon(Icons.add_a_photo, color: _ashGrey, size: 40) : null,
                     ),
@@ -568,13 +621,10 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                         allergens.add(otherAllergenCtrl.text.trim());
                       }
 
-                      // Save image to permanent app documents storage if a new image was picked
+                      // Save image to Base64 so it syncs across devices
                       String? permanentPath = pet.imageUrl;
                       if (petImage != null) {
-                        permanentPath = await ImageHelper.saveImagePermanently(
-                          petImage!.path, 
-                          pet.id,
-                        );
+                        permanentPath = await ImageHelper.imageToBase64(petImage!.path);
                       }
 
                       final updatedPet = PetProfile(
@@ -605,8 +655,10 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             ),
           ),
         ),
-      ),
-    );
+      ); // PopScope
+      }, // StatefulBuilder builder
+      ), // StatefulBuilder
+    ); // showModalBottomSheet
   }
 
   void _showImageSourceSheet(StateSetter setMState, Function(XFile?) onImagePicked) {
@@ -622,13 +674,23 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             const Text("Choose Photo Source", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D3142))),
             const SizedBox(height: 30),
             _sourceTile(Icons.camera_alt_rounded, "Take a Photo", () async {
-              final image = await _picker.pickImage(source: ImageSource.camera);
+              final image = await _picker.pickImage(
+                source: ImageSource.camera,
+                maxWidth: 512,
+                maxHeight: 512,
+                imageQuality: 70,
+              );
               onImagePicked(image); 
               setMState(() {}); 
               if (context.mounted) Navigator.pop(context);
             }),
             _sourceTile(Icons.photo_library_rounded, "Choose from Gallery", () async {
-              final image = await _picker.pickImage(source: ImageSource.gallery);
+              final image = await _picker.pickImage(
+                source: ImageSource.gallery,
+                maxWidth: 512,
+                maxHeight: 512,
+                imageQuality: 70,
+              );
               onImagePicked(image); 
               setMState(() {}); 
               if (context.mounted) Navigator.pop(context);

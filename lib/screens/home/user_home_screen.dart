@@ -14,6 +14,7 @@ import '../../utils/image_helper.dart';
 import '../login_screen.dart';
 import '../nutrition/nutrition_engine_screen.dart';
 import '../pet/pet_details_screen.dart';
+import '../health/health_screen.dart';
 import '../widgets/fringe_header.dart';
 
 /// UserHomeScreen: Redesigned dashboard for Pet Owners.
@@ -441,8 +442,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         }
 
                         PetCondition finalCond = selectedReproductive == "Neutered/Spayed" ? PetCondition.neutered : PetCondition.intact;
-                        if (isNursing) finalCond = PetCondition.nursing;
-                        else if (isPregnant) finalCond = PetCondition.pregnant;
+                        if (isNursing) {
+                          finalCond = PetCondition.nursing;
+                        } else if (isPregnant) {
+                          finalCond = PetCondition.pregnant;
+                        }
 
                         List<String> allergens = List.from(selectedAllergens);
                         if (allergens.contains("Other") && otherAllergenCtrl.text.isNotEmpty) {
@@ -842,13 +846,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           }
                         }
 
-                        // Save image to permanent app documents storage so OS won't clean it up from temp cache
+                          // Save image to Base64 so it works across devices
                         String? permanentPath;
                         if (petImage != null) {
-                          permanentPath = await ImageHelper.saveImagePermanently(
-                            petImage!.path, 
-                            DateTime.now().millisecondsSinceEpoch.toString()
-                          );
+                          permanentPath = await ImageHelper.imageToBase64(petImage!.path);
                         }
 
                         final newPet = PetProfile(
@@ -922,30 +923,45 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               icon: Icons.camera_alt_rounded,
               label: "Take a Photo",
               onTap: () async {
-                final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+                final XFile? image = await _picker.pickImage(
+                  source: ImageSource.camera,
+                  maxWidth: 512, // Compress image size
+                  maxHeight: 512,
+                  imageQuality: 70,
+                );
                 onImagePicked(image);
                 setMState(() {});
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               }
             ),
             _buildSourceTile(
               icon: Icons.photo_library_rounded,
               label: "Choose from Gallery",
               onTap: () async {
-                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                final XFile? image = await _picker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 512, // Compress image size
+                  maxHeight: 512,
+                  imageQuality: 70,
+                );
                 onImagePicked(image);
                 setMState(() {});
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               }
             ),
             _buildSourceTile(
               icon: Icons.folder_rounded,
               label: "Browse Files",
               onTap: () async {
-                final XFile? image = await _picker.pickImage(source: ImageSource.gallery); // Fallback to gallery for browse
+                final XFile? image = await _picker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 512,
+                  maxHeight: 512,
+                  imageQuality: 70,
+                ); // Fallback to gallery for browse
                 onImagePicked(image);
                 setMState(() {});
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               }
             ),
             const SizedBox(height: 10),
@@ -1117,7 +1133,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         debugPrint("DEBUG: uid=$uid, petsCount=${pets.length}");
         final views = [
           _buildDashboard(context, pets),
-          _buildPlaceholderView("Health Records", Icons.favorite, _drySage),
+          HealthScreen(onBackPressed: () => setState(() => _selectedIndex = 0)),
           _buildPlaceholderView("Bookings", Icons.calendar_month, _desertSand),
           _buildProfileView(context)
         ];
@@ -1300,14 +1316,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     required String? imageUrl,
     required BuildContext context, // Added context for dialogs
   }) {
-    ImageProvider? imgProvider;
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      if (imageUrl.startsWith('http')) {
-        imgProvider = NetworkImage(imageUrl);
-      } else {
-        imgProvider = FileImage(File(imageUrl));
-      }
-    }
+    ImageProvider? imgProvider = ImageHelper.getImageProvider(imageUrl);
 
     return Transform.scale(
       scale: scale, 

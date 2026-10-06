@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 class FringeHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
-  final VoidCallback onBack;
+  final VoidCallback? onBack;
 
   const FringeHeader({
     super.key,
     required this.title,
     this.subtitle,
-    required this.onBack,
+    this.onBack,
   });
 
   @override
@@ -46,10 +46,13 @@ class FringeHeader extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
-                        onPressed: onBack,
-                      ),
+                      if (onBack != null)
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                          onPressed: onBack,
+                        )
+                      else
+                        const SizedBox(width: 16), // Padding if no back button
                       const SizedBox(width: 6),
                       Expanded(
                         child: Column(
