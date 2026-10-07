@@ -135,22 +135,47 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
           Text(pet.name, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: _darkCharcoal)),
           Text("${pet.breed} • ${pet.species.name.toUpperCase()}", style: TextStyle(fontSize: 16, color: _ashGrey, fontWeight: FontWeight.w500)),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: pet.isHealthy ? Colors.green.withAlpha(30) : _errorCoral.withAlpha(30),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(radius: 4, backgroundColor: pet.isHealthy ? Colors.green : _errorCoral),
-                const SizedBox(width: 8),
-                Text(
-                  pet.isHealthy ? "HEALTHY" : "NEEDS ATTENTION",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: pet.isHealthy ? Colors.green : _errorCoral),
-                ),
-              ],
+          InkWell(
+            onTap: pet.isHealthy == null ? () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => HealthIssuesScreen(pet: pet)));
+            } : null,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: pet.isHealthy == null 
+                    ? Colors.transparent
+                    : (pet.isHealthy! ? Colors.green.withAlpha(30) : _errorCoral.withAlpha(30)),
+                borderRadius: BorderRadius.circular(20),
+                border: pet.isHealthy == null 
+                    ? Border.all(color: _ashGrey.withAlpha(100), width: 1.5) 
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (pet.isHealthy != null)
+                    CircleAvatar(radius: 4, backgroundColor: pet.isHealthy! ? Colors.green : _errorCoral),
+                  if (pet.isHealthy != null)
+                    const SizedBox(width: 8),
+                  Text(
+                    pet.isHealthy == null 
+                        ? "LOG HEALTH NOW" 
+                        : (pet.isHealthy! ? "HEALTHY" : "NEEDS ATTENTION"),
+                    style: TextStyle(
+                      fontSize: 12, 
+                      fontWeight: FontWeight.bold, 
+                      color: pet.isHealthy == null 
+                          ? _ashGrey
+                          : (pet.isHealthy! ? Colors.green : _errorCoral)
+                    ),
+                  ),
+                  if (pet.isHealthy == null) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _ashGrey),
+                  ]
+                ],
+              ),
             ),
           ),
         ],

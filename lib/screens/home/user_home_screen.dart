@@ -1144,7 +1144,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Widget _buildDashboard(BuildContext context, List<PetProfile> pets) {
     final userName = context.watch<UserProvider>().displayName ?? 'Friend';
-    final healthyCount = pets.where((p) => p.isHealthy).length;
+    final healthyCount = pets.where((p) => p.isHealthy == true).length;
+    final attentionCount = pets.where((p) => p.isHealthy == false).length;
     return Column(
       children: [
         // Static Top Wave Fringe Header (pinned at top)
@@ -1170,7 +1171,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       const SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text("${pets.length} registered:", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text("$healthyCount healthy; ${pets.length - healthyCount} needs attention", style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14, fontWeight: FontWeight.w500)),
+                        Text("$healthyCount healthy; $attentionCount needs attention", style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14, fontWeight: FontWeight.w500)),
                       ])),
                     ]),
                   ),
@@ -1216,7 +1217,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         breed: pet.breed, 
                         age: "${y}y, ${m}m", 
                         weight: "${pet.weightKg} kg", 
-                        isHealthy: pet.isHealthy, 
+                        isHealthy: pet.isHealthy,  
                         imageUrl: pet.imageUrl,
                         context: context,
                       ),
@@ -1312,7 +1313,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     required String breed, 
     required String age, 
     required String weight, 
-    required bool isHealthy, 
+    required bool? isHealthy, 
     required String? imageUrl,
     required BuildContext context, // Added context for dialogs
   }) {
@@ -1376,16 +1377,27 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         color: Colors.white.withAlpha(220), 
                         borderRadius: BorderRadius.circular(20), 
                         boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 5)],
+                        border: isHealthy == null ? Border.all(color: _ashGrey.withAlpha(100), width: 1.5) : null,
                       ), 
                       child: Row(
                         mainAxisSize: MainAxisSize.min, 
                         children: [
-                          CircleAvatar(radius: 4, backgroundColor: isHealthy ? Colors.green : Colors.red), 
-                          const SizedBox(width: 6), 
+                          if (isHealthy != null)
+                            CircleAvatar(radius: 4, backgroundColor: isHealthy ? Colors.green : Colors.red), 
+                          if (isHealthy != null)
+                            const SizedBox(width: 6), 
                           Text(
-                            isHealthy ? "Healthy" : "Needs Attention", 
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isHealthy ? Colors.green : Colors.red),
+                            isHealthy == null ? "Log Health Now" : (isHealthy ? "Healthy" : "Needs Attention"), 
+                            style: TextStyle(
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold, 
+                              color: isHealthy == null ? _darkCharcoal : (isHealthy ? Colors.green : Colors.red)
+                            ),
                           ),
+                          if (isHealthy == null) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_ios_rounded, size: 8, color: _darkCharcoal),
+                          ]
                         ],
                       ),
                     ),

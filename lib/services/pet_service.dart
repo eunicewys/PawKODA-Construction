@@ -45,6 +45,16 @@ class PetService {
         .update(pet.toMap());
   }
 
+  /// Updates only the health status flag of a pet in Firestore (fast & lightweight).
+  Future<void> updatePetHealthStatus(String userId, String petId, bool? isHealthy) async {
+    await _db
+        .collection('USERS')
+        .doc(userId)
+        .collection('PETS')
+        .doc(petId)
+        .update({'isHealthy': isHealthy});
+  }
+
   /// Streams a single pet's data from Firestore.
   Stream<PetProfile?> streamPet(String userId, String petId) {
     return _db

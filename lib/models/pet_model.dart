@@ -25,7 +25,7 @@ class PetProfile {
   final List<String> allergens;
   final String breed;
   final String? imageUrl;
-  final bool isHealthy;
+  final bool? isHealthy; // Null means not logged yet
 
   PetProfile({
     required this.id,
@@ -39,7 +39,7 @@ class PetProfile {
     required this.allergens,
     this.breed = "Unknown",
     this.imageUrl,
-    this.isHealthy = true,
+    this.isHealthy, // Defaults to null
   });
 
   // Helper to calculate age in months dynamically
@@ -100,7 +100,7 @@ class PetProfile {
       allergens: List<String>.from(map['allergens'] ?? []),
       breed: map['breed'] ?? 'Unknown',
       imageUrl: map['imageUrl'],
-      isHealthy: map['isHealthy'] ?? true,
+      isHealthy: map['isHealthy'], // Can be null
     );
   }
 }
