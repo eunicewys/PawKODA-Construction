@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/pet_model.dart';
+import '../models/disease_model.dart';
 
 class PetService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -45,14 +46,20 @@ class PetService {
         .update(pet.toMap());
   }
 
-  /// Updates only the health status flag of a pet in Firestore (fast & lightweight).
-  Future<void> updatePetHealthStatus(String userId, String petId, bool? isHealthy) async {
+  /// Updates only the health status flag & active disease of a pet in Firestore (fast & lightweight).
+  Future<void> updatePetHealthStatus(String userId, String petId, bool? isHealthy, {DiseaseType? activeDisease}) async {
+    Map<String, dynamic> updateData = {'isHealthy': isHealthy};
+    if (activeDisease != null) {
+      updateData['activeDisease'] = activeDisease.name;
+    } else if (isHealthy == true) {
+      updateData['activeDisease'] = DiseaseType.none.name;
+    }
     await _db
         .collection('USERS')
         .doc(userId)
         .collection('PETS')
         .doc(petId)
-        .update({'isHealthy': isHealthy});
+        .update(updateData);
   }
 
   /// Streams a single pet's data from Firestore.

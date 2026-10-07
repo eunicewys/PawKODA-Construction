@@ -4,10 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/pet_model.dart';
 import '../../models/ingredient_model.dart';
+import '../../models/disease_model.dart';
 import '../../providers/nutritional_provider.dart';
-import '../home_screen.dart';
 import '../widgets/fringe_header.dart';
-import 'widgets/caloric_status_banner.dart';
+import 'widgets/caloric_adequacy_banner.dart';
+import 'widgets/clinical_warning_box.dart';
 import 'widgets/safety_alert_dialog.dart';
 
 class NutritionEngineScreen extends StatefulWidget {
@@ -18,11 +19,10 @@ class NutritionEngineScreen extends StatefulWidget {
 }
 
 class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
-  // Official Morandi Colors
+  // Official Morandi Palette
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _powderPetal = const Color(0xFFFFE8D6);
   final Color _desertSand = const Color(0xFFDDBEA9);
-  final Color _errorCoral = const Color(0xFFB56576); 
   final Color _ashGrey = const Color(0xFFB7B7A4);
   final Color _darkCharcoal = const Color(0xFF2D3142);
 
@@ -58,7 +58,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
       showDialog(
         context: context,
         builder: (context) => SafetyAlertDialog(
-          title: "Safety Alert!",
+          title: "Safety Interceptor Alert!",
           message: warning,
           alternatives: _allIngredients
               .where((i) => provider.checkIngredientSafety(i) == null && i.category == item.category)
@@ -80,7 +80,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
         builder: (context, setMState) {
           final scaled = item.nutrientsPer100g.scale(selectedMass);
           return AlertDialog(
-            backgroundColor: const Color(0xFFFBFBFB), // Creamy white
+            backgroundColor: const Color(0xFFFBFBFB),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: Text("Add ${item.name}", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
             content: Column(
@@ -157,28 +157,34 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. METABOLIC PROFILE HEADER
+                  // 1. TOP METABOLIC CARD & CLINICAL STATUS BADGE
                   _buildMetabolicHeader(pet, provider),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // 2. INTERACTIVE BOWL WIDGET
                   _buildFeedingBowl(provider),
                   const SizedBox(height: 24),
 
-                  // 3. ADD INGREDIENTS SECTION (Placed right below bowl for instant visual feedback)
+                  // 3. ADD INGREDIENTS SEARCH & SELECTION
                   _buildAddIngredientsSection(),
                   const SizedBox(height: 24),
 
-                  // 4. NUTRIENT ANALYSIS PROGRESS BARS
+                  // 4. NUTRIENT ANALYSIS & CUMULATIVE CALORIES
                   _buildNutrientAnalysis(provider),
                   
-                  // 5 & 6. STATUS BANNER
+                  // 5. CALORIC ADEQUACY BANNER, CLINICAL WARNING BOX & ACTION BUTTONS
                   if (provider.bowl.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    _buildCaloricDisplay(provider),
+                    CaloricAdequacyBanner(
+                      adequacyRatio: provider.adequacyRatio,
+                      petName: pet.name,
+                      isSickPet: provider.isSickPet,
+                    ),
+                    ClinicalWarningBox(warnings: provider.clinicalWarnings),
+                    _buildBottomActionButtons(provider),
                   ],
 
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
@@ -188,13 +194,16 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
     );
   }
 
-
-
+  // -----------------------------------------------------------------
+  // 1. TOP METABOLIC CARD WITH DYNAMIC STATUS BADGE
+  // -----------------------------------------------------------------
   Widget _buildMetabolicHeader(PetProfile pet, NutritionalProvider provider) {
     String conditionLabel = pet.condition.name.toUpperCase();
     if (pet.gender == Gender.female && pet.condition == PetCondition.intact) {
       conditionLabel = "INTACT";
     }
+
+    final diseaseProfile = DiseaseProfile.getProfile(pet.activeDisease);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
@@ -216,13 +225,57 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
+
+          // DYNAMIC STATUS BADGE
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: provider.isSickPet 
+                  ? const Color(0xFFCB997E) // Coral / Light Bronze
+                  : const Color(0xFF759C86), // Sage Green
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      provider.isSickPet ? Icons.healing_rounded : Icons.check_circle_outline_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        provider.isSickPet
+                            ? "Clinical Mode: ${diseaseProfile.displayName} • Therapeutic Constraints Active"
+                            : "Status: Healthy • Standard Life-Stage Engine",
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+                if (provider.isSickPet && diseaseProfile.requiresIdealWeight) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    "Target Weight: ${provider.idealWeight.toStringAsFixed(1)} kg (BCS ${pet.bodyConditionScore}/9)",
+                    style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _profileStat("Met. Weight", "${pet.weightKg} kg"),
+                _profileStat("Weight", "${pet.weightKg} kg"),
                 const SizedBox(width: 16),
                 _profileStat("Gender", pet.gender.name.toUpperCase()),
                 const SizedBox(width: 16),
@@ -230,16 +283,17 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          // Highlighted Daily Goal (DER)
+          const SizedBox(height: 18),
+          
           _bigStatBox("DAILY ENERGY GOAL (DER)", "${provider.targetDER.toInt()} kcal/day", isPrimary: true),
           const SizedBox(height: 10),
-          // Supporting Resting Baseline (RER)
           _bigStatBox("RESTING BASELINE (RER)", "${provider.currentRER.toInt()} kcal/day", isPrimary: false),
         ],
       ),
     );
   }
+
+
 
   void _showMetabolicInfo() {
     showDialog(
@@ -251,7 +305,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _infoItem("Daily Energy Goal (DER)", "The actual calories your pet needs based on its weight, age, and reproductive status."),
+            _infoItem("Daily Energy Goal (DER)", "The actual calories your pet needs based on its weight, age, condition, and clinical status."),
             const SizedBox(height: 16),
             _infoItem("Resting Baseline (RER)", "The energy needed to maintain basic life functions (heartbeat, breathing) while at rest."),
           ],
@@ -280,51 +334,41 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   Widget _profileStat(String label, String value) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10)),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _bigStatBox(String label, String value, {required bool isPrimary}) {
+  Widget _bigStatBox(String label, String value, {bool isPrimary = false}) {
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isPrimary ? 12 : 10, horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: isPrimary ? Colors.white.withAlpha(50) : Colors.white.withAlpha(20), 
+        color: isPrimary ? Colors.white.withAlpha(40) : Colors.white.withAlpha(20),
         borderRadius: BorderRadius.circular(16),
-        border: isPrimary ? Border.all(color: Colors.white.withAlpha(40), width: 1.5) : null,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                label, 
-                style: TextStyle(
-                  color: isPrimary ? Colors.white : Colors.white70, 
-                  fontSize: 10, 
-                  fontWeight: FontWeight.bold, 
-                  letterSpacing: 0.5
-                ),
+            child: Text(
+              label, 
+              style: TextStyle(
+                color: isPrimary ? Colors.white : Colors.white70, 
+                fontSize: 10, 
+                fontWeight: FontWeight.bold, 
+                letterSpacing: 0.5
               ),
             ),
           ),
           const SizedBox(width: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: Text(
-              value, 
-              style: TextStyle(
-                color: Colors.white, 
-                fontWeight: FontWeight.bold, 
-                fontSize: isPrimary ? 16 : 13
-              ),
+          Text(
+            value, 
+            style: TextStyle(
+              color: Colors.white, 
+              fontWeight: FontWeight.bold, 
+              fontSize: isPrimary ? 16 : 13
             ),
           ),
         ],
@@ -332,10 +376,13 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
     );
   }
 
+  // -----------------------------------------------------------------
+  // 2. INTERACTIVE BOWL WIDGET (RESTORED ORIGINAL VECTOR BOWL & STYLING)
+  // -----------------------------------------------------------------
   Widget _buildFeedingBowl(NutritionalProvider provider) {
     return Container(
       width: double.infinity,
-      height: 340,
+      height: 380,
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(230), 
         borderRadius: BorderRadius.circular(28), 
@@ -343,12 +390,12 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
       ),
       child: Stack(
         children: [
-          // 1. VECTOR BOWL & ORGANIC FOOD MOUND PAINTER (Matching Screenshots 2 & 3)
+          // 1. VECTOR BOWL & ORGANIC FOOD MOUND PAINTER
           Positioned(
             top: 10,
             left: 10,
             right: 10,
-            height: 195,
+            height: 180,
             child: CustomPaint(
               painter: PetFoodBowlPainter(
                 bowl: provider.bowl,
@@ -381,80 +428,107 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             ),
           ),
 
-          // 3. SELECTED INGREDIENTS VERTICAL LIST (3-4 viewable items)
+          // 3. SELECTED INGREDIENTS VERTICAL LIST WITH PORTION SLIDERS
           Positioned(
             bottom: 10,
             left: 12,
             right: 12,
             child: Container(
-              height: 125,
+              height: 170,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.grey.withAlpha(18),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.withAlpha(40), width: 1),
               ),
               child: provider.bowl.isEmpty
                 ? Center(
                     child: Text(
-                      "Selected ingredients will appear here",
+                      "Selected ingredients & portion sliders will appear here",
                       style: TextStyle(color: _ashGrey, fontSize: 11, fontStyle: FontStyle.italic),
                     ),
                   )
                 : ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: provider.bowl.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 4),
+                    separatorBuilder: (context, index) => const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final item = provider.bowl[index];
                       final style = _getFoodBitStyle(item.ingredient.category);
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                         decoration: BoxDecoration(
-                          color: style.mainColor.withAlpha(25),
-                          borderRadius: BorderRadius.circular(10),
+                          color: style.mainColor.withAlpha(20),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: style.mainColor.withAlpha(60), width: 0.8),
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                color: style.mainColor.withAlpha(50),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(style.icon, size: 10, color: style.mainColor),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                item.ingredient.name,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: _darkCharcoal,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    color: style.mainColor.withAlpha(50),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(style.icon, size: 10, color: style.mainColor),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    item.ingredient.name,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _darkCharcoal,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  "${item.massGrams.toInt()}g",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: style.mainColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () => provider.removeIngredient(index),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2),
+                                    child: Icon(
+                                      Icons.close_rounded,
+                                      size: 14,
+                                      color: _darkCharcoal.withAlpha(160),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              "${item.massGrams.toInt()}g",
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: style.mainColor,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            InkWell(
-                              onTap: () => provider.removeIngredient(item.ingredient.ingredientId),
-                              child: Padding(
-                                padding: const EdgeInsets.all(2),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: 14,
-                                  color: _darkCharcoal.withAlpha(160),
+                            // Portion Slider (Pull Lever) to dynamically adjust mass in real-time
+                            SizedBox(
+                              height: 22,
+                              child: SliderTheme(
+                                data: SliderThemeData(
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                                  trackHeight: 3,
+                                  activeTrackColor: style.mainColor,
+                                  inactiveTrackColor: style.mainColor.withAlpha(40),
+                                  thumbColor: style.mainColor,
+                                ),
+                                child: Slider(
+                                  value: item.massGrams.clamp(10.0, 500.0),
+                                  min: 10,
+                                  max: 500,
+                                  divisions: 49,
+                                  onChanged: (newGrams) {
+                                    provider.updateIngredientGrams(index, newGrams);
+                                  },
                                 ),
                               ),
                             ),
@@ -470,233 +544,9 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
     );
   }
 
-  Widget _buildFoodBit(Ingredient ingredient) {
-    final style = _getFoodBitStyle(ingredient.category);
-
-    return Container(
-      width: 30,
-      height: 30,
-      decoration: BoxDecoration(
-        borderRadius: style.borderRadius,
-        border: Border.all(
-          color: Colors.white.withAlpha(150), // Soft glass-like translucent rim
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: style.mainColor.withAlpha(80),
-            blurRadius: 6,
-            spreadRadius: -1,
-            offset: const Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Colors.black.withAlpha(25),
-            blurRadius: 3,
-            offset: const Offset(1, 2),
-          ),
-        ],
-        gradient: LinearGradient(
-          colors: style.gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          style.icon, 
-          color: Colors.white.withAlpha(220), 
-          size: 15,
-        ),
-      ),
-    );
-  }
-
-  _FoodBitStyle _getFoodBitStyle(String category) {
-    String c = category.toLowerCase();
-
-    // 1. VEGETABLES / LEAFY (e.g. Broccoli, Carrots, Pumpkin, Sweet Potato)
-    if (c.contains('veg') || c.contains('green') || c.contains('leafy') || c.contains('broccoli')) {
-      return _FoodBitStyle(
-        mainColor: const Color(0xFF2E7D32),
-        gradientColors: [
-          const Color(0xFF81C784).withAlpha(220), // Translucent light green
-          const Color(0xFF2E7D32).withAlpha(190), // Translucent deep foliage green
-        ],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
-          topRight: Radius.circular(4),
-          bottomLeft: Radius.circular(4),
-        ),
-        icon: Icons.eco_rounded,
-      );
-    }
-
-    // 2. POULTRY / CHICKEN / TURKEY
-    if (c.contains('poultry') || c.contains('chicken') || c.contains('turkey')) {
-      return _FoodBitStyle(
-        mainColor: const Color(0xFFD97724),
-        gradientColors: [
-          const Color(0xFFFCD3A1).withAlpha(220), // Soft warm golden highlight
-          const Color(0xFFD97724).withAlpha(190), // Translucent roasted honey chicken
-        ],
-        borderRadius: BorderRadius.circular(12),
-        icon: Icons.restaurant_rounded,
-      );
-    }
-
-    // 3. MEAT / BEEF / ORGAN MEAT
-    if (c.contains('meat') || c.contains('beef') || c.contains('organ')) {
-      return _FoodBitStyle(
-        mainColor: const Color(0xFF6D4C41),
-        gradientColors: [
-          const Color(0xFFA1887F).withAlpha(220),
-          const Color(0xFF5D4037).withAlpha(190),
-        ],
-        borderRadius: BorderRadius.circular(10),
-        icon: Icons.pets,
-      );
-    }
-
-    // 4. FISH / SALMON
-    if (c.contains('fish') || c.contains('salmon') || c.contains('seafood')) {
-      return _FoodBitStyle(
-        mainColor: const Color(0xFFE64A19),
-        gradientColors: [
-          const Color(0xFFFFAB91).withAlpha(220),
-          const Color(0xFFE64A19).withAlpha(190),
-        ],
-        borderRadius: BorderRadius.circular(10),
-        icon: Icons.set_meal_rounded,
-      );
-    }
-
-    // 5. PROTEIN / EGG
-    if (c.contains('egg') || c.contains('protein')) {
-      return _FoodBitStyle(
-        mainColor: const Color(0xFFFFB300),
-        gradientColors: [
-          const Color(0xFFFFE082).withAlpha(220),
-          const Color(0xFFFFB300).withAlpha(190),
-        ],
-        borderRadius: BorderRadius.circular(15),
-        icon: Icons.egg_rounded,
-      );
-    }
-
-    // 6. FRUIT / BERRY
-    if (c.contains('fruit') || c.contains('berry')) {
-      return _FoodBitStyle(
-        mainColor: const Color(0xFFC62828),
-        gradientColors: [
-          const Color(0xFFEF9A9A).withAlpha(220),
-          const Color(0xFFC62828).withAlpha(190),
-        ],
-        borderRadius: BorderRadius.circular(15),
-        icon: Icons.circle_rounded,
-      );
-    }
-
-    // 7. GRAIN / CARB / RICE
-    if (c.contains('grain') || c.contains('carb') || c.contains('rice')) {
-      return _FoodBitStyle(
-        mainColor: const Color(0xFFF57C00),
-        gradientColors: [
-          const Color(0xFFFFE0B2).withAlpha(220),
-          const Color(0xFFF57C00).withAlpha(190),
-        ],
-        borderRadius: BorderRadius.circular(12),
-        icon: Icons.grain_rounded,
-      );
-    }
-
-    // DEFAULT
-    return _FoodBitStyle(
-      mainColor: const Color(0xFF455A64),
-      gradientColors: [
-        const Color(0xFF90A4AE).withAlpha(220),
-        const Color(0xFF455A64).withAlpha(190),
-      ],
-      borderRadius: BorderRadius.circular(12),
-      icon: Icons.grain_rounded,
-    );
-  }
-
-  Color _getFoodColor(String category) {
-    return _getFoodBitStyle(category).mainColor;
-  }
-
-  Widget _buildNutrientAnalysis(NutritionalProvider provider) {
-    final n = provider.totalNutrients;
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("NUTRIENT ANALYSIS", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-          const SizedBox(height: 20),
-          _nutrientBar("PROTEIN", n.proteinGrams, 50, Colors.teal),
-          _nutrientBar("FAT", n.fatGrams, 30, Colors.orange),
-          _nutrientBar("CALCIUM", n.calciumMg / 1000, 2, Colors.purple),
-          _nutrientBar("VITAMINS", n.vitaminsGrams, 1, Colors.pink),
-          _nutrientBar("MINERALS", n.mineralsGrams, 1, Colors.blueGrey),
-          
-          const Divider(height: 32, thickness: 1),
-          
-          Row(
-            children: [
-              const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 28),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("TOTAL CALORIES", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFB7B7A4), letterSpacing: 0.5)),
-                  Text("${provider.totalNutrients.kcal.toInt()} kcal", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: _darkCharcoal)),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _nutrientBar(String label, double current, double max, Color color) {
-    double progress = (current / max).clamp(0.0, 1.0);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey)),
-              Text("${current.toStringAsFixed(1)}g", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          LinearProgressIndicator(value: progress, backgroundColor: color.withAlpha(40), valueColor: AlwaysStoppedAnimation<Color>(color), minHeight: 8, borderRadius: BorderRadius.circular(10)),
-        ],
-      ),
-    );
-  }
-
-  List<Ingredient> get _filteredIngredients {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      return _allIngredients; // Show all suggested ingredients scrollable
-    }
-    return _allIngredients
-        .where((i) => i.name.toLowerCase().contains(query) || i.category.toLowerCase().contains(query))
-        .toList();
-  }
-
-  Widget _buildCaloricDisplay(NutritionalProvider provider) {
-    if (provider.bowl.isEmpty) return const SizedBox.shrink();
-    return CaloricStatusBanner(status: provider.adequacyStatus, petName: provider.selectedPet?.name ?? "Pet");
-  }
-
+  // -----------------------------------------------------------------
+  // 3. ADD INGREDIENTS SECTION (RESTORED ORIGINAL CATEGORY CARDS)
+  // -----------------------------------------------------------------
   Widget _buildAddIngredientsSection() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -800,6 +650,276 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
         ],
       ),
     );
+  }
+
+  _FoodBitStyle _getFoodBitStyle(String category) {
+    String c = category.toLowerCase();
+
+    // 1. VEGETABLES / LEAFY (Broccoli, Carrots, Sweet Potato)
+    if (c.contains('veg') || c.contains('green') || c.contains('leafy') || c.contains('broccoli')) {
+      return const _FoodBitStyle(
+        mainColor: Color(0xFF2E7D32),
+        gradientColors: [Color(0xFF81C784), Color(0xFF2E7D32)],
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
+        icon: Icons.eco_rounded,
+      );
+    }
+
+    // 2. POULTRY / CHICKEN / TURKEY
+    if (c.contains('poultry') || c.contains('chicken') || c.contains('turkey')) {
+      return const _FoodBitStyle(
+        mainColor: Color(0xFFD97724),
+        gradientColors: [Color(0xFFFCD3A1), Color(0xFFD97724)],
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        icon: Icons.restaurant_rounded,
+      );
+    }
+
+    // 3. MEAT / BEEF / ORGAN MEAT
+    if (c.contains('meat') || c.contains('beef') || c.contains('organ')) {
+      return const _FoodBitStyle(
+        mainColor: Color(0xFF6D4C41),
+        gradientColors: [Color(0xFFA1887F), Color(0xFF5D4037)],
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+        icon: Icons.pets,
+      );
+    }
+
+    // 4. FISH / SALMON
+    if (c.contains('fish') || c.contains('salmon') || c.contains('seafood')) {
+      return const _FoodBitStyle(
+        mainColor: Color(0xFFE64A19),
+        gradientColors: [Color(0xFFFFAB91), Color(0xFFE64A19)],
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+        icon: Icons.set_meal_rounded,
+      );
+    }
+
+    // 5. PROTEIN / EGG
+    if (c.contains('egg') || c.contains('protein')) {
+      return const _FoodBitStyle(
+        mainColor: Color(0xFFFFB300),
+        gradientColors: [Color(0xFFFFE082), Color(0xFFFFB300)],
+        borderRadius: BorderRadius.all(Radius.circular(15)),
+        icon: Icons.egg_rounded,
+      );
+    }
+
+    // 6. FRUIT / BERRY
+    if (c.contains('fruit') || c.contains('berry')) {
+      return const _FoodBitStyle(
+        mainColor: Color(0xFFC62828),
+        gradientColors: [Color(0xFFEF9A9A), Color(0xFFC62828)],
+        borderRadius: BorderRadius.all(Radius.circular(15)),
+        icon: Icons.circle_rounded,
+      );
+    }
+
+    // DEFAULT / GRAIN
+    return const _FoodBitStyle(
+      mainColor: Color(0xFF455A64),
+      gradientColors: [Color(0xFF90A4AE), Color(0xFF455A64)],
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+      icon: Icons.grain_rounded,
+    );
+  }
+
+  // -----------------------------------------------------------------
+  // 4. NUTRIENT ANALYSIS & CUMULATIVE CALORIES
+  // -----------------------------------------------------------------
+  Widget _buildNutrientAnalysis(NutritionalProvider provider) {
+    final n = provider.totalNutrients;
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("NUTRIENT ANALYSIS", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+          const SizedBox(height: 20),
+          _nutrientBar("PROTEIN", n.proteinGrams, 50, Colors.teal),
+          _nutrientBar("FAT", n.fatGrams, 30, Colors.orange),
+          _nutrientBar("CALCIUM", n.calciumMg / 1000, 2, Colors.purple),
+          _nutrientBar("VITAMINS", n.vitaminsGrams, 1, Colors.pink),
+          _nutrientBar("MINERALS", n.mineralsGrams, 1, Colors.blueGrey),
+          
+          const Divider(height: 32, thickness: 1),
+          
+          Row(
+            children: [
+              const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 28),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("CUMULATIVE CALORIES", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFB7B7A4), letterSpacing: 0.5)),
+                  Text(
+                    "${provider.totalKcal.toInt()} kcal",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: _darkCharcoal),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _nutrientBar(String label, double current, double max, Color color) {
+    double progress = (current / max).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey)),
+              Text("${current.toStringAsFixed(1)}g", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: progress, 
+            backgroundColor: color.withAlpha(40), 
+            valueColor: AlwaysStoppedAnimation<Color>(color), 
+            minHeight: 8, 
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -----------------------------------------------------------------
+  // 5. BOTTOM ACTION BUTTONS WITH DISABLING REASON EXPLANATIONS
+  // -----------------------------------------------------------------
+  Widget _buildBottomActionButtons(NutritionalProvider provider) {
+    if (provider.bowl.isEmpty) return const SizedBox.shrink();
+
+    bool canAct = provider.canSaveOrFeed;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: canAct
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: _dustyOlive,
+                                content: Text("Recipe saved for ${provider.selectedPet?.name ?? 'pet'}!"),
+                              ),
+                            );
+                          }
+                        : () => _explainDisabledReason(provider),
+                    icon: Icon(
+                      canAct ? Icons.bookmark_added_rounded : Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      "Save Recipe",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: canAct ? _dustyOlive : _ashGrey,
+                      disabledBackgroundColor: _ashGrey,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: canAct
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: _dustyOlive,
+                                content: Text("Feeding meal to ${provider.selectedPet?.name ?? 'pet'}! Bon appétit!"),
+                              ),
+                            );
+                          }
+                        : () => _explainDisabledReason(provider),
+                    icon: Icon(
+                      canAct ? Icons.restaurant_rounded : Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      "Feed Meal",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: canAct ? const Color(0xFF759C86) : _ashGrey,
+                      disabledBackgroundColor: _ashGrey,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (!canAct) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => _explainDisabledReason(provider),
+              child: Text(
+                provider.hasClinicalViolation
+                    ? "⚠️ Action blocked by clinical safety hazard"
+                    : "⚠️ Caloric target match (${provider.adequacyRatio.toStringAsFixed(1)}%) must be between 90% - 110%",
+                style: TextStyle(
+                  color: provider.hasClinicalViolation ? const Color(0xFFD32F2F) : _darkCharcoal,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _explainDisabledReason(NutritionalProvider provider) {
+    String reason = "";
+    if (provider.hasClinicalViolation) {
+      reason = "Action Blocked: Active clinical safety hazard detected in recipe. Please resolve all warnings in red box.";
+    } else if (provider.adequacyRatio < 90.0) {
+      reason = "Action Blocked: Recipe is under-caloric (${provider.adequacyRatio.toStringAsFixed(1)}%). Target is 90% - 110%.";
+    } else if (provider.adequacyRatio > 110.0) {
+      reason = "Action Blocked: Recipe is over-caloric (${provider.adequacyRatio.toStringAsFixed(1)}%). Target is 90% - 110%.";
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFFD32F2F),
+        duration: const Duration(seconds: 3),
+        content: Text(reason),
+      ),
+    );
+  }
+
+  List<Ingredient> get _filteredIngredients {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      return _allIngredients;
+    }
+    return _allIngredients
+        .where((i) => i.name.toLowerCase().contains(query) || i.category.toLowerCase().contains(query))
+        .toList();
   }
 }
 
@@ -1017,7 +1137,7 @@ class PetFoodBowlPainter extends CustomPainter {
         colors: [piece.lightColor, piece.darkColor],
       ).createShader(kibbleRect);
 
-    // Dark vector outline (Screenshot 2 & 3 style)
+    // Dark vector outline
     final Paint outlinePaint = Paint()
       ..color = piece.outlineColor
       ..style = PaintingStyle.stroke
@@ -1074,8 +1194,8 @@ class PetFoodBowlPainter extends CustomPainter {
 
       for (int i = 0; i < numPieces; i++) {
         // Pseudo-random deterministic offsets
-        double pseudo1 = (((seed + i * 17) % 100) / 100.0) - 0.5; // -0.5 to +0.5
-        double pseudo2 = (((seed + i * 31) % 100) / 100.0) - 0.5; // -0.5 to +0.5
+        double pseudo1 = (((seed + i * 17) % 100) / 100.0) - 0.5;
+        double pseudo2 = (((seed + i * 31) % 100) / 100.0) - 0.5;
 
         // Layer mounding logic
         int layer = i ~/ 4;
@@ -1112,9 +1232,9 @@ class PetFoodBowlPainter extends CustomPainter {
     // 1. VEGETABLES / LEAFY (Broccoli, Carrots, Sweet Potato)
     if (c.contains('veg') || c.contains('green') || c.contains('leafy') || c.contains('broccoli')) {
       return const _KibbleStyle(
-        lightColor: Color(0xFF66BB6A), // Fresh leaf green
-        darkColor: Color(0xFF2E7D32),  // Deep forest green
-        outlineColor: Color(0xFF1B5E20), // Dark green outline
+        lightColor: Color(0xFF66BB6A),
+        darkColor: Color(0xFF2E7D32),
+        outlineColor: Color(0xFF1B5E20),
         shape: _KibbleShape.leaf,
         width: 26,
         height: 18,
@@ -1124,9 +1244,9 @@ class PetFoodBowlPainter extends CustomPainter {
     // 2. POULTRY / CHICKEN / TURKEY
     if (c.contains('poultry') || c.contains('chicken') || c.contains('turkey')) {
       return const _KibbleStyle(
-        lightColor: Color(0xFFFFA726), // Golden warm chicken
-        darkColor: Color(0xFFE65100),  // Roasted amber
-        outlineColor: Color(0xFF8D4000), // Dark outline
+        lightColor: Color(0xFFFFA726),
+        darkColor: Color(0xFFE65100),
+        outlineColor: Color(0xFF8D4000),
         shape: _KibbleShape.oval,
         width: 28,
         height: 18,
@@ -1136,9 +1256,9 @@ class PetFoodBowlPainter extends CustomPainter {
     // 3. MEAT / BEEF / ORGAN MEAT
     if (c.contains('meat') || c.contains('beef') || c.contains('organ')) {
       return const _KibbleStyle(
-        lightColor: Color(0xFF8D6E63), // Rich beef roast
-        darkColor: Color(0xFF4E342E),  // Deep chocolate brown
-        outlineColor: Color(0xFF2C1B18), // Dark outline
+        lightColor: Color(0xFF8D6E63),
+        darkColor: Color(0xFF4E342E),
+        outlineColor: Color(0xFF2C1B18),
         shape: _KibbleShape.sphere,
         width: 24,
         height: 20,
@@ -1148,9 +1268,9 @@ class PetFoodBowlPainter extends CustomPainter {
     // 4. FISH / SALMON
     if (c.contains('fish') || c.contains('salmon') || c.contains('seafood')) {
       return const _KibbleStyle(
-        lightColor: Color(0xFFFF8A65), // Tender coral salmon
-        darkColor: Color(0xFFD84315),  // Deep salmon red
-        outlineColor: Color(0xFF801A00), // Dark outline
+        lightColor: Color(0xFFFF8A65),
+        darkColor: Color(0xFFD84315),
+        outlineColor: Color(0xFF801A00),
         shape: _KibbleShape.oval,
         width: 26,
         height: 16,
@@ -1160,9 +1280,9 @@ class PetFoodBowlPainter extends CustomPainter {
     // 5. PROTEIN / EGG
     if (c.contains('egg') || c.contains('protein')) {
       return const _KibbleStyle(
-        lightColor: Color(0xFFFFE082), // Sunny egg yolk
-        darkColor: Color(0xFFFFB300),  // Deep golden yolk
-        outlineColor: Color(0xFFB27B00), // Outline
+        lightColor: Color(0xFFFFE082),
+        darkColor: Color(0xFFFFB300),
+        outlineColor: Color(0xFFB27B00),
         shape: _KibbleShape.sphere,
         width: 22,
         height: 22,
@@ -1172,9 +1292,9 @@ class PetFoodBowlPainter extends CustomPainter {
     // 6. FRUIT / BERRY
     if (c.contains('fruit') || c.contains('berry')) {
       return const _KibbleStyle(
-        lightColor: Color(0xFFEF9A9A), // Ruby berry
-        darkColor: Color(0xFFC62828),  // Deep berry red
-        outlineColor: Color(0xFF7F0000), // Dark outline
+        lightColor: Color(0xFFEF9A9A),
+        darkColor: Color(0xFFC62828),
+        outlineColor: Color(0xFF7F0000),
         shape: _KibbleShape.sphere,
         width: 20,
         height: 20,
@@ -1183,9 +1303,9 @@ class PetFoodBowlPainter extends CustomPainter {
 
     // DEFAULT / GRAINS
     return const _KibbleStyle(
-      lightColor: Color(0xFFFFCC80), // Warm wheat grain
-      darkColor: Color(0xFFFB8C00),  // Amber grain
-      outlineColor: Color(0xFF9E4700), // Outline
+      lightColor: Color(0xFFFFCC80),
+      darkColor: Color(0xFFFB8C00),
+      outlineColor: Color(0xFF9E4700),
       shape: _KibbleShape.oval,
       width: 24,
       height: 16,

@@ -1,3 +1,5 @@
+import 'disease_model.dart';
+
 enum Species { dog, cat }
 
 enum Gender { male, female }
@@ -17,15 +19,18 @@ class PetProfile {
   final String id;
   final String name;
   final Species species;
-  final Gender gender; // New field
+  final Gender gender;
   final double weightKg;
-  final DateTime birthDate; // Use DateTime for precise age tracking
+  final DateTime birthDate;
   final PetCondition condition;
   final ActivityLevel activityLevel;
   final List<String> allergens;
   final String breed;
   final String? imageUrl;
   final bool? isHealthy; // Null means not logged yet
+  final String healthCondition; // "Healthy" vs "Needs Attention" (defaults to "Healthy")
+  final DiseaseType activeDisease; // Defaults to DiseaseType.none
+  final int bodyConditionScore; // 1 to 9 scale; defaults to 5 for ideal weight
 
   PetProfile({
     required this.id,
@@ -39,7 +44,10 @@ class PetProfile {
     required this.allergens,
     this.breed = "Unknown",
     this.imageUrl,
-    this.isHealthy, // Defaults to null
+    this.isHealthy,
+    this.healthCondition = "Healthy",
+    this.activeDisease = DiseaseType.none,
+    this.bodyConditionScore = 5,
   });
 
   // Helper to calculate age in months dynamically
@@ -48,6 +56,42 @@ class PetProfile {
     int months = (now.year - birthDate.year) * 12 + now.month - birthDate.month;
     if (now.day < birthDate.day) months--;
     return months < 0 ? 0 : months;
+  }
+
+  PetProfile copyWith({
+    String? id,
+    String? name,
+    Species? species,
+    Gender? gender,
+    double? weightKg,
+    DateTime? birthDate,
+    PetCondition? condition,
+    ActivityLevel? activityLevel,
+    List<String>? allergens,
+    String? breed,
+    String? imageUrl,
+    bool? isHealthy,
+    String? healthCondition,
+    DiseaseType? activeDisease,
+    int? bodyConditionScore,
+  }) {
+    return PetProfile(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      species: species ?? this.species,
+      gender: gender ?? this.gender,
+      weightKg: weightKg ?? this.weightKg,
+      birthDate: birthDate ?? this.birthDate,
+      condition: condition ?? this.condition,
+      activityLevel: activityLevel ?? this.activityLevel,
+      allergens: allergens ?? this.allergens,
+      breed: breed ?? this.breed,
+      imageUrl: imageUrl ?? this.imageUrl,
+      isHealthy: isHealthy ?? this.isHealthy,
+      healthCondition: healthCondition ?? this.healthCondition,
+      activeDisease: activeDisease ?? this.activeDisease,
+      bodyConditionScore: bodyConditionScore ?? this.bodyConditionScore,
+    );
   }
 
   Map<String, dynamic> toMap() {
@@ -64,6 +108,9 @@ class PetProfile {
       'breed': breed,
       'imageUrl': imageUrl,
       'isHealthy': isHealthy,
+      'healthCondition': healthCondition,
+      'activeDisease': activeDisease.name,
+      'bodyConditionScore': bodyConditionScore,
     };
   }
 
@@ -75,6 +122,9 @@ class PetProfile {
         throw FormatException("Pet profile '$docId' is missing mandatory field: $field");
       }
     }
+
+    bool? isHealthyVal = map['isHealthy'];
+    String healthCondVal = map['healthCondition'] ?? (isHealthyVal == false ? "Needs Attention" : "Healthy");
 
     return PetProfile(
       id: docId,
@@ -100,7 +150,13 @@ class PetProfile {
       allergens: List<String>.from(map['allergens'] ?? []),
       breed: map['breed'] ?? 'Unknown',
       imageUrl: map['imageUrl'],
-      isHealthy: map['isHealthy'], // Can be null
+      isHealthy: isHealthyVal,
+      healthCondition: healthCondVal,
+      activeDisease: DiseaseType.values.firstWhere(
+        (e) => e.name == map['activeDisease'],
+        orElse: () => DiseaseType.none,
+      ),
+      bodyConditionScore: (map['bodyConditionScore'] as num?)?.toInt() ?? 5,
     );
   }
 }

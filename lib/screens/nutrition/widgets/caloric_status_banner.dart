@@ -4,11 +4,13 @@ import '../../../services/nutrition_calculator_service.dart';
 class CaloricStatusBanner extends StatelessWidget {
   final AdequacyCategory status;
   final String petName;
+  final bool isSickPet;
 
   const CaloricStatusBanner({
     super.key,
     required this.status,
     required this.petName,
+    this.isSickPet = false,
   });
 
   @override
@@ -22,16 +24,20 @@ class CaloricStatusBanner extends StatelessWidget {
         message = "Insufficient nutrition for $petName";
         break;
       case AdequacyCategory.lacking:
-        bgColor = const Color(0xFFCB997E); // Soft Orange / Bronze
+        bgColor = const Color(0xFFE07A5F); // Soft Orange
         message = "Almost there, still lacking a bit of nutrition";
         break;
       case AdequacyCategory.optimal:
         bgColor = const Color(0xFF759C86); // Soft Sage Green
-        message = "Hooray! Let's proceed to feed the meal to $petName";
+        message = isSickPet 
+            ? "Optimal! Portions match $petName's therapeutic target"
+            : "Optimal! Portions match $petName's daily energy requirement";
         break;
       case AdequacyCategory.excess:
-        bgColor = const Color(0xFF7F5539); // Muted Brown / Dark Terracotta
-        message = "Overfeeding! It might harm $petName's health";
+        bgColor = const Color(0xFF8D6E63); // Muted Brown
+        message = isSickPet
+            ? "Excessive intake! This may exacerbate $petName's condition"
+            : "Excessive intake! This may lead to unhealthy weight gain";
         break;
     }
 

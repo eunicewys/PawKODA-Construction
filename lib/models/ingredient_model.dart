@@ -5,9 +5,12 @@ class Nutrients {
   final double carbsGrams;
   final double calciumMg;
   final double phosphorusMg;
-  final double vitaminsGrams; // Added for UI progress bars
-  final double mineralsGrams; // Added for UI progress bars
+  final double vitaminsGrams;
+  final double mineralsGrams;
   final double moistureGrams;
+  final double fiberGrams;
+  final double sodiumMg;
+  final double magnesiumMg;
 
   Nutrients({
     required this.kcal,
@@ -19,6 +22,9 @@ class Nutrients {
     required this.vitaminsGrams,
     required this.mineralsGrams,
     required this.moistureGrams,
+    this.fiberGrams = 0.0,
+    this.sodiumMg = 0.0,
+    this.magnesiumMg = 0.0,
   });
 
   factory Nutrients.fromMap(Map<String, dynamic> map) {
@@ -32,6 +38,9 @@ class Nutrients {
       vitaminsGrams: (map['vitaminsGrams'] ?? 0.0).toDouble(),
       mineralsGrams: (map['mineralsGrams'] ?? 0.0).toDouble(),
       moistureGrams: (map['moistureGrams'] ?? 0.0).toDouble(),
+      fiberGrams: (map['fiberGrams'] ?? 0.0).toDouble(),
+      sodiumMg: (map['sodiumMg'] ?? 0.0).toDouble(),
+      magnesiumMg: (map['magnesiumMg'] ?? 0.0).toDouble(),
     );
   }
 
@@ -47,6 +56,9 @@ class Nutrients {
       vitaminsGrams: vitaminsGrams * factor,
       mineralsGrams: mineralsGrams * factor,
       moistureGrams: moistureGrams * factor,
+      fiberGrams: fiberGrams * factor,
+      sodiumMg: sodiumMg * factor,
+      magnesiumMg: magnesiumMg * factor,
     );
   }
 }
@@ -57,8 +69,8 @@ class Ingredient {
   final String category;
   final bool safeForDogs;
   final bool safeForCats;
-  final bool isToxicToDogs; // Added for safety interceptor
-  final bool isToxicToCats; // Added for safety interceptor
+  final bool isToxicToDogs;
+  final bool isToxicToCats;
   final Nutrients nutrientsPer100g;
   final List<String> allergenTags;
 
