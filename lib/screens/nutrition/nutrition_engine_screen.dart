@@ -2,10 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/pet_model.dart';
 import '../../models/ingredient_model.dart';
 import '../../models/disease_model.dart';
+import '../../models/recipe_model.dart';
 import '../../providers/nutritional_provider.dart';
+import '../../providers/user_provider.dart';
+import '../../services/recipe_service.dart';
 import '../widgets/fringe_header.dart';
 import 'widgets/caloric_adequacy_banner.dart';
 import 'widgets/clinical_warning_box.dart';
@@ -811,14 +815,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                   height: 50,
                   child: ElevatedButton.icon(
                     onPressed: canAct
-                        ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: _dustyOlive,
-                                content: Text("Recipe saved for ${provider.selectedPet?.name ?? 'pet'}!"),
-                              ),
-                            );
-                          }
+                        ? () => _saveRecipePrompt(provider)
                         : () => _explainDisabledReason(provider),
                     icon: Icon(
                       canAct ? Icons.bookmark_added_rounded : Icons.lock_rounded,
@@ -908,6 +905,76 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
         backgroundColor: const Color(0xFFD32F2F),
         duration: const Duration(seconds: 3),
         content: Text(reason),
+      ),
+    );
+  }
+
+  void _saveRecipePrompt(NutritionalProvider provider) {
+    final pet = provider.selectedPet;
+    if (pet == null || provider.bowl.isEmpty) return;
+
+    final nameController = TextEditingController(text: "${pet.name}'s Meal Bowl");
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Text("Save Custom Recipe", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Give your balanced meal recipe a name to save it to your collection:", style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            const SizedBox(height: 14),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: "Recipe Name",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel", style: TextStyle(color: _ashGrey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive),
+            onPressed: () async {
+              final uid = Provider.of<UserProvider>(context, listen: false).uid 
+                  ?? FirebaseAuth.instance.currentUser?.uid;
+              if (uid == null || uid.isEmpty) return;
+
+              final recipeName = nameController.text.trim().isEmpty ? "${pet.name}'s Meal Bowl" : nameController.text.trim();
+
+              final recipe = SavedRecipe(
+                id: '',
+                petId: pet.id,
+                petName: pet.name,
+                recipeName: recipeName,
+                createdAt: DateTime.now(),
+                totalKcal: provider.totalKcal,
+                ingredients: List.from(provider.bowl),
+              );
+
+              final RecipeService recipeService = RecipeService();
+              await recipeService.saveRecipe(uid, recipe);
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: _dustyOlive,
+                    content: Text("Recipe '$recipeName' saved successfully! View it in Quick Actions -> Recipes."),
+                  ),
+                );
+              }
+            },
+            child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

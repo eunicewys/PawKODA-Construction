@@ -13,6 +13,7 @@ import '../../services/pet_service.dart';
 import '../../utils/image_helper.dart';
 import '../login_screen.dart';
 import '../nutrition/nutrition_engine_screen.dart';
+import '../nutrition/saved_recipes_screen.dart';
 import '../pet/pet_details_screen.dart';
 import '../health/health_screen.dart';
 import '../widgets/fringe_header.dart';
@@ -1234,7 +1235,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       Flexible(child: _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets))),
                       Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1))),
                       Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() => _selectedIndex = 2))),
-                      Flexible(child: _buildActionItem(Icons.assignment, "Records", _powderPetal, () => setState(() => _selectedIndex = 1))),
+                      Flexible(child: _buildActionItem(Icons.menu_book_rounded, "Recipes", _powderPetal, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SavedRecipesScreen())))),
                     ],
                   ),
                 ),
