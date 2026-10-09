@@ -17,6 +17,7 @@ enum ActivityLevel { low, moderate, high }
 
 class PetProfile {
   final String id;
+  final String userId;
   final String name;
   final Species species;
   final Gender gender;
@@ -26,6 +27,9 @@ class PetProfile {
   final ActivityLevel activityLevel;
   final List<String> allergens;
   final String breed;
+  final bool isMixedBreed;
+  final String? secondaryBreedId;
+  final bool isMultiMixed;
   final String? imageUrl;
   final bool? isHealthy; // Null means not logged yet
   final String healthCondition; // "Healthy" vs "Needs Attention" (defaults to "Healthy")
@@ -34,6 +38,7 @@ class PetProfile {
 
   PetProfile({
     required this.id,
+    this.userId = "",
     required this.name,
     required this.species,
     required this.gender,
@@ -43,6 +48,9 @@ class PetProfile {
     this.activityLevel = ActivityLevel.moderate,
     required this.allergens,
     this.breed = "Unknown",
+    this.isMixedBreed = false,
+    this.secondaryBreedId,
+    this.isMultiMixed = false,
     this.imageUrl,
     this.isHealthy,
     this.healthCondition = "Healthy",
@@ -50,7 +58,10 @@ class PetProfile {
     this.bodyConditionScore = 5,
   });
 
-  // Helper to calculate age in months dynamically
+  /// Alias for petId
+  String get petId => id;
+
+  /// Helper to calculate age in months dynamically
   int get ageInMonths {
     final now = DateTime.now();
     int months = (now.year - birthDate.year) * 12 + now.month - birthDate.month;
@@ -58,8 +69,40 @@ class PetProfile {
     return months < 0 ? 0 : months;
   }
 
+  /// Auto-resolved sizeCategory ("Small", "Medium", "Large") based on species & weight
+  String get sizeCategory {
+    if (species == Species.dog) {
+      if (weightKg < 10.0) return "Small";
+      if (weightKg <= 25.0) return "Medium";
+      return "Large";
+    } else {
+      if (weightKg < 4.5) return "Small";
+      if (weightKg <= 6.5) return "Medium";
+      return "Large";
+    }
+  }
+
+  /// Resolves standard lifeStageOrCondition String
+  String get lifeStageOrCondition {
+    if (ageInMonths < 12) return "puppy_or_kitten";
+    switch (condition) {
+      case PetCondition.neutered:
+      case PetCondition.inactive:
+        return "adult_neutered";
+      case PetCondition.intact:
+        return "adult_intact";
+      case PetCondition.senior:
+        return "senior";
+      case PetCondition.pregnant:
+        return "pregnant";
+      case PetCondition.nursing:
+        return "nursing";
+    }
+  }
+
   PetProfile copyWith({
     String? id,
+    String? userId,
     String? name,
     Species? species,
     Gender? gender,
@@ -69,6 +112,9 @@ class PetProfile {
     ActivityLevel? activityLevel,
     List<String>? allergens,
     String? breed,
+    bool? isMixedBreed,
+    String? secondaryBreedId,
+    bool? isMultiMixed,
     String? imageUrl,
     bool? isHealthy,
     String? healthCondition,
@@ -77,6 +123,7 @@ class PetProfile {
   }) {
     return PetProfile(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       name: name ?? this.name,
       species: species ?? this.species,
       gender: gender ?? this.gender,
@@ -86,6 +133,9 @@ class PetProfile {
       activityLevel: activityLevel ?? this.activityLevel,
       allergens: allergens ?? this.allergens,
       breed: breed ?? this.breed,
+      isMixedBreed: isMixedBreed ?? this.isMixedBreed,
+      secondaryBreedId: secondaryBreedId ?? this.secondaryBreedId,
+      isMultiMixed: isMultiMixed ?? this.isMultiMixed,
       imageUrl: imageUrl ?? this.imageUrl,
       isHealthy: isHealthy ?? this.isHealthy,
       healthCondition: healthCondition ?? this.healthCondition,
@@ -97,6 +147,8 @@ class PetProfile {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'petId': id,
+      'userId': userId,
       'name': name,
       'species': species.name,
       'gender': gender.name,
@@ -106,6 +158,9 @@ class PetProfile {
       'activityLevel': activityLevel.name,
       'allergens': allergens,
       'breed': breed,
+      'isMixedBreed': isMixedBreed,
+      'secondaryBreedId': secondaryBreedId,
+      'isMultiMixed': isMultiMixed,
       'imageUrl': imageUrl,
       'isHealthy': isHealthy,
       'healthCondition': healthCondition,
@@ -128,6 +183,7 @@ class PetProfile {
 
     return PetProfile(
       id: docId,
+      userId: map['userId'] ?? '',
       name: map['name'],
       species: Species.values.firstWhere(
         (e) => e.name == map['species'], 
@@ -149,6 +205,9 @@ class PetProfile {
       ),
       allergens: List<String>.from(map['allergens'] ?? []),
       breed: map['breed'] ?? 'Unknown',
+      isMixedBreed: map['isMixedBreed'] ?? false,
+      secondaryBreedId: map['secondaryBreedId'],
+      isMultiMixed: map['isMultiMixed'] ?? false,
       imageUrl: map['imageUrl'],
       isHealthy: isHealthyVal,
       healthCondition: healthCondVal,
@@ -160,3 +219,6 @@ class PetProfile {
     );
   }
 }
+
+/// Typedef for PetModel alias
+typedef PetModel = PetProfile;

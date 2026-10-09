@@ -42,7 +42,32 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
   Future<void> _loadBreedData() async {
     try {
       final String response = await rootBundle.loadString('assets/data/breeds.json');
-      setState(() => _breedData = json.decode(response));
+      final dynamic decoded = json.decode(response);
+      
+      Map<String, List<String>> map = {
+        'dog': [],
+        'cat': [],
+      };
+
+      if (decoded is List) {
+        for (var item in decoded) {
+          if (item is Map) {
+            String species = (item['species'] ?? '').toString().toLowerCase();
+            String name = (item['name'] ?? '').toString();
+            if (map.containsKey(species) && name.isNotEmpty) {
+              map[species]!.add(name);
+            }
+          }
+        }
+      } else if (decoded is Map<String, dynamic>) {
+        decoded.forEach((key, value) {
+          if (value is List) {
+            map[key.toLowerCase()] = List<String>.from(value.map((e) => e.toString()));
+          }
+        });
+      }
+
+      setState(() => _breedData = map);
     } catch (e) {
       debugPrint("Error loading breeds: $e");
     }

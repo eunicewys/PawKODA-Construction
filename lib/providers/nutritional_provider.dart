@@ -1,16 +1,20 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/pet_model.dart';
 import '../models/ingredient_model.dart';
 import '../models/disease_model.dart';
 import '../services/nutrition_calculator_service.dart';
 
-/// NutritionalProvider: Manages state for pet selection, ingredient bowl composition,
-/// live caloric/nutrient recalculations, and clinical safety validations.
+/// NutritionalProvider: State management provider for pet selection, offline ingredient searching,
+/// live multi-nutrient bowl aggregation, and clinical safety validations.
 class NutritionalProvider extends ChangeNotifier {
   final NutritionCalculatorService _calculator = NutritionCalculatorService();
 
   // State Properties
   PetProfile? _currentPet;
+  List<Ingredient> _allIngredients = [];
+  List<Ingredient> _searchResults = [];
   List<BowlIngredient> _bowlIngredients = [];
   double _targetDER = 0.0;
   List<String> _clinicalWarnings = [];
@@ -19,22 +23,68 @@ class NutritionalProvider extends ChangeNotifier {
   double _totalKcal = 0.0;
   double _totalProteinGrams = 0.0;
   double _totalFatGrams = 0.0;
-  double _totalCarbsGrams = 0.0;
-  double _totalMoistureGrams = 0.0;
   double _totalCalciumMg = 0.0;
-  double _totalPhosphorusMg = 0.0;
+  double _totalVitaminsMg = 0.0;
+  double _totalMineralsMg = 0.0;
+  double _totalCarbsGrams = 0.0;
   double _totalFiberGrams = 0.0;
+  double _totalMoistureGrams = 0.0;
+  double _totalPhosphorusMg = 0.0;
+  double _totalSodiumMg = 0.0;
   double _totalMagnesiumMg = 0.0;
 
   // -----------------------------------------------------------------
-  // REACTIVE LIFECYCLE METHODS
+  // REACTIVE LIFECYCLE & INGREDIENT SEARCH METHODS
   // -----------------------------------------------------------------
 
-  /// Updates the active pet profile and recalculates target DER & bowl state
+  /// Reads assets/data/ingredients.json and populates _allIngredients
+  Future<void> loadIngredients() async {
+    try {
+      final String response = await rootBundle.loadString('assets/data/ingredients.json');
+      final List<dynamic> data = json.decode(response) as List<dynamic>;
+      _allIngredients = data.map((i) => Ingredient.fromJson(i as Map<String, dynamic>)).toList();
+      _searchResults = List.from(_allIngredients);
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading offline ingredients.json in NutritionalProvider: $e");
+    }
+  }
+
+  /// Filters _allIngredients by query string and species safety
+  void searchIngredients(String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) {
+      _searchResults = List.from(_allIngredients);
+    } else {
+      _searchResults = _allIngredients.where((i) {
+        bool matchesName = i.name.toLowerCase().contains(q);
+        bool matchesCategory = i.category.toLowerCase().contains(q);
+        return matchesName || matchesCategory;
+      }).toList();
+    }
+
+    // Apply species safety filter if pet is selected
+    if (_currentPet != null) {
+      if (_currentPet!.species == Species.dog) {
+        _searchResults = _searchResults.where((i) => i.safeForDogs && !i.isToxicToDogs).toList();
+      } else if (_currentPet!.species == Species.cat) {
+        _searchResults = _searchResults.where((i) => i.safeForCats && !i.isToxicToCats).toList();
+      }
+    }
+
+    notifyListeners();
+  }
+
+  /// Updates active pet profile and recalculates target DER & bowl state
   void setPet(PetProfile pet) {
     _currentPet = pet;
     _targetDER = _calculator.calculateTargetDER(pet);
     _bowlIngredients = []; // Reset bowl when pet changes
+    if (_allIngredients.isEmpty) {
+      loadIngredients();
+    } else {
+      searchIngredients("");
+    }
     recalculateNutrients();
   }
 
@@ -111,19 +161,38 @@ class NutritionalProvider extends ChangeNotifier {
     recalculateNutrients();
   }
 
-  /// Recalculates all cumulative nutrient totals and validates therapeutic limits
+  /// Multi-Nutrient Aggregation & Clinical Validation
   void recalculateNutrients() {
-    Nutrients totals = _calculator.calculateBowlTotal(_bowlIngredients);
+    _totalKcal = 0.0;
+    _totalProteinGrams = 0.0;
+    _totalFatGrams = 0.0;
+    _totalCalciumMg = 0.0;
+    _totalVitaminsMg = 0.0;
+    _totalMineralsMg = 0.0;
+    _totalCarbsGrams = 0.0;
+    _totalFiberGrams = 0.0;
+    _totalMoistureGrams = 0.0;
+    _totalPhosphorusMg = 0.0;
+    _totalSodiumMg = 0.0;
+    _totalMagnesiumMg = 0.0;
 
-    _totalKcal = totals.kcal;
-    _totalProteinGrams = totals.proteinGrams;
-    _totalFatGrams = totals.fatGrams;
-    _totalCarbsGrams = totals.carbsGrams;
-    _totalMoistureGrams = totals.moistureGrams;
-    _totalCalciumMg = totals.calciumMg;
-    _totalPhosphorusMg = totals.phosphorusMg;
-    _totalFiberGrams = totals.fiberGrams;
-    _totalMagnesiumMg = totals.magnesiumMg;
+    for (var item in _bowlIngredients) {
+      double factor = item.massGrams / 100.0;
+      _totalKcal += item.ingredient.kcalPer100g * factor;
+      _totalProteinGrams += item.ingredient.proteinGrams * factor;
+      _totalFatGrams += item.ingredient.fatGrams * factor;
+      _totalCalciumMg += item.ingredient.calciumMg * factor;
+      _totalVitaminsMg += item.ingredient.vitaminsMg * factor; // Accurately sums vitamins
+      _totalMineralsMg += item.ingredient.mineralsMg * factor; // Accurately sums minerals
+      _totalCarbsGrams += item.ingredient.carbsGrams * factor;
+      _totalFiberGrams += item.ingredient.fiberGrams * factor;
+      _totalMoistureGrams += item.ingredient.moistureGrams * factor;
+      _totalPhosphorusMg += item.ingredient.nutrientsPer100g.phosphorusMg * factor;
+      _totalSodiumMg += item.ingredient.nutrientsPer100g.sodiumMg * factor;
+      _totalMagnesiumMg += item.ingredient.nutrientsPer100g.magnesiumMg * factor;
+    }
+
+    Nutrients totals = totalNutrients;
 
     if (_currentPet != null) {
       _clinicalWarnings = _calculator.validateTherapeuticLimits(_currentPet!, _bowlIngredients, totals);
@@ -135,11 +204,59 @@ class NutritionalProvider extends ChangeNotifier {
   }
 
   // -----------------------------------------------------------------
+  // ALLERGEN & TOXICITY VERIFICATION METHODS
+  // -----------------------------------------------------------------
+
+  /// Returns false if ingredient is unsafe/toxic or contains pet allergens
+  bool isIngredientSafe(Ingredient ingredient) {
+    if (_currentPet == null) return true;
+
+    if (_currentPet!.species == Species.dog && (!ingredient.safeForDogs || ingredient.isToxicToDogs)) {
+      return false;
+    }
+    if (_currentPet!.species == Species.cat && (!ingredient.safeForCats || ingredient.isToxicToCats)) {
+      return false;
+    }
+
+    final petAllergens = _currentPet!.allergens.map((a) => a.trim().toLowerCase()).toSet();
+    final itemAllergens = ingredient.allergenTags.map((a) => a.trim().toLowerCase()).toSet();
+
+    if (petAllergens.intersection(itemAllergens).isNotEmpty) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Returns warning string if unsafe or null if safe
+  String? checkIngredientSafety(Ingredient item) {
+    if (_currentPet == null) return null;
+
+    if (_currentPet!.species == Species.dog && (!item.safeForDogs || item.isToxicToDogs)) {
+      return "WARNING! ${item.name} is toxic or unsafe for dogs.";
+    }
+    if (_currentPet!.species == Species.cat && (!item.safeForCats || item.isToxicToCats)) {
+      return "WARNING! ${item.name} is toxic or unsafe for cats.";
+    }
+
+    for (var tag in item.allergenTags) {
+      if (_currentPet!.allergens.map((e) => e.toLowerCase()).contains(tag.toLowerCase())) {
+        return "WARNING! ${_currentPet!.name} is allergic to ${item.name}.";
+      }
+    }
+
+    return null;
+  }
+
+  // -----------------------------------------------------------------
   // PUBLIC GETTERS
   // -----------------------------------------------------------------
 
   PetProfile? get currentPet => _currentPet;
   PetProfile? get selectedPet => _currentPet;
+
+  List<Ingredient> get allIngredients => _allIngredients;
+  List<Ingredient> get searchResults => _searchResults;
 
   List<BowlIngredient> get bowlIngredients => _bowlIngredients;
   List<BowlIngredient> get bowl => _bowlIngredients;
@@ -167,9 +284,10 @@ class NutritionalProvider extends ChangeNotifier {
   double get totalCarbsGrams => _totalCarbsGrams;
   double get totalMoistureGrams => _totalMoistureGrams;
   double get totalCalciumMg => _totalCalciumMg;
+  double get totalVitaminsMg => _totalVitaminsMg;
+  double get totalMineralsMg => _totalMineralsMg;
   double get totalPhosphorusMg => _totalPhosphorusMg;
   double get totalFiberGrams => _totalFiberGrams;
-  double get totalMagnesiumMg => _totalMagnesiumMg;
 
   Nutrients get totalNutrients => Nutrients(
     kcal: _totalKcal,
@@ -178,11 +296,11 @@ class NutritionalProvider extends ChangeNotifier {
     carbsGrams: _totalCarbsGrams,
     calciumMg: _totalCalciumMg,
     phosphorusMg: _totalPhosphorusMg,
-    vitaminsGrams: 0.0,
-    mineralsGrams: 0.0,
+    vitaminsGrams: _totalVitaminsMg,
+    mineralsGrams: _totalMineralsMg,
     moistureGrams: _totalMoistureGrams,
     fiberGrams: _totalFiberGrams,
-    sodiumMg: 0.0,
+    sodiumMg: _totalSodiumMg,
     magnesiumMg: _totalMagnesiumMg,
   );
 
@@ -198,11 +316,7 @@ class NutritionalProvider extends ChangeNotifier {
 
   bool get hasClinicalViolation => _clinicalWarnings.isNotEmpty;
 
-  bool get canSaveOrFeed => !hasClinicalViolation && adequacyRatio >= 90.0 && adequacyRatio <= 110.0;
+  bool get canFeedMeal => !hasClinicalViolation && _totalKcal > 0;
 
-  /// Ingredient Toxicity & Allergen Interceptor
-  String? checkIngredientSafety(Ingredient item) {
-    if (_currentPet == null) return null;
-    return _calculator.checkIngredientSafety(item, _currentPet!);
-  }
+  bool get canSaveOrFeed => !hasClinicalViolation && adequacyRatio >= 90.0 && adequacyRatio <= 110.0;
 }

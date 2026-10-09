@@ -6,13 +6,16 @@ import 'providers/user_provider.dart';
 import 'providers/nutritional_provider.dart';
 import 'screens/login_screen.dart';
 
+import 'services/breed_service.dart';
+
 /// main: The starting point of the app.
 void main() async {
-  // 1. Initialize Flutter and Firebase
+  // 1. Initialize Flutter, Firebase, and BreedService
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await BreedService().loadBreeds();
 
   // 2. Wrap the entire app in MultiProvider to share data
   runApp(

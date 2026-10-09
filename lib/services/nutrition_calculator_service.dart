@@ -41,8 +41,14 @@ class NutritionCalculatorService {
   /// Resolves healthy life-stage multiplier alpha
   double getHealthyAlpha(PetProfile pet) {
     bool isDog = pet.species == Species.dog;
-    if (pet.ageInMonths < 4) return isDog ? 3.0 : 2.5; // Puppy / Kitten
-    if (pet.ageInMonths < 12) return 2.0; // Growing (4-12 months)
+    if (pet.ageInMonths < 4) return isDog ? 3.0 : 2.5; // Young Puppy / Kitten
+    if (pet.ageInMonths < 12) {
+      // Growing (4-12 months): Large Breed Dog = 2.2, Small/Medium Dog = 2.0, Cat = 2.0
+      if (isDog && pet.sizeCategory.toLowerCase() == "large") {
+        return 2.2;
+      }
+      return 2.0;
+    }
 
     switch (pet.condition) {
       case PetCondition.neutered: return isDog ? 1.6 : 1.2;
