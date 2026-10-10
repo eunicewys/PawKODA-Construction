@@ -229,43 +229,52 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Text("METABOLIC PROFILE", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                  const SizedBox(width: 6),
-                  InkWell(
-                    onTap: () => _showMetabolicInfo(),
-                    child: const Icon(Icons.info_outline_rounded, color: Colors.white70, size: 14),
-                  ),
-                ],
+              Expanded(
+                child: Row(
+                  children: [
+                    const Flexible(
+                      child: Text(
+                        "METABOLIC PROFILE", 
+                        style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => _showMetabolicInfo(),
+                      child: const Icon(Icons.info_outline_rounded, color: Colors.white70, size: 14),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               // Top Right Meal Frequency Dropdown Selector
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha(40),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.white.withAlpha(80), width: 1),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<int>(
                     value: provider.mealsPerDay,
                     dropdownColor: _dustyOlive,
-                    icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.white, size: 18),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                    icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.white, size: 16),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
                     isDense: true,
                     items: const [
                       DropdownMenuItem<int>(
                         value: 1,
-                        child: Text("1 Meal / Day"),
+                        child: Text("1 Meal/Day"),
                       ),
                       DropdownMenuItem<int>(
                         value: 2,
-                        child: Text("2 Meals / Day"),
+                        child: Text("2 Meals/Day"),
                       ),
                       DropdownMenuItem<int>(
                         value: 3,
-                        child: Text("3 Meals / Day"),
+                        child: Text("3 Meals/Day"),
                       ),
                     ],
                     onChanged: (val) {
