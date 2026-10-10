@@ -13,6 +13,7 @@ class NutritionalProvider extends ChangeNotifier {
 
   // State Properties
   PetProfile? _currentPet;
+  int _mealsPerDay = 1; // 1, 2, or 3 meals per day
   List<Ingredient> _allIngredients = [];
   List<Ingredient> _searchResults = [];
   List<BowlIngredient> _bowlIngredients = [];
@@ -304,9 +305,18 @@ class NutritionalProvider extends ChangeNotifier {
     magnesiumMg: _totalMagnesiumMg,
   );
 
-  double get adequacyRatio => _targetDER > 0 ? (_totalKcal / _targetDER) * 100.0 : 0.0;
+  int get mealsPerDay => _mealsPerDay;
 
-  AdequacyCategory get adequacyStatus => _calculator.getAdequacyCategory(_totalKcal, _targetDER);
+  void setMealsPerDay(int meals) {
+    _mealsPerDay = meals.clamp(1, 3);
+    notifyListeners();
+  }
+
+  double get targetMealCalories => _mealsPerDay > 0 ? (_targetDER / _mealsPerDay) : _targetDER;
+
+  double get adequacyRatio => targetMealCalories > 0 ? (_totalKcal / targetMealCalories) * 100.0 : 0.0;
+
+  AdequacyCategory get adequacyStatus => _calculator.getAdequacyCategory(_totalKcal, targetMealCalories);
 
   bool get isSickPet => _currentPet?.healthCondition == "Needs Attention";
 

@@ -227,13 +227,54 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("METABOLIC PROFILE", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => _showMetabolicInfo(),
-                child: const Icon(Icons.info_outline_rounded, color: Colors.white70, size: 14),
+              Row(
+                children: [
+                  const Text("METABOLIC PROFILE", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => _showMetabolicInfo(),
+                    child: const Icon(Icons.info_outline_rounded, color: Colors.white70, size: 14),
+                  ),
+                ],
+              ),
+              // Top Right Meal Frequency Dropdown Selector
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(40),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withAlpha(80), width: 1),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: provider.mealsPerDay,
+                    dropdownColor: _dustyOlive,
+                    icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.white, size: 18),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                    isDense: true,
+                    items: const [
+                      DropdownMenuItem<int>(
+                        value: 1,
+                        child: Text("1 Meal / Day"),
+                      ),
+                      DropdownMenuItem<int>(
+                        value: 2,
+                        child: Text("2 Meals / Day"),
+                      ),
+                      DropdownMenuItem<int>(
+                        value: 3,
+                        child: Text("3 Meals / Day"),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        provider.setMealsPerDay(val);
+                      }
+                    },
+                  ),
+                ),
               ),
             ],
           ),
@@ -299,9 +340,16 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
           ),
           const SizedBox(height: 18),
           
-          _bigStatBox("DAILY ENERGY GOAL (DER)", "${provider.targetDER.toInt()} kcal/day", isPrimary: true),
+          // Target Meal Calories (Divided dynamically by mealsPerDay)
+          _bigStatBox(
+            provider.mealsPerDay > 1 
+                ? "TARGET MEAL CALORIES (1/${provider.mealsPerDay} MEAL)" 
+                : "TARGET MEAL CALORIES (1 MEAL)", 
+            "${provider.targetMealCalories.toInt()} kcal/meal", 
+            isPrimary: true
+          ),
           const SizedBox(height: 10),
-          _bigStatBox("RESTING BASELINE (RER)", "${provider.currentRER.toInt()} kcal/day", isPrimary: false),
+          _bigStatBox("DAILY ENERGY GOAL (DER)", "${provider.targetDER.toInt()} kcal/day", isPrimary: false),
         ],
       ),
     );
@@ -392,22 +440,67 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   // 2. INTERACTIVE MIXING BOWL WIDGET
   // -----------------------------------------------------------------
   Widget _buildFeedingBowl(NutritionalProvider provider) {
-    return Container(
+    int itemCount = provider.bowl.length;
+    double listContainerHeight;
+    if (itemCount == 0) {
+      listContainerHeight = 46.0;
+    } else {
+      int visibleItems = itemCount.clamp(1, 3);
+      listContainerHeight = (visibleItems * 54.0) + ((visibleItems - 1) * 6.0) + 12.0;
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       width: double.infinity,
-      height: 380,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(230), 
         borderRadius: BorderRadius.circular(28), 
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 15, offset: const Offset(0, 4))]
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 15, offset: const Offset(0, 4))],
       ),
-      child: Stack(
+      child: Column(
         children: [
-          // Vector Bowl Painter
-          Positioned(
-            top: 10,
-            left: 10,
-            right: 10,
-            height: 180,
+          // Top Header Row with Title & Reset Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(width: 48), // Spacer for centering
+              Text(
+                "MIXING BOWL",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: _dustyOlive,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              InkWell(
+                onTap: () => provider.clearBowl(),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _dustyOlive.withAlpha(30),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh_rounded, size: 13, color: _dustyOlive),
+                      const SizedBox(width: 4),
+                      Text("RESET", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // 1. Vector Bowl Painter
+          SizedBox(
+            height: 155,
+            width: double.infinity,
             child: CustomPaint(
               painter: PetFoodBowlPainter(
                 bowl: provider.bowl,
@@ -415,48 +508,23 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
               ),
             ),
           ),
-          
-          // Reset Button
-          Positioned(
-            top: 12,
-            right: 12,
-            child: InkWell(
-              onTap: () => provider.clearBowl(),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _dustyOlive.withAlpha(30),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh_rounded, size: 13, color: _dustyOlive),
-                    const SizedBox(width: 4),
-                    Text("RESET", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 10)),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(height: 10),
 
-          // Selected Ingredients List with Integrated Portion Sliders
-          Positioned(
-            bottom: 10,
-            left: 12,
-            right: 12,
-            child: Container(
-              height: 170,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey.withAlpha(18),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withAlpha(40), width: 1),
-              ),
-              child: provider.bowl.isEmpty
+          // 2. Selected Ingredients Box with Dynamic Resizing
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            height: listContainerHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey.withAlpha(18),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.withAlpha(40), width: 1),
+            ),
+            child: provider.bowl.isEmpty
                 ? Center(
                     child: Text(
-                      "Selected food items & portion sliders will appear here in the mixing bowl",
+                      "Selected food items & portion sliders will appear here",
                       style: TextStyle(color: _ashGrey, fontSize: 11, fontStyle: FontStyle.italic),
                     ),
                   )
@@ -549,7 +617,6 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                       );
                     },
                   ),
-            ),
           ),
         ],
       ),
@@ -681,7 +748,6 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
           _nutrientBar("PROTEIN", provider.totalProteinGrams, 150.0, Colors.teal, unit: "g"),
           _nutrientBar("FAT", provider.totalFatGrams, 80.0, Colors.orange, unit: "g"),
           _nutrientBar("CALCIUM", provider.totalCalciumMg, 2500.0, Colors.purple, unit: "mg"),
-          _nutrientBar("PHOSPHORUS", provider.totalPhosphorusMg, 2500.0, Colors.indigo, unit: "mg"),
           _nutrientBar("VITAMINS (A & B Complex)", provider.totalVitaminsMg, 500.0, Colors.pink, unit: "mg"),
           _nutrientBar("MINERALS (Iron & Zinc)", provider.totalMineralsMg, 5000.0, Colors.blueGrey, unit: "mg"),
           
