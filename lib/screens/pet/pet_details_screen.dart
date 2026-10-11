@@ -9,7 +9,10 @@ import '../../models/pet_model.dart';
 import '../../services/pet_service.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/image_helper.dart';
+import '../../models/health_model.dart';
+import '../../services/health_service.dart';
 import '../health/health_issues_screen.dart';
+import '../health/vaccination_screen.dart';
 
 class PetDetailsScreen extends StatefulWidget {
   final String petId;
@@ -28,6 +31,8 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
   final Color _ashGrey = const Color(0xFFB7B7A4);
   final Color _darkCharcoal = const Color(0xFF2D3142);
   final Color _errorCoral = const Color(0xFFB56576);
+
+  final HealthService _healthService = HealthService();
 
   final PetService _petService = PetService();
   final ImagePicker _picker = ImagePicker();
@@ -121,7 +126,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                 const SizedBox(height: 32),
                 _buildHealthIssuesSection(uid, pet),
                 const SizedBox(height: 32),
-                _buildMedicalHistoryPlaceholder(),
+                _buildHealthRecordsSection(uid, pet),
                 const SizedBox(height: 50),
               ],
             ),
@@ -276,9 +281,158 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => HealthIssuesScreen(pet: pet),
+                  MaterialPageRoute(builder: (context) => HealthIssuesScreen(pet: pet)),
+                );
+              },
+              child: Text("Manage", style: TextStyle(color: _powderPetal, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        StreamBuilder<List<HealthIssue>>(
+          stream: _healthService.streamHealthIssues(uid, pet.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: const Color(0xFFFBFBFB), borderRadius: BorderRadius.circular(24)),
+                child: const Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final issues = snapshot.data ?? [];
+
+            if (issues.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBFBFB),
+                  borderRadius: BorderRadius.circular(24), 
+                  border: Border.all(color: Colors.white.withAlpha(50)),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.monitor_heart_rounded, size: 36, color: _ashGrey.withAlpha(120)),
+                    const SizedBox(height: 10),
+                    Text(
+                      "No active medical conditions logged.", 
+                      textAlign: TextAlign.center, 
+                      style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13, fontWeight: FontWeight.w500)
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => HealthIssuesScreen(pet: pet)),
+                        );
+                      },
+                      icon: const Icon(Icons.add, color: Colors.white, size: 16),
+                      label: const Text("Log Medical Condition", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _dustyOlive,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: issues.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final issue = issues[index];
+                Color severityColor = Colors.orange;
+                if (issue.severity.toLowerCase() == 'mild') severityColor = Colors.teal;
+                if (issue.severity.toLowerCase() == 'severe') severityColor = _errorCoral;
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBFBFB),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 5)],
                   ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.healing_rounded, size: 18, color: severityColor),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              issue.title,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: severityColor.withAlpha(30),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              issue.severity.toUpperCase(),
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: severityColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Diagnosed: ${DateFormat('dd MMM yyyy').format(issue.diagnosisDate)}",
+                            style: TextStyle(fontSize: 12, color: _ashGrey, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "Status: ${issue.status}",
+                            style: TextStyle(
+                              fontSize: 12, 
+                              fontWeight: FontWeight.bold, 
+                              color: issue.status.toLowerCase() == 'recovered' ? Colors.green : _darkCharcoal
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (issue.notes.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          issue.notes,
+                          style: TextStyle(fontSize: 12, color: _darkCharcoal.withAlpha(180), fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHealthRecordsSection(String uid, PetProfile pet) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _sectionTitle("WELLNESS TRACK"),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => VaccinationScreen(pet: pet)),
                 );
               },
               child: Text("View All", style: TextStyle(color: _powderPetal, fontWeight: FontWeight.bold)),
@@ -286,72 +440,143 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFBFBFB), // Creamy white
-            borderRadius: BorderRadius.circular(24), 
-            border: Border.all(color: Colors.white.withAlpha(50)),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.monitor_heart_rounded, size: 40, color: _ashGrey.withAlpha(100)),
-              const SizedBox(height: 12),
-              Text(
-                "Track ongoing health conditions, symptoms, and vet advice here.", 
-                textAlign: TextAlign.center, 
-                style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14)
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => HealthIssuesScreen(pet: pet),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text("Log Health Issue", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _dustyOlive,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+        StreamBuilder<List<VaccinationRecord>>(
+          stream: _healthService.streamVaccinations(uid, pet.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: const Color(0xFFFBFBFB), borderRadius: BorderRadius.circular(24)),
+                child: const Center(child: CircularProgressIndicator()),
+              );
+            }
 
-  Widget _buildMedicalHistoryPlaceholder() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle("HEALTH RECORDS"),
-        const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFBFBFB), // Creamy white
-            borderRadius: BorderRadius.circular(24), 
-            border: Border.all(color: Colors.white.withAlpha(50)),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.history_edu_rounded, size: 40, color: _ashGrey.withAlpha(100)),
-              const SizedBox(height: 12),
-              Text(
-                "Medical history and vaccine records will appear here once implemented in the Health dashboard.", 
-                textAlign: TextAlign.center, 
-                style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 14)
-              ),
-            ],
-          ),
+            final records = snapshot.data ?? [];
+            
+            // STRICT FILTER: Pet Passport displays ONLY passed/completed vaccination & deworming records
+            final DateTime now = DateTime.now();
+            final passedRecords = records.where((r) {
+              return r.isCompleted || r.dateGiven.isBefore(now) || (r.dateGiven.year == now.year && r.dateGiven.month == now.month && r.dateGiven.day == now.day);
+            }).toList();
+
+            if (passedRecords.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBFBFB),
+                  borderRadius: BorderRadius.circular(24), 
+                  border: Border.all(color: Colors.white.withAlpha(50)),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.history_edu_rounded, size: 36, color: _ashGrey.withAlpha(120)),
+                    const SizedBox(height: 10),
+                    Text(
+                      "No passed vaccination or deworming records logged yet.", 
+                      textAlign: TextAlign.center, 
+                      style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13, fontWeight: FontWeight.w500)
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => VaccinationScreen(pet: pet)),
+                        );
+                      },
+                      icon: const Icon(Icons.add, color: Colors.white, size: 16),
+                      label: const Text("Log Dose Record", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _dustyOlive,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: passedRecords.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final rec = passedRecords[index];
+                bool isVaccine = rec.type.toLowerCase() == 'vaccine';
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBFBFB),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 5)],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isVaccine ? Colors.blue.withAlpha(30) : Colors.orange.withAlpha(30),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isVaccine ? Icons.vaccines_rounded : Icons.medication_rounded,
+                          color: isVaccine ? Colors.blue.shade800 : Colors.orange.shade800,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    rec.doseName,
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    "✓ PASSED",
+                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.green),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Given: ${DateFormat('dd MMM yyyy').format(rec.dateGiven)} • ${rec.dosage}",
+                              style: TextStyle(fontSize: 12, color: _ashGrey, fontWeight: FontWeight.bold),
+                            ),
+                            if (rec.vetName.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                "Administered at: ${rec.vetName}",
+                                style: TextStyle(fontSize: 11, color: _darkCharcoal.withAlpha(160)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         ),
       ],
     );

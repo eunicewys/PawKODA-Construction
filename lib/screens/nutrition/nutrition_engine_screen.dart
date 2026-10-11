@@ -312,8 +312,8 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                     Flexible(
                       child: Text(
                         provider.isSickPet
-                            ? "Clinical Mode: ${diseaseProfile.displayName} • Therapeutic Constraints Active"
-                            : "Status: Healthy • Standard Life-Stage Engine",
+                            ? "Status: ${diseaseProfile.displayName}"
+                            : "Status: Healthy",
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                         textAlign: TextAlign.center,
                       ),
