@@ -30,6 +30,14 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
 
   final HealthService _healthService = HealthService();
 
+  String _toTitleCase(String text) {
+    if (text.trim().isEmpty) return text;
+    return text.trim().split(RegExp(r'\s+')).map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
   DiseaseType _mapDiseaseTitleToType(String title) {
     String t = title.toLowerCase();
     if (t.contains('obesity') || t.contains('overweight') || t.contains('weight loss')) {
@@ -48,6 +56,122 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
       return DiseaseType.urinaryHealth;
     }
     return DiseaseType.none;
+  }
+
+  void _showVetConsultModal(String diseaseName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: _errorCoral.withAlpha(30), shape: BoxShape.circle),
+              child: Icon(Icons.local_hospital_rounded, color: _errorCoral, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Consult Veterinarian",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: TextSpan(
+                style: TextStyle(fontSize: 14, color: _darkCharcoal, height: 1.4),
+                children: [
+                  const TextSpan(text: "For "),
+                  TextSpan(
+                    text: diseaseName,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: _dustyOlive),
+                  ),
+                  const TextSpan(
+                    text: ", please consult a qualified veterinarian for real specialized nutrition intake and clinical advice.\n\n",
+                  ),
+                  TextSpan(
+                    text: "⚠️ Note: ",
+                    style: TextStyle(fontWeight: FontWeight.bold, color: _errorCoral),
+                  ),
+                  const TextSpan(
+                    text: "Because this condition requires professional diagnosis, the Nutrition Engine will calculate energy requirements for ",
+                  ),
+                  TextSpan(
+                    text: widget.pet.name,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal),
+                  ),
+                  const TextSpan(
+                    text: " using normal healthy pet formulas.",
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _dustyOlive,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Understood", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: _errorCoral, size: 26),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 14, color: _darkCharcoal, height: 1.3),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _dustyOlive,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showAddIssueDialog([HealthIssue? existingIssue]) {
@@ -110,35 +234,34 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Condition Title
+                    // Condition Title Dropdown
                     _buildLabel("CONDITION / DISEASE NAME"),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: commonDiseases.map((disease) {
-                        final isSel = selectedCommon == disease;
-                        return ChoiceChip(
-                          label: Text(disease, style: TextStyle(color: isSel ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
-                          selected: isSel,
-                          selectedColor: _dustyOlive,
-                          backgroundColor: Colors.white,
-                          onSelected: (val) {
-                            setMState(() {
-                              if (val) {
-                                selectedCommon = disease;
-                                if (disease != "Others") {
-                                  titleCtrl.text = disease;
-                                } else {
-                                  titleCtrl.clear();
-                                }
-                              } else {
-                                selectedCommon = null;
-                                titleCtrl.clear();
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedCommon,
+                      decoration: InputDecoration(
+                        hintText: "Select condition or disease...",
+                        fillColor: Colors.white,
+                        filled: true,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      ),
+                      dropdownColor: Colors.white,
+                      style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
+                      items: commonDiseases.map((d) => DropdownMenuItem<String>(
+                        value: d,
+                        child: Text(d),
+                      )).toList(),
+                      onChanged: (val) {
+                        setMState(() {
+                          selectedCommon = val;
+                          if (val != null && val != "Others") {
+                            titleCtrl.text = val;
+                          } else {
+                            titleCtrl.clear();
+                          }
+                        });
+                      },
                     ),
                     const SizedBox(height: 12),
                     
@@ -207,13 +330,13 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Status
+                    // Status (2 Options: Active vs Recovered)
                     _buildLabel("CURRENT STATUS"),
                     Row(
-                      children: ['Active', 'Ongoing', 'Recovered'].map((st) {
+                      children: ['Active', 'Recovered'].map((st) {
                         final isSel = status == st;
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.only(right: 12),
                           child: ChoiceChip(
                             label: Text(st, style: TextStyle(color: isSel ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
                             selected: isSel,
@@ -248,7 +371,23 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: isSaving ? null : () async {
-                          if (titleCtrl.text.trim().isEmpty) return;
+                          final String enteredTitle = _toTitleCase(titleCtrl.text);
+
+                          if (selectedCommon == null || selectedCommon!.isEmpty) {
+                            _showErrorDialog("Condition Required", "Please select a condition or select 'Others' and specify the disease name.");
+                            return;
+                          }
+
+                          if (selectedCommon == "Others" && enteredTitle.isEmpty) {
+                            _showErrorDialog("Disease Name Required", "Please specify the custom condition or disease name before saving to the Pet Passport.");
+                            return;
+                          }
+
+                          if (enteredTitle.isEmpty) {
+                            _showErrorDialog("Disease Name Required", "Condition / Disease name is required.");
+                            return;
+                          }
+
                           setMState(() => isSaving = true);
 
                           try {
@@ -268,14 +407,14 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                             final issue = HealthIssue(
                               id: existingIssue?.id ?? '',
                               petId: widget.pet.id,
-                              title: titleCtrl.text.trim(),
+                              title: enteredTitle,
                               diagnosisDate: selectedDate,
                               severity: severity,
                               status: status,
                               notes: notesCtrl.text.trim(),
                             );
 
-                            DiseaseType mappedDisease = _mapDiseaseTitleToType(titleCtrl.text.trim());
+                            DiseaseType mappedDisease = _mapDiseaseTitleToType(enteredTitle);
 
                             if (existingIssue == null) {
                               await _healthService.addHealthIssue(uid, widget.pet.id, issue);
@@ -285,7 +424,14 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                               await PetService().updatePetHealthStatus(uid, widget.pet.id, false, activeDisease: mappedDisease);
                             }
 
-                            if (context.mounted) Navigator.pop(context);
+                            if (context.mounted) {
+                              Navigator.pop(context); // Close modal sheet
+                              
+                              // If disease is outside the 5 clinical diseases, show pop-up dialog warning
+                              if (mappedDisease == DiseaseType.none) {
+                                _showVetConsultModal(enteredTitle);
+                              }
+                            }
                           } catch (e) {
                             debugPrint("Error saving health issue: $e");
                             if (context.mounted) {
@@ -337,7 +483,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
           return Column(
             children: [
               FringeHeader(
-                title: "Health Issues",
+                title: "Medical Conditions",
                 subtitle: "${currentPet.name} • Passport Synced",
                 onBack: () => Navigator.pop(context),
               ),
@@ -376,7 +522,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text("Overall Passport Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal)),
+                                  Text("Health Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal)),
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
@@ -417,7 +563,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  Text("This syncs directly with the Pet Passport top right badge.", style: TextStyle(color: Colors.grey.shade500, fontSize: 10)),
+                                  Text("Sync with Pet Passport", style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                             ),
@@ -430,15 +576,17 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("LOGGED CONDITIONS (${issues.length})", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.8)),
+                            Text("LOGGED ISSUES (${issues.length})", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.8)),
                             ElevatedButton.icon(
                               onPressed: () => _showAddIssueDialog(),
-                              icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                              label: const Text("+ Log Issue", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              icon: const Icon(Icons.add, size: 14, color: Colors.white),
+                              label: const Text("Add Disease", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _darkCharcoal,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
                           ],
@@ -456,7 +604,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                               const SizedBox(height: 12),
                               Text("No Active Health Issues", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal)),
                               const SizedBox(height: 4),
-                              Text("Tap + Log Issue to record diseases or allergies.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text("Tap + Add Disease to record health issues", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                             ],
                           ),
                         )

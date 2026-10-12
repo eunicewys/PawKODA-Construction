@@ -4,12 +4,14 @@ class FringeHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final VoidCallback? onBack;
+  final Widget? trailing;
 
   const FringeHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.onBack,
+    this.trailing,
   });
 
   @override
@@ -87,6 +89,10 @@ class FringeHeader extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (trailing != null) ...[
+                        const SizedBox(width: 8),
+                        trailing!,
+                      ],
                     ],
                   ),
                 ),

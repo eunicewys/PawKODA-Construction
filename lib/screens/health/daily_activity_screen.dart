@@ -58,7 +58,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Daily Activity Diary Log", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                    Text("Daily Activity", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)),
                     const SizedBox(height: 4),
                     Text("Record ${widget.pet.name}'s daily appetite, stool, water & energy", style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13)),
                     const SizedBox(height: 18),
@@ -258,9 +258,37 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
       body: Column(
         children: [
           FringeHeader(
-            title: "Daily Activity Diary",
+            title: "Daily Activity",
             subtitle: "${widget.pet.name} • Wellbeing Log",
             onBack: () => Navigator.pop(context),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(40),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white.withAlpha(80), width: 1),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedFilter,
+                  dropdownColor: _dustyOlive,
+                  icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.white, size: 16),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+                  isDense: true,
+                  items: ['Past 3 days', 'Past 7 days', 'Past 14 days', 'Past 30 days', 'All time']
+                      .map((f) => DropdownMenuItem<String>(
+                            value: f,
+                            child: Text(f),
+                          ))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _selectedFilter = val);
+                    }
+                  },
+                ),
+              ),
+            ),
           ),
           Expanded(
             child: StreamBuilder<List<DailyActivityLog>>(
@@ -278,79 +306,22 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10)],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(color: _powderPetal, shape: BoxShape.circle),
-                              child: Icon(Icons.edit_note_rounded, color: _dustyOlive, size: 24),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("Daily Wellbeing Diary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal)),
-                                  Text("Track appetite, stool, water & walk activity", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Time Filters
-                      const Text("TIMELINE FILTER", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 0.8)),
-                      const SizedBox(height: 8),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: ['Past 3 days', 'Past 7 days', 'Past 14 days', 'Past 30 days', 'All time'].map((f) {
-                            final isSel = _selectedFilter == f;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ChoiceChip(
-                                label: Text(f, style: TextStyle(color: isSel ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 12)),
-                                selected: isSel,
-                                selectedColor: _dustyOlive,
-                                backgroundColor: Colors.white.withAlpha(200),
-                                showCheckmark: false,
-                                onSelected: (val) {
-                                  if (val) setState(() => _selectedFilter = f);
-                                },
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("DIARY ENTRIES (${filteredLogs.length})", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.8)),
-                          ElevatedButton.icon(
-                            onPressed: () => _showAddDiaryDialog(),
-                            icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                            label: const Text("+ Log Today", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _darkCharcoal,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            ),
+                      // Add Diary Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showAddDiaryDialog(),
+                          icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                          label: const Text("Add Diary", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _darkCharcoal,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 2,
                           ),
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
 
                       if (filteredLogs.isEmpty)
                         Container(
@@ -361,9 +332,14 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                             children: [
                               Icon(Icons.event_note_rounded, size: 48, color: _dustyOlive),
                               const SizedBox(height: 12),
-                              Text("No Diary Entries for $_selectedFilter", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal)),
+                              Text(
+                                _selectedFilter.startsWith("Past")
+                                    ? "No Diary for $_selectedFilter"
+                                    : "No Diary Logged Yet", 
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
+                              ),
                               const SizedBox(height: 4),
-                              Text("Tap + Log Today to create a daily wellbeing entry.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text("Tap Add Diary to create a daily wellbeing entry.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                             ],
                           ),
                         )

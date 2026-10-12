@@ -8,7 +8,8 @@ import '../../providers/user_provider.dart';
 import '../../services/health_service.dart';
 import '../widgets/fringe_header.dart';
 
-/// VaccinationScreen: Log past & future vaccine / deworming dosages and set reminders.
+/// VaccinationScreen: Log past immunization records (syncs to Passport)
+/// and schedule future upcoming dosage reminders.
 class VaccinationScreen extends StatefulWidget {
   final PetProfile pet;
   const VaccinationScreen({super.key, required this.pet});
@@ -27,15 +28,17 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
 
   final HealthService _healthService = HealthService();
 
-  void _showAddDoseDialog() {
+  void _showAddDoseDialog({bool isUpcoming = false}) {
     final nameCtrl = TextEditingController();
     final vetCtrl = TextEditingController();
     final dosageCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
     
     String selectedType = 'Vaccine'; // Vaccine or Deworming
-    DateTime dateGiven = DateTime.now();
-    DateTime? dueDate = DateTime.now().add(const Duration(days: 180)); // Default 6 months
+    // For past records: past or today date. For upcoming: tomorrow onwards.
+    DateTime selectedDate = isUpcoming 
+        ? DateTime.now().add(const Duration(days: 1)) 
+        : DateTime.now();
     bool isSaving = false;
 
     showModalBottomSheet(
@@ -47,7 +50,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
           return Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.82,
+              height: MediaQuery.of(context).size.height * 0.80,
               decoration: BoxDecoration(
                 color: _desertSand,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -58,12 +61,14 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Log Vaccine / Deworming",
+                      isUpcoming ? "Schedule Upcoming Dosage" : "Log Past Dosage Record",
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "Record dosage details and schedule future reminders for ${widget.pet.name}",
+                      isUpcoming 
+                          ? "Set a future reminder for upcoming vaccine or deworming for ${widget.pet.name}"
+                          : "Record past dosage details (syncs to Pet Passport for ${widget.pet.name})",
                       style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13),
                     ),
                     const SizedBox(height: 18),
@@ -104,24 +109,33 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Date Given
-                    _buildLabel("DATE ADMINISTERED"),
+                    // Date Selector (Past vs Future Date Picker)
+                    _buildLabel(isUpcoming ? "SCHEDULED DUE DATE (FUTURE ONLY)" : "DATE ADMINISTERED (PAST OR TODAY)"),
                     SizedBox(
                       width: double.infinity,
                       height: 46,
                       child: OutlinedButton.icon(
                         onPressed: () async {
+                          final now = DateTime.now();
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: dateGiven,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime.now().add(const Duration(days: 30)),
+                            initialDate: selectedDate,
+                            firstDate: isUpcoming 
+                                ? now.add(const Duration(days: 1)) 
+                                : DateTime(2000),
+                            lastDate: isUpcoming 
+                                ? now.add(const Duration(days: 3650)) // Up to 10 years in future
+                                : now, // Up to today only
                           );
-                          if (picked != null) setMState(() => dateGiven = picked);
+                          if (picked != null) setMState(() => selectedDate = picked);
                         },
-                        icon: Icon(Icons.calendar_today_rounded, color: _dustyOlive, size: 18),
+                        icon: Icon(
+                          isUpcoming ? Icons.notifications_active_rounded : Icons.calendar_today_rounded, 
+                          color: _dustyOlive, 
+                          size: 18
+                        ),
                         label: Text(
-                          DateFormat('dd MMM yyyy').format(dateGiven),
+                          DateFormat('dd MMM yyyy').format(selectedDate),
                           style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         style: OutlinedButton.styleFrom(
@@ -144,7 +158,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                               TextField(
                                 controller: vetCtrl,
                                 decoration: InputDecoration(
-                                  hintText: "e.g. Dr. Tan / Paw Clinic",
+                                  hintText: "e.g. Paw Clinic",
                                   fillColor: Colors.white,
                                   filled: true,
                                   isDense: true,
@@ -159,11 +173,11 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel("DOSAGE (e.g. 1 ml / 1 tab)"),
+                              _buildLabel("DOSAGE"),
                               TextField(
                                 controller: dosageCtrl,
                                 decoration: InputDecoration(
-                                  hintText: "e.g. 1 ml",
+                                  hintText: "e.g. 1 ml / 1 tab",
                                   fillColor: Colors.white,
                                   filled: true,
                                   isDense: true,
@@ -177,37 +191,8 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Future Next Due Date (Reminder)
-                    _buildLabel("FUTURE NEXT DUE DATE (REMINDER)"),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 46,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: dueDate ?? DateTime.now().add(const Duration(days: 180)),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 1095)), // 3 years
-                          );
-                          if (picked != null) setMState(() => dueDate = picked);
-                        },
-                        icon: Icon(Icons.notifications_active_rounded, color: _dustyOlive, size: 18),
-                        label: Text(
-                          dueDate == null ? "Set Future Due Date" : "Next Due: ${DateFormat('dd MMM yyyy').format(dueDate!)}",
-                          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: _darkCharcoal.withAlpha(50)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
                     // Notes
-                    _buildLabel("NOTES"),
+                    _buildLabel("NOTES / BATCH NO"),
                     TextField(
                       controller: notesCtrl,
                       decoration: InputDecoration(
@@ -248,11 +233,11 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                               petId: widget.pet.id,
                               type: selectedType,
                               doseName: nameCtrl.text.trim(),
-                              dateGiven: dateGiven,
+                              dateGiven: selectedDate,
                               vetName: vetCtrl.text.trim().isEmpty ? 'Central Vet' : vetCtrl.text.trim(),
                               dosage: dosageCtrl.text.trim().isEmpty ? '1 dose' : dosageCtrl.text.trim(),
-                              dueDate: dueDate,
-                              isCompleted: true,
+                              dueDate: isUpcoming ? selectedDate : null,
+                              isCompleted: !isUpcoming, // True for past record, False for upcoming reminder
                               notes: notesCtrl.text.trim(),
                             );
 
@@ -274,7 +259,10 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         ),
                         child: isSaving
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text("Log Dose & Enable Reminder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          : Text(
+                              isUpcoming ? "Enable Upcoming Reminder" : "Save Record to Passport", 
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
+                            ),
                       ),
                     ),
                   ],
@@ -301,7 +289,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
       body: Column(
         children: [
           FringeHeader(
-            title: "Vaccines & Deworming",
+            title: "Vax & Deworm",
             subtitle: "${widget.pet.name} • Dosage Log & Reminders",
             onBack: () => Navigator.pop(context),
           ),
@@ -313,73 +301,60 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                   return const Center(child: CircularProgressIndicator(color: Colors.white));
                 }
 
-                final records = snapshot.data ?? [];
+                final allRecords = snapshot.data ?? [];
+                final DateTime now = DateTime.now();
+
+                // Partition Records
+                // Past Dosage Records: isCompleted == true OR (dueDate == null && dateGiven <= now)
+                final pastRecords = allRecords.where((r) {
+                  return r.isCompleted || r.dueDate == null || r.dateGiven.isBefore(now) || (r.dateGiven.year == now.year && r.dateGiven.month == now.month && r.dateGiven.day == now.day);
+                }).toList();
+
+                // Upcoming Dosages: isCompleted == false OR (dueDate != null && dueDate > now)
+                final upcomingRecords = allRecords.where((r) {
+                  return !r.isCompleted && r.dueDate != null && r.dueDate!.isAfter(now);
+                }).toList();
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10)],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(color: _powderPetal, shape: BoxShape.circle),
-                              child: Icon(Icons.vaccines_rounded, color: _dustyOlive, size: 24),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("Immunization & Parasite Log", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal)),
-                                  Text("Track vaccinations, dewormers & due dates", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
+                      // -----------------------------------------------------------------
+                      // SECTION 1: DOSAGE RECORDS (PAST / PASSED DOSES - SYNCS TO PASSPORT)
+                      // -----------------------------------------------------------------
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text("DOSAGE RECORDS (${records.length})", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.8)),
+                          Text("DOSAGE RECORDS (${pastRecords.length})", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.8)),
                           ElevatedButton.icon(
-                            onPressed: () => _showAddDoseDialog(),
-                            icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                            label: const Text("+ Log Dose", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                            onPressed: () => _showAddDoseDialog(isUpcoming: false),
+                            icon: const Icon(Icons.add, size: 14, color: Colors.white),
+                            label: const Text("Add Record", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _darkCharcoal,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
 
-                      if (records.isEmpty)
+                      if (pastRecords.isEmpty)
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(30),
+                          padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(color: Colors.white.withAlpha(200), borderRadius: BorderRadius.circular(20)),
                           child: Column(
                             children: [
-                              Icon(Icons.vaccines_rounded, size: 48, color: _dustyOlive),
-                              const SizedBox(height: 12),
-                              Text("No Dosage Records Yet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal)),
+                              Icon(Icons.vaccines_rounded, size: 40, color: _dustyOlive),
+                              const SizedBox(height: 10),
+                              Text("No Past Dosage Records", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal)),
                               const SizedBox(height: 4),
-                              Text("Tap + Log Dose to record vaccines or dewormers.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text("Tap Add Record to log past vaccines or dewormers.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                             ],
                           ),
                         )
@@ -387,11 +362,12 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: records.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemCount: pastRecords.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
-                            final rec = records[index];
-                            final isDueSoon = rec.dueDate != null && rec.dueDate!.isBefore(DateTime.now().add(const Duration(days: 30)));
+                            final rec = pastRecords[index];
+                            bool isVaccine = rec.type.toLowerCase() == 'vaccine';
+
                             return Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -407,12 +383,12 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: rec.type == 'Vaccine' ? Colors.blue.withAlpha(30) : Colors.orange.withAlpha(30),
+                                          color: isVaccine ? Colors.blue.withAlpha(30) : Colors.orange.withAlpha(30),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
                                           rec.type.toUpperCase(),
-                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: rec.type == 'Vaccine' ? Colors.blue.shade800 : Colors.orange.shade800),
+                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isVaccine ? Colors.blue.shade800 : Colors.orange.shade800),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -451,32 +427,133 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                     const SizedBox(height: 4),
                                     Text("Vet / Clinic: ${rec.vetName} • Dosage: ${rec.dosage}", style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                                   ],
-                                  if (rec.dueDate != null) ...[
-                                    const SizedBox(height: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: isDueSoon ? _errorCoral.withAlpha(20) : const Color(0xFFFFE8D6),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(color: isDueSoon ? _errorCoral : _dustyOlive, width: 1),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.notifications_active_rounded, size: 16, color: isDueSoon ? _errorCoral : _dustyOlive),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              "⏰ Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(rec.dueDate!)}",
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDueSoon ? _errorCoral : _darkCharcoal),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
                                   if (rec.notes.isNotEmpty) ...[
                                     const SizedBox(height: 8),
-                                    Text(rec.notes, style: TextStyle(fontSize: 12, color: _darkCharcoal, fontStyle: FontStyle.italic)),
+                                    Text("Notes: ${rec.notes}", style: TextStyle(fontSize: 12, color: _darkCharcoal, fontStyle: FontStyle.italic)),
+                                  ],
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 28),
+
+                      // -----------------------------------------------------------------
+                      // SECTION 2: UPCOMING DOSAGES & REMINDERS (FUTURE DATES ONLY)
+                      // -----------------------------------------------------------------
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("UPCOMING (${upcomingRecords.length})", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.8)),
+                          ElevatedButton.icon(
+                            onPressed: () => _showAddDoseDialog(isUpcoming: true),
+                            icon: const Icon(Icons.add, size: 14, color: Colors.white),
+                            label: const Text("Add Reminder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _darkCharcoal,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (upcomingRecords.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(color: Colors.white.withAlpha(200), borderRadius: BorderRadius.circular(20)),
+                          child: Column(
+                            children: [
+                              Icon(Icons.notifications_active_rounded, size: 40, color: _dustyOlive),
+                              const SizedBox(height: 10),
+                              Text("No Upcoming Reminders", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal)),
+                              const SizedBox(height: 4),
+                              Text("Tap Add Reminder to set a future due date alert.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                            ],
+                          ),
+                        )
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: upcomingRecords.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final rec = upcomingRecords[index];
+                            bool isVaccine = rec.type.toLowerCase() == 'vaccine';
+
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: _errorCoral.withAlpha(120), width: 1.2),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isVaccine ? Colors.blue.withAlpha(30) : Colors.orange.withAlpha(30),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          rec.type.toUpperCase(),
+                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isVaccine ? Colors.blue.shade800 : Colors.orange.shade800),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          rec.doseName,
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
+                                        onPressed: () async {
+                                          await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFE8D6),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: _dustyOlive, width: 1),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.notifications_active_rounded, size: 16, color: _dustyOlive),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            "⏰ Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(rec.dueDate ?? rec.dateGiven)}",
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (rec.vetName.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text("Scheduled Vet / Clinic: ${rec.vetName} • Dosage: ${rec.dosage}", style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                  ],
+                                  if (rec.notes.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text("Notes: ${rec.notes}", style: TextStyle(fontSize: 12, color: _darkCharcoal, fontStyle: FontStyle.italic)),
                                   ],
                                 ],
                               ),

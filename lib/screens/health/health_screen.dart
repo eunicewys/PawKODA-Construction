@@ -84,67 +84,79 @@ class _HealthScreenState extends State<HealthScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Pet Selector Header
+                      // Pet Selector Dropdown Header
                       if (pets.isNotEmpty) ...[
                         const Text("SELECT PET", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 1.0)),
                         const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: pets.map((pet) {
-                              final isSelected = pet.id == _selectedPetId;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  curve: Curves.easeInOut,
-                                  child: ChoiceChip(
-                                    label: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.pets_rounded, 
-                                            size: 16, 
-                                            color: isSelected ? Colors.white : _dustyOlive.withAlpha(200)
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            pet.name, 
-                                            style: TextStyle(
-                                              color: isSelected ? Colors.white : _darkCharcoal, 
-                                              fontWeight: FontWeight.bold, 
-                                              fontSize: 15,
-                                              letterSpacing: 0.3,
-                                            )
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    selected: isSelected,
-                                    selectedColor: _dustyOlive,
-                                    backgroundColor: Colors.white,
-                                    elevation: isSelected ? 4 : 0,
-                                    shadowColor: _dustyOlive.withAlpha(100),
-                                    showCheckmark: false,
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                    onSelected: (val) {
-                                      if (val) {
-                                        setState(() => _selectedPetId = pet.id);
-                                      }
-                                    },
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20), 
-                                      side: BorderSide(
-                                        color: isSelected ? Colors.transparent : Colors.white.withAlpha(150),
-                                        width: 1,
-                                      ),
-                                    ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          decoration: BoxDecoration(
+                            color: selectedPet != null 
+                                ? _powderPetal // Warm Morandi Powder Petal accent color when pet is selected
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: selectedPet != null ? _dustyOlive : const Color(0xFFCB997E), 
+                              width: 2.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: selectedPet != null 
+                                    ? _dustyOlive.withAlpha(50) 
+                                    : Colors.black.withAlpha(20), 
+                                blurRadius: 10, 
+                                offset: const Offset(0, 4),
+                              )
+                            ],
+                          ),
+                          child: DropdownButtonFormField<String?>(
+                            initialValue: _selectedPetId,
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(
+                                Icons.pets_rounded, 
+                                color: selectedPet != null ? _dustyOlive : const Color(0xFFCB997E), 
+                                size: 22
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                borderSide: BorderSide.none,
+                              ),
+                              fillColor: Colors.transparent,
+                              filled: true,
+                            ),
+                            dropdownColor: Colors.white,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold, 
+                              color: _darkCharcoal, 
+                              fontSize: 15
+                            ),
+                            items: [
+                              DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text(
+                                  "-- Please select a pet --",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold, 
+                                    color: Colors.grey.shade600, 
+                                    fontStyle: FontStyle.italic
                                   ),
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                              ...pets.map((pet) => DropdownMenuItem<String?>(
+                                value: pet.id,
+                                child: Text(
+                                  "${pet.name} (${pet.breed})",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold, 
+                                    color: _darkCharcoal
+                                  ),
+                                ),
+                              )),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _selectedPetId = val);
+                            },
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -182,7 +194,7 @@ class _HealthScreenState extends State<HealthScreen> {
                       // Module 3: Vaccines & Deworming Dosage Log
                       _buildModuleCard(
                         icon: Icons.vaccines_rounded,
-                        title: "Vaccinations & Deworming",
+                        title: "Vax & Deworm",
                         subtitle: "Log doses and set reminders",
                         color: _desertSand,
                         onTap: () {
