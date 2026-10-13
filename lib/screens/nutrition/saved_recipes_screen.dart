@@ -20,6 +20,55 @@ class SavedRecipesScreen extends StatelessWidget {
   final Color _ashGrey = const Color(0xFFB7B7A4);
   final Color _errorCoral = const Color(0xFFB56576);
 
+  Future<bool> _showDeleteConfirmationDialog(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: _errorCoral.withAlpha(30), shape: BoxShape.circle),
+              child: Icon(Icons.delete_outline_rounded, color: _errorCoral, size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 14, color: _darkCharcoal, height: 1.3),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel", style: TextStyle(color: _ashGrey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _errorCoral,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = Provider.of<UserProvider>(context).uid ?? FirebaseAuth.instance.currentUser?.uid ?? "";
@@ -116,11 +165,18 @@ class SavedRecipesScreen extends StatelessWidget {
                                     IconButton(
                                       icon: Icon(Icons.delete_outline_rounded, color: _errorCoral, size: 20),
                                       onPressed: () async {
-                                        await recipeService.deleteRecipe(uid, recipe.id);
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text("Deleted '${recipe.recipeName}'")),
-                                          );
+                                        bool confirm = await _showDeleteConfirmationDialog(
+                                          context,
+                                          title: "Delete Recipe",
+                                          message: "Are you sure you want to delete '${recipe.recipeName}'? This action cannot be undone.",
+                                        );
+                                        if (confirm) {
+                                          await recipeService.deleteRecipe(uid, recipe.id);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text("Deleted '${recipe.recipeName}'")),
+                                            );
+                                          }
                                         }
                                       },
                                     ),

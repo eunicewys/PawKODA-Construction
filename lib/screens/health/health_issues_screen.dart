@@ -134,6 +134,55 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
     );
   }
 
+  Future<bool> _showDeleteConfirmationDialog(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: _errorCoral.withAlpha(30), shape: BoxShape.circle),
+              child: Icon(Icons.delete_outline_rounded, color: _errorCoral, size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 14, color: _darkCharcoal, height: 1.3),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _errorCoral,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   void _showErrorDialog(String title, String message) {
     showDialog(
       context: context,
@@ -679,7 +728,14 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                           const SizedBox(width: 4),
                                           InkWell(
                                             onTap: () async {
-                                              await _healthService.deleteHealthIssue(uid, currentPet.id, issue.id);
+                                              bool confirm = await _showDeleteConfirmationDialog(
+                                                context,
+                                                title: "Delete Medical Issue",
+                                                message: "Are you sure you want to delete '${issue.title}'? This action cannot be undone.",
+                                              );
+                                              if (confirm) {
+                                                await _healthService.deleteHealthIssue(uid, currentPet.id, issue.id);
+                                              }
                                             },
                                             borderRadius: BorderRadius.circular(6),
                                             child: Padding(

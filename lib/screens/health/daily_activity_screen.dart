@@ -32,6 +32,55 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  Future<bool> _showDeleteConfirmationDialog(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: _errorCoral.withAlpha(30), shape: BoxShape.circle),
+              child: Icon(Icons.delete_outline_rounded, color: _errorCoral, size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 14, color: _darkCharcoal, height: 1.3),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _errorCoral,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   void _showDialogAlert(BuildContext ctx, String title, String message, IconData icon) {
     showDialog(
       context: ctx,
@@ -493,7 +542,15 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                                           IconButton(
                                             icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
                                             onPressed: () async {
-                                              await _healthService.deleteDailyActivityLog(uid, widget.pet.id, log.id);
+                                              String dateStr = DateFormat('EEEE, dd MMM yyyy').format(log.date);
+                                              bool confirm = await _showDeleteConfirmationDialog(
+                                                context,
+                                                title: "Delete Diary Entry",
+                                                message: "Are you sure you want to delete the daily activity log for $dateStr? This action cannot be undone.",
+                                              );
+                                              if (confirm) {
+                                                await _healthService.deleteDailyActivityLog(uid, widget.pet.id, log.id);
+                                              }
                                             },
                                             padding: EdgeInsets.zero,
                                             constraints: const BoxConstraints(),

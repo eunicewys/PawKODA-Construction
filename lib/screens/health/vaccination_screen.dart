@@ -279,6 +279,55 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
     );
   }
 
+  Future<bool> _showDeleteConfirmationDialog(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: _errorCoral.withAlpha(30), shape: BoxShape.circle),
+              child: Icon(Icons.delete_outline_rounded, color: _errorCoral, size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 14, color: _darkCharcoal, height: 1.3),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _errorCoral,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Widget _buildLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
     child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5)),
@@ -405,10 +454,18 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                       IconButton(
                                         icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
                                         onPressed: () async {
-                                          await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
+                                          bool confirm = await _showDeleteConfirmationDialog(
+                                            context,
+                                            title: "Delete Dose Record",
+                                            message: "Are you sure you want to delete '${rec.doseName}'? This action cannot be undone.",
+                                          );
+                                          if (confirm) {
+                                            await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
+                                          }
                                         },
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
+                                        tooltip: "Delete Record",
                                       ),
                                     ],
                                   ),
@@ -523,10 +580,18 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                       IconButton(
                                         icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
                                         onPressed: () async {
-                                          await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
+                                          bool confirm = await _showDeleteConfirmationDialog(
+                                            context,
+                                            title: "Delete Reminder",
+                                            message: "Are you sure you want to delete the reminder for '${rec.doseName}'? This action cannot be undone.",
+                                          );
+                                          if (confirm) {
+                                            await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
+                                          }
                                         },
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
+                                        tooltip: "Delete Reminder",
                                       ),
                                     ],
                                   ),
