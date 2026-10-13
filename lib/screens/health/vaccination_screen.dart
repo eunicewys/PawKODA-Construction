@@ -28,17 +28,18 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
 
   final HealthService _healthService = HealthService();
 
-  void _showAddDoseDialog({bool isUpcoming = false}) {
-    final nameCtrl = TextEditingController();
-    final vetCtrl = TextEditingController();
-    final dosageCtrl = TextEditingController();
-    final notesCtrl = TextEditingController();
+  void _showAddDoseDialog({bool isUpcoming = false, VaccinationRecord? existingRecord}) {
+    final nameCtrl = TextEditingController(text: existingRecord?.doseName ?? '');
+    final vetCtrl = TextEditingController(text: existingRecord?.vetName ?? '');
+    final dosageCtrl = TextEditingController(text: existingRecord?.dosage ?? '');
+    final notesCtrl = TextEditingController(text: existingRecord?.notes ?? '');
     
-    String selectedType = 'Vaccine'; // Vaccine or Deworming
-    // For past records: past or today date. For upcoming: tomorrow onwards.
-    DateTime selectedDate = isUpcoming 
-        ? DateTime.now().add(const Duration(days: 1)) 
-        : DateTime.now();
+    String selectedType = existingRecord?.type ?? 'Vaccine';
+    DateTime selectedDate = existingRecord?.dueDate ?? existingRecord?.dateGiven ?? (
+      isUpcoming 
+          ? DateTime.now().add(const Duration(days: 1)) 
+          : DateTime.now()
+    );
     bool isSaving = false;
 
     showModalBottomSheet(
@@ -61,7 +62,9 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isUpcoming ? "Schedule Upcoming Dosage" : "Log Past Dosage Record",
+                      existingRecord != null 
+                          ? (isUpcoming ? "Edit Upcoming Reminder" : "Edit Past Dosage Record")
+                          : (isUpcoming ? "Schedule Upcoming Dosage" : "Log Past Dosage Record"),
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal),
                     ),
                     const SizedBox(height: 4),
@@ -233,7 +236,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                             }
 
                             final record = VaccinationRecord(
-                              id: '',
+                              id: existingRecord?.id ?? '',
                               petId: widget.pet.id,
                               type: selectedType,
                               doseName: nameCtrl.text.trim(),
@@ -241,11 +244,15 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                               vetName: vetCtrl.text.trim().isEmpty ? 'Central Vet' : vetCtrl.text.trim(),
                               dosage: dosageCtrl.text.trim().isEmpty ? '1 dose' : dosageCtrl.text.trim(),
                               dueDate: isUpcoming ? selectedDate : null,
-                              isCompleted: !isUpcoming, // True for past record, False for upcoming reminder
+                              isCompleted: !isUpcoming,
                               notes: notesCtrl.text.trim(),
                             );
 
-                            await _healthService.addVaccination(uid, widget.pet.id, record);
+                            if (existingRecord == null) {
+                              await _healthService.addVaccination(uid, widget.pet.id, record);
+                            } else {
+                              await _healthService.updateVaccination(uid, widget.pet.id, existingRecord.id, record);
+                            }
                             if (context.mounted) Navigator.pop(context);
                           } catch (e) {
                             debugPrint("Error saving vaccination: $e");
@@ -264,7 +271,9 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         child: isSaving
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                           : Text(
-                              isUpcoming ? "Enable Upcoming Reminder" : "Save Record to Passport", 
+                              existingRecord != null 
+                                  ? (isUpcoming ? "Update Reminder" : "Update Record")
+                                  : (isUpcoming ? "Enable Upcoming Reminder" : "Save Record to Passport"), 
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
                             ),
                       ),
@@ -394,7 +403,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
 
                       if (pastRecords.isEmpty)
                         Container(
@@ -413,6 +422,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         )
                       else
                         ListView.separated(
+                          padding: EdgeInsets.zero,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: pastRecords.length,
@@ -432,9 +442,10 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
                                           color: isVaccine ? Colors.blue.withAlpha(30) : Colors.orange.withAlpha(30),
                                           borderRadius: BorderRadius.circular(8),
@@ -444,32 +455,45 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isVaccine ? Colors.blue.shade800 : Colors.orange.shade800),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          rec.doseName,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
-                                        onPressed: () async {
-                                          bool confirm = await _showDeleteConfirmationDialog(
-                                            context,
-                                            title: "Delete",
-                                            message: "Are you sure you want to delete '${rec.doseName}'? This action cannot be undone.",
-                                          );
-                                          if (confirm) {
-                                            await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
-                                          }
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        tooltip: "Delete Record",
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          InkWell(
+                                            onTap: () => _showAddDoseDialog(isUpcoming: false, existingRecord: rec),
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: Icon(Icons.edit_note_rounded, size: 22, color: _dustyOlive),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          InkWell(
+                                            onTap: () async {
+                                              bool confirm = await _showDeleteConfirmationDialog(
+                                                context,
+                                                title: "Delete",
+                                                message: "Are you sure you want to delete '${rec.doseName}'? This action cannot be undone.",
+                                              );
+                                              if (confirm) {
+                                                await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
+                                              }
+                                            },
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: Icon(Icons.delete_outline_rounded, size: 20, color: _errorCoral),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    rec.doseName,
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
+                                  ),
+                                  const SizedBox(height: 8),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
@@ -497,7 +521,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                             );
                           },
                         ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 36),
 
                       // -----------------------------------------------------------------
                       // SECTION 2: UPCOMING DOSAGES & REMINDERS (FUTURE DATES ONLY)
@@ -520,7 +544,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
 
                       if (upcomingRecords.isEmpty)
                         Container(
@@ -539,6 +563,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         )
                       else
                         ListView.separated(
+                          padding: EdgeInsets.zero,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: upcomingRecords.length,
@@ -558,9 +583,10 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
                                           color: isVaccine ? Colors.blue.withAlpha(30) : Colors.orange.withAlpha(30),
                                           borderRadius: BorderRadius.circular(8),
@@ -570,32 +596,45 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isVaccine ? Colors.blue.shade800 : Colors.orange.shade800),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          rec.doseName,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
-                                        onPressed: () async {
-                                          bool confirm = await _showDeleteConfirmationDialog(
-                                            context,
-                                            title: "Delete",
-                                            message: "Are you sure you want to delete the reminder for '${rec.doseName}'? This action cannot be undone.",
-                                          );
-                                          if (confirm) {
-                                            await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
-                                          }
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        tooltip: "Delete Reminder",
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          InkWell(
+                                            onTap: () => _showAddDoseDialog(isUpcoming: true, existingRecord: rec),
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: Icon(Icons.edit_note_rounded, size: 22, color: _dustyOlive),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          InkWell(
+                                            onTap: () async {
+                                              bool confirm = await _showDeleteConfirmationDialog(
+                                                context,
+                                                title: "Delete",
+                                                message: "Are you sure you want to delete the reminder for '${rec.doseName}'? This action cannot be undone.",
+                                              );
+                                              if (confirm) {
+                                                await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
+                                              }
+                                            },
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: Icon(Icons.delete_outline_rounded, size: 20, color: _errorCoral),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    rec.doseName,
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
+                                  ),
+                                  const SizedBox(height: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                     decoration: BoxDecoration(

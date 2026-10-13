@@ -76,6 +76,17 @@ class HealthService {
         .add(record.toMap());
   }
 
+  Future<void> updateVaccination(String userId, String petId, String recordId, VaccinationRecord record) async {
+    await _db
+        .collection('USERS')
+        .doc(userId)
+        .collection('PETS')
+        .doc(petId)
+        .collection('VACCINATIONS')
+        .doc(recordId)
+        .update(record.toMap());
+  }
+
   Future<void> deleteVaccination(String userId, String petId, String recordId) async {
     await _db
         .collection('USERS')
