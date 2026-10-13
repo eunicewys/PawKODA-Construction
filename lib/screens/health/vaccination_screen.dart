@@ -456,7 +456,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                         onPressed: () async {
                                           bool confirm = await _showDeleteConfirmationDialog(
                                             context,
-                                            title: "Delete Dose Record",
+                                            title: "Delete",
                                             message: "Are you sure you want to delete '${rec.doseName}'? This action cannot be undone.",
                                           );
                                           if (confirm) {
@@ -582,7 +582,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                         onPressed: () async {
                                           bool confirm = await _showDeleteConfirmationDialog(
                                             context,
-                                            title: "Delete Reminder",
+                                            title: "Delete",
                                             message: "Are you sure you want to delete the reminder for '${rec.doseName}'? This action cannot be undone.",
                                           );
                                           if (confirm) {

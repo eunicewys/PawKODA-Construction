@@ -167,7 +167,7 @@ class SavedRecipesScreen extends StatelessWidget {
                                       onPressed: () async {
                                         bool confirm = await _showDeleteConfirmationDialog(
                                           context,
-                                          title: "Delete Recipe",
+                                          title: "Delete",
                                           message: "Are you sure you want to delete '${recipe.recipeName}'? This action cannot be undone.",
                                         );
                                         if (confirm) {

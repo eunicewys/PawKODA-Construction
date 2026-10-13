@@ -545,7 +545,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                                               String dateStr = DateFormat('EEEE, dd MMM yyyy').format(log.date);
                                               bool confirm = await _showDeleteConfirmationDialog(
                                                 context,
-                                                title: "Delete Diary Entry",
+                                                title: "Delete",
                                                 message: "Are you sure you want to delete the daily activity log for $dateStr? This action cannot be undone.",
                                               );
                                               if (confirm) {

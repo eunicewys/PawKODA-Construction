@@ -730,7 +730,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                             onTap: () async {
                                               bool confirm = await _showDeleteConfirmationDialog(
                                                 context,
-                                                title: "Delete Medical Issue",
+                                                title: "Delete",
                                                 message: "Are you sure you want to delete '${issue.title}'? This action cannot be undone.",
                                               );
                                               if (confirm) {
