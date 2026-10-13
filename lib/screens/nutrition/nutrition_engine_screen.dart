@@ -650,6 +650,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search food (try: chicken, broccoli...)",
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _searchController.text.isNotEmpty 
                 ? IconButton(

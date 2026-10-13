@@ -6,9 +6,9 @@ import '../../providers/nutritional_provider.dart';
 import '../../services/pet_service.dart';
 import '../nutrition/nutrition_engine_screen.dart';
 import '../widgets/fringe_header.dart';
-import 'health_issues_screen.dart';
-import 'vaccination_screen.dart';
-import 'daily_activity_screen.dart';
+import 'health_issues_screen.dart' show HealthIssuesScreen;
+import 'vaccination_screen.dart' show VaccinationScreen;
+import 'daily_activity_screen.dart' show DailyActivityScreen;
 
 /// HealthScreen: Main Health Section hub in bottom navigation.
 /// Offers 4 modules: Nutrition, Health Issues, Vaccines/Deworming, and Daily Activity Diary.
@@ -109,8 +109,8 @@ class _HealthScreenState extends State<HealthScreen> {
                               )
                             ],
                           ),
-                          child: DropdownButtonFormField<String?>(
-                            initialValue: _selectedPetId,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _selectedPetId ?? "",
                             decoration: InputDecoration(
                               prefixIcon: Icon(
                                 Icons.pets_rounded, 
@@ -132,8 +132,8 @@ class _HealthScreenState extends State<HealthScreen> {
                               fontSize: 15
                             ),
                             items: [
-                              DropdownMenuItem<String?>(
-                                value: null,
+                              DropdownMenuItem<String>(
+                                value: "",
                                 child: Text(
                                   "-- Please select a pet --",
                                   style: TextStyle(
@@ -143,7 +143,7 @@ class _HealthScreenState extends State<HealthScreen> {
                                   ),
                                 ),
                               ),
-                              ...pets.map((pet) => DropdownMenuItem<String?>(
+                              ...pets.map((pet) => DropdownMenuItem<String>(
                                 value: pet.id,
                                 child: Text(
                                   "${pet.name} (${pet.breed})",
@@ -155,7 +155,7 @@ class _HealthScreenState extends State<HealthScreen> {
                               )),
                             ],
                             onChanged: (val) {
-                              setState(() => _selectedPetId = val);
+                              setState(() => _selectedPetId = (val == null || val.isEmpty) ? null : val);
                             },
                           ),
                         ),

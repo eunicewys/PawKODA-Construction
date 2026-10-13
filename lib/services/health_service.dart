@@ -112,6 +112,17 @@ class HealthService {
         .add(log.toMap());
   }
 
+  Future<void> updateDailyActivityLog(String userId, String petId, String logId, DailyActivityLog log) async {
+    await _db
+        .collection('USERS')
+        .doc(userId)
+        .collection('PETS')
+        .doc(petId)
+        .collection('DAILY_LOGS')
+        .doc(logId)
+        .update(log.toMap());
+  }
+
   Future<void> deleteDailyActivityLog(String userId, String petId, String logId) async {
     await _db
         .collection('USERS')

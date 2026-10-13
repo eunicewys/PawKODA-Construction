@@ -8,8 +8,8 @@ import '../../providers/user_provider.dart';
 import '../../services/health_service.dart';
 import '../widgets/fringe_header.dart';
 
-/// DailyActivityScreen: Daily Wellbeing & Activity Diary for a pet.
-/// Includes timeline filtering: "Past 3 days", "Past 7 days", "Past 14 days", "Past 30 days", "All time".
+/// DailyActivityScreen: Daily Wellbeing & Activity Log module.
+/// Supports timeline filtering: "Past 3 days", "Past 7 days", "Past 14 days", "Past 30 days", "All time".
 class DailyActivityScreen extends StatefulWidget {
   final PetProfile pet;
   const DailyActivityScreen({super.key, required this.pet});
@@ -19,36 +19,79 @@ class DailyActivityScreen extends StatefulWidget {
 }
 
 class _DailyActivityScreenState extends State<DailyActivityScreen> {
-  final Color _dustyOlive = const Color(0xFF6B705C);
-  final Color _powderPetal = const Color(0xFFFFE8D6);
-  final Color _desertSand = const Color(0xFFDDBEA9);
-  final Color _drySage = const Color(0xFFA5A58D);
-  final Color _darkCharcoal = const Color(0xFF2D3142);
-  final Color _errorCoral = const Color(0xFFB56576);
+  static const Color _dustyOlive = Color(0xFF6B705C);
+  static const Color _desertSand = Color(0xFFDDBEA9);
+  static const Color _drySage = Color(0xFFA5A58D);
+  static const Color _darkCharcoal = Color(0xFF2D3142);
+  static const Color _errorCoral = Color(0xFFB56576);
 
   final HealthService _healthService = HealthService();
-  String _selectedFilter = 'Past 7 days'; // Past 3 days, Past 7 days, Past 14 days, Past 30 days, All time
+  String _selectedFilter = 'Past 7 days';
 
-  void _showAddDiaryDialog() {
-    DateTime logDate = DateTime.now();
-    String appetite = 'Good';
-    String stool = 'Normal';
-    String waterIntake = 'Good';
-    String activityLevel = 'Active';
-    bool wentForWalk = true;
-    final notesCtrl = TextEditingController();
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  void _showDialogAlert(BuildContext ctx, String title, String message, IconData icon) {
+    showDialog(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(
+          children: [
+            Icon(icon, color: _errorCoral, size: 26),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkCharcoal),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 14, color: _darkCharcoal, height: 1.3),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _dustyOlive,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text("OK", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddDiaryDialog(List<DailyActivityLog> existingLogs, [DailyActivityLog? existingLog]) {
+    DateTime logDate = existingLog?.date ?? DateTime.now();
+    String? appetite = existingLog?.appetite;
+    String? stool = existingLog?.stool;
+    String? waterIntake = existingLog?.waterIntake;
+    String? activityLevel = existingLog?.activityLevel;
+    bool wentForWalk = existingLog?.wentForWalk ?? false;
+    final notesCtrl = TextEditingController(text: existingLog?.notes ?? '');
     bool isSaving = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setMState) {
+      builder: (bottomSheetContext) => StatefulBuilder(
+        builder: (stContext, setMState) {
           return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            padding: EdgeInsets.only(bottom: MediaQuery.of(stContext).viewInsets.bottom),
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.85,
+              height: MediaQuery.of(stContext).size.height * 0.85,
               decoration: BoxDecoration(
                 color: _desertSand,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -58,9 +101,17 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Daily Activity", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                    Text(
+                      existingLog == null ? "Daily Activity" : "Edit Daily Activity", 
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)
+                    ),
                     const SizedBox(height: 4),
-                    Text("Record ${widget.pet.name}'s daily appetite, stool, water & energy", style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13)),
+                    Text(
+                      existingLog == null 
+                          ? "Record ${widget.pet.name}'s daily appetite, stool, water & energy"
+                          : "Update ${widget.pet.name}'s recorded activity entry", 
+                      style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13)
+                    ),
                     const SizedBox(height: 18),
 
                     // Log Date
@@ -71,7 +122,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           final picked = await showDatePicker(
-                            context: context,
+                            context: stContext,
                             initialDate: logDate,
                             firstDate: DateTime(2020),
                             lastDate: DateTime.now(),
@@ -94,22 +145,38 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
 
                     // Appetite
                     _buildLabel("APPETITE"),
-                    _buildChoiceRow(['Good', 'Normal', 'Poor'], appetite, (val) => setMState(() => appetite = val)),
+                    _buildDropdownField(
+                      value: appetite,
+                      options: const ['Good', 'Normal', 'Poor'],
+                      onChanged: (val) => setMState(() => appetite = val),
+                    ),
                     const SizedBox(height: 16),
 
                     // Stool
                     _buildLabel("STOOL CONDITION"),
-                    _buildChoiceRow(['Normal', 'Soft', 'Hard', 'None'], stool, (val) => setMState(() => stool = val)),
+                    _buildDropdownField(
+                      value: stool,
+                      options: const ['Normal', 'Soft', 'Hard', 'None'],
+                      onChanged: (val) => setMState(() => stool = val),
+                    ),
                     const SizedBox(height: 16),
 
                     // Water Intake
                     _buildLabel("WATER INTAKE"),
-                    _buildChoiceRow(['Good', 'Normal', 'Low'], waterIntake, (val) => setMState(() => waterIntake = val)),
+                    _buildDropdownField(
+                      value: waterIntake,
+                      options: const ['Good', 'Normal', 'Low'],
+                      onChanged: (val) => setMState(() => waterIntake = val),
+                    ),
                     const SizedBox(height: 16),
 
                     // Activity Level
                     _buildLabel("ACTIVITY / ENERGY LEVEL"),
-                    _buildChoiceRow(['Active', 'Normal', 'Lethargic'], activityLevel, (val) => setMState(() => activityLevel = val)),
+                    _buildDropdownField(
+                      value: activityLevel,
+                      options: const ['Active', 'Normal', 'Lethargic'],
+                      onChanged: (val) => setMState(() => activityLevel = val),
+                    ),
                     const SizedBox(height: 16),
 
                     // Walk Checkbox
@@ -117,7 +184,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                       title: Text("Went for a walk / outdoor exercise?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _darkCharcoal)),
                       value: wentForWalk,
                       activeColor: _dustyOlive,
-                      onChanged: (val) => setMState(() => wentForWalk = val!),
+                      onChanged: (val) => setMState(() => wentForWalk = val ?? false),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                       dense: true,
@@ -131,6 +198,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                       maxLines: 2,
                       decoration: InputDecoration(
                         hintText: "e.g. Ate full bowl, played in park, slept early...",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                         fillColor: Colors.white,
                         filled: true,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -144,16 +212,40 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: isSaving ? null : () async {
+                          if (appetite == null || stool == null || waterIntake == null || activityLevel == null) {
+                            _showDialogAlert(
+                              stContext,
+                              "Selection Required",
+                              "Please select options for Appetite, Stool Condition, Water Intake, and Activity Level before saving.",
+                              Icons.warning_amber_rounded,
+                            );
+                            return;
+                          }
+
+                          // Duplicate Date Check (Avoid overlapping logs on same day)
+                          bool alreadyLoggedForDate = existingLogs.any((log) => 
+                            _isSameDay(log.date, logDate) && (existingLog == null || log.id != existingLog.id)
+                          );
+                          if (alreadyLoggedForDate) {
+                            _showDialogAlert(
+                              stContext,
+                              "Entry Already Exists",
+                              "A daily activity entry has already been logged for ${widget.pet.name} on ${DateFormat('EEEE, dd MMM yyyy').format(logDate)}.\n\nTo avoid overlapping logs, you cannot log duplicate entries for the same day.",
+                              Icons.event_busy_rounded,
+                            );
+                            return;
+                          }
+
                           setMState(() => isSaving = true);
 
                           try {
-                            final uid = Provider.of<UserProvider>(context, listen: false).uid
+                            final uid = Provider.of<UserProvider>(stContext, listen: false).uid
                                 ?? FirebaseAuth.instance.currentUser?.uid;
 
                             if (uid == null || uid.isEmpty) {
-                              if (context.mounted) {
+                              if (stContext.mounted) {
                                 setMState(() => isSaving = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ScaffoldMessenger.of(stContext).showSnackBar(
                                   const SnackBar(content: Text("Error: User session invalid. Please log in again.")),
                                 );
                               }
@@ -161,24 +253,29 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                             }
 
                             final diary = DailyActivityLog(
-                              id: '',
+                              id: existingLog?.id ?? '',
                               petId: widget.pet.id,
                               date: logDate,
-                              appetite: appetite,
-                              stool: stool,
-                              waterIntake: waterIntake,
-                              activityLevel: activityLevel,
+                              appetite: appetite!,
+                              stool: stool!,
+                              waterIntake: waterIntake!,
+                              activityLevel: activityLevel!,
                               wentForWalk: wentForWalk,
                               notes: notesCtrl.text.trim(),
                             );
 
-                            await _healthService.addDailyActivityLog(uid, widget.pet.id, diary);
-                            if (context.mounted) Navigator.pop(context);
+                            if (existingLog == null) {
+                              await _healthService.addDailyActivityLog(uid, widget.pet.id, diary);
+                            } else {
+                              await _healthService.updateDailyActivityLog(uid, widget.pet.id, existingLog.id, diary);
+                            }
+
+                            if (stContext.mounted) Navigator.pop(bottomSheetContext);
                           } catch (e) {
                             debugPrint("Error saving daily activity log: $e");
-                            if (context.mounted) {
+                            if (stContext.mounted) {
                               setMState(() => isSaving = false);
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(stContext).showSnackBar(
                                 SnackBar(content: Text("Failed to save: $e")),
                               );
                             }
@@ -189,8 +286,8 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         child: isSaving
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text("Save Daily Entry", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : Text(existingLog == null ? "Save Daily Entry" : "Update Entry", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ],
@@ -203,26 +300,38 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
     );
   }
 
-  Widget _buildChoiceRow(List<String> options, String current, Function(String) onSelect) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: options.map((opt) {
-          final isSel = current == opt;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(opt, style: TextStyle(color: isSel ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
-              selected: isSel,
-              selectedColor: opt == 'Poor' || opt == 'Lethargic' ? _errorCoral : _dustyOlive,
-              backgroundColor: Colors.white,
-              onSelected: (val) {
-                if (val) onSelect(opt);
-              },
-            ),
-          );
-        }).toList(),
+  Widget _buildDropdownField({
+    required String? value,
+    required List<String> options,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String?>(
+      initialValue: value,
+      decoration: InputDecoration(
+        hintText: "-- Please Select --",
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
+        fillColor: Colors.white,
+        filled: true,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
       ),
+      dropdownColor: Colors.white,
+      style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
+      items: [
+        DropdownMenuItem<String?>(
+          value: null,
+          child: Text(
+            "-- Please Select --",
+            style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13, fontStyle: FontStyle.italic),
+          ),
+        ),
+        ...options.map((opt) => DropdownMenuItem<String?>(
+          value: opt,
+          child: Text(opt, style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal)),
+        )),
+      ],
+      onChanged: onChanged,
     );
   }
 
@@ -246,7 +355,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
       final cutoff = now.subtract(const Duration(days: 30));
       return logs.where((l) => l.date.isAfter(cutoff)).toList();
     }
-    return logs; // All time
+    return logs;
   }
 
   @override
@@ -275,7 +384,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                   icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.white, size: 16),
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
                   isDense: true,
-                  items: ['Past 3 days', 'Past 7 days', 'Past 14 days', 'Past 30 days', 'All time']
+                  items: const ['Past 3 days', 'Past 7 days', 'Past 14 days', 'Past 30 days', 'All time']
                       .map((f) => DropdownMenuItem<String>(
                             value: f,
                             child: Text(f),
@@ -311,7 +420,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                         width: double.infinity,
                         height: 46,
                         child: ElevatedButton.icon(
-                          onPressed: () => _showAddDiaryDialog(),
+                          onPressed: () => _showAddDiaryDialog(allLogs),
                           icon: const Icon(Icons.add, size: 18, color: Colors.white),
                           label: const Text("Add Diary", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                           style: ElevatedButton.styleFrom(
@@ -364,17 +473,33 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        DateFormat('EEEE, dd MMM yyyy').format(log.date),
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
+                                      Expanded(
+                                        child: Text(
+                                          DateFormat('EEEE, dd MMM yyyy').format(log.date),
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
+                                        ),
                                       ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
-                                        onPressed: () async {
-                                          await _healthService.deleteDailyActivityLog(uid, widget.pet.id, log.id);
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(Icons.edit_note_rounded, size: 20, color: _dustyOlive),
+                                            onPressed: () => _showAddDiaryDialog(allLogs, log),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            tooltip: "Edit Entry",
+                                          ),
+                                          const SizedBox(width: 4),
+                                          IconButton(
+                                            icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
+                                            onPressed: () async {
+                                              await _healthService.deleteDailyActivityLog(uid, widget.pet.id, log.id);
+                                            },
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            tooltip: "Delete Entry",
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -429,3 +554,4 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
     );
   }
 }
+// timestamp update: 1740000001

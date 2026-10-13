@@ -240,6 +240,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                       initialValue: selectedCommon,
                       decoration: InputDecoration(
                         hintText: "Select condition or disease...",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                         fillColor: Colors.white,
                         filled: true,
                         isDense: true,
@@ -270,6 +271,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                         controller: titleCtrl,
                         decoration: InputDecoration(
                           hintText: "Specify the disease or issue...",
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                           fillColor: Colors.white,
                           filled: true,
                           isDense: true,
@@ -309,24 +311,31 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Severity
+                    // Severity Dropdown (Half-width)
                     _buildLabel("SEVERITY LEVEL"),
-                    Row(
-                      children: ['Mild', 'Moderate', 'Severe'].map((sev) {
-                        final isSel = severity == sev;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(sev, style: TextStyle(color: isSel ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
-                            selected: isSel,
-                            selectedColor: sev == 'Severe' ? _errorCoral : _dustyOlive,
-                            backgroundColor: Colors.white,
-                            onSelected: (val) {
-                              if (val) setMState(() => severity = sev);
-                            },
-                          ),
-                        );
-                      }).toList(),
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.48,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: severity,
+                        decoration: InputDecoration(
+                          fillColor: Colors.white,
+                          filled: true,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        ),
+                        dropdownColor: Colors.white,
+                        style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
+                        items: ['Mild', 'Moderate', 'Severe'].map((sev) => DropdownMenuItem<String>(
+                          value: sev,
+                          child: Text(sev),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setMState(() => severity = val);
+                          }
+                        },
+                      ),
                     ),
                     const SizedBox(height: 16),
 
@@ -358,6 +367,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                       maxLines: 3,
                       decoration: InputDecoration(
                         hintText: "Prescribed meds, vet instructions, symptoms...",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                         fillColor: Colors.white,
                         filled: true,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -448,7 +458,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                         ),
                         child: isSaving 
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : Text(existingIssue == null ? "Save to Passport" : "Update Issue", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          : Text(existingIssue == null ? "Save" : "Update Issue", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ],
@@ -591,7 +601,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 6),
 
                       if (issues.isEmpty)
                         Container(
@@ -610,15 +620,16 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                         )
                       else
                         ListView.separated(
+                          padding: EdgeInsets.zero,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: issues.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          separatorBuilder: (context, index) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final issue = issues[index];
                             final isRecovered = issue.status == 'Recovered';
                             return Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(18),
@@ -631,53 +642,71 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
                                         child: Text(
                                           issue.title,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: _darkCharcoal),
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _darkCharcoal),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isRecovered ? Colors.green.withAlpha(30) : _errorCoral.withAlpha(30),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          issue.status.toUpperCase(),
-                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isRecovered ? Colors.green : _errorCoral),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_outlined, size: 18),
-                                        onPressed: () => _showAddIssueDialog(issue),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      IconButton(
-                                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
-                                        onPressed: () async {
-                                          await _healthService.deleteHealthIssue(uid, currentPet.id, issue.id);
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
+                                      const SizedBox(width: 6),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isRecovered ? Colors.green.withAlpha(30) : _errorCoral.withAlpha(30),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              issue.status.toUpperCase(),
+                                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isRecovered ? Colors.green : _errorCoral),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          InkWell(
+                                            onTap: () => _showAddIssueDialog(issue),
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: Icon(Icons.edit_note_rounded, size: 22, color: _dustyOlive),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          InkWell(
+                                            onTap: () async {
+                                              await _healthService.deleteHealthIssue(uid, currentPet.id, issue.id);
+                                            },
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: Icon(Icons.delete_outline_rounded, size: 20, color: _errorCoral),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 8),
                                   Row(
                                     children: [
                                       Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade600),
-                                      const SizedBox(width: 4),
+                                      const SizedBox(width: 6),
                                       Text(
                                         "Diagnosed: ${DateFormat('dd MMM yyyy').format(issue.diagnosisDate)}",
-                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Icon(Icons.warning_amber_rounded, size: 12, color: issue.severity == 'Severe' ? _errorCoral : _dustyOlive),
-                                      const SizedBox(width: 4),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, size: 13, color: issue.severity == 'Severe' ? _errorCoral : _dustyOlive),
+                                      const SizedBox(width: 6),
                                       Text(
                                         "Severity: ${issue.severity}",
                                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: issue.severity == 'Severe' ? _errorCoral : _darkCharcoal),
@@ -685,10 +714,10 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                     ],
                                   ),
                                   if (issue.notes.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 6),
                                     Text(
-                                      issue.notes,
-                                      style: TextStyle(fontSize: 13, color: _darkCharcoal, fontStyle: FontStyle.italic),
+                                      "Notes: ${issue.notes}",
+                                      style: TextStyle(fontSize: 12, color: _darkCharcoal.withAlpha(200), fontStyle: FontStyle.italic),
                                     ),
                                   ],
                                 ],

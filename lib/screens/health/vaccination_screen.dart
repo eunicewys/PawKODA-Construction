@@ -100,6 +100,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                       controller: nameCtrl,
                       decoration: InputDecoration(
                         hintText: selectedType == 'Vaccine' ? "e.g. DHPP Core, Rabies..." : "e.g. Bravecto, Drontal...",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                         fillColor: Colors.white,
                         filled: true,
                         isDense: true,
@@ -159,6 +160,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                 controller: vetCtrl,
                                 decoration: InputDecoration(
                                   hintText: "e.g. Paw Clinic",
+                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                                   fillColor: Colors.white,
                                   filled: true,
                                   isDense: true,
@@ -178,6 +180,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                 controller: dosageCtrl,
                                 decoration: InputDecoration(
                                   hintText: "e.g. 1 ml / 1 tab",
+                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                                   fillColor: Colors.white,
                                   filled: true,
                                   isDense: true,
@@ -197,6 +200,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                       controller: notesCtrl,
                       decoration: InputDecoration(
                         hintText: "Batch no, reaction, notes...",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                         fillColor: Colors.white,
                         filled: true,
                         isDense: true,
