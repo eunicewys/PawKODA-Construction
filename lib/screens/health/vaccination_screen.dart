@@ -648,7 +648,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            "⏰ Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(rec.dueDate ?? rec.dateGiven)}",
+                                            "Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(rec.dueDate ?? rec.dateGiven)}",
                                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal),
                                           ),
                                         ),
