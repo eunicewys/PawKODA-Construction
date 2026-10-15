@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,139 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
   final Color _sageGreenAlert = const Color(0xFF759C86); // Morandi Sage Green SnackBar color
 
   final HealthService _healthService = HealthService();
+
+  /// Show iOS/Android Alarm-style scroll wheel picker for Time selection
+  Future<TimeOfDay?> _showScrollTimePicker(BuildContext context, TimeOfDay initialTime) async {
+    DateTime tempDateTime = DateTime(
+      2025, 1, 1,
+      initialTime.hour,
+      initialTime.minute,
+    );
+
+    TimeOfDay? result = initialTime;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext modalContext) {
+        return Container(
+          height: 280,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(modalContext),
+                      child: Text("Cancel", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                    Text(
+                      "Set Time",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        result = TimeOfDay(hour: tempDateTime.hour, minute: tempDateTime.minute);
+                        Navigator.pop(modalContext);
+                      },
+                      child: Text("Done", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.time,
+                  initialDateTime: tempDateTime,
+                  use24hFormat: false,
+                  onDateTimeChanged: (DateTime newDateTime) {
+                    tempDateTime = newDateTime;
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return result;
+  }
+
+  /// Show iOS/Android Alarm-style scroll wheel picker for Date selection
+  Future<DateTime?> _showScrollDatePicker({
+    required BuildContext context,
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required DateTime lastDate,
+  }) async {
+    DateTime tempDate = initialDate;
+    DateTime? result = initialDate;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext modalContext) {
+        return Container(
+          height: 280,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(modalContext),
+                      child: Text("Cancel", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                    Text(
+                      "Set Date",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        result = tempDate;
+                        Navigator.pop(modalContext);
+                      },
+                      child: Text("Done", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: initialDate.isBefore(firstDate)
+                      ? firstDate
+                      : (initialDate.isAfter(lastDate) ? lastDate : initialDate),
+                  minimumDate: firstDate,
+                  maximumDate: lastDate,
+                  onDateTimeChanged: (DateTime newDate) {
+                    tempDate = newDate;
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return result;
+  }
 
   void _showAddDoseDialog({bool isUpcoming = false, VaccinationRecord? existingRecord}) {
     final nameCtrl = TextEditingController(text: existingRecord?.doseName ?? '');
@@ -124,23 +258,22 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Date Selector (Past vs Future Date Picker)
-                    _buildLabel(isUpcoming ? "SCHEDULED DUE DATE (FUTURE ONLY)" : "DATE ADMINISTERED (PAST OR TODAY)"),
+                    // Date Selector (Scroll Wheel Picker)
+                    _buildLabel(isUpcoming ? "SCHEDULED DUE DATE" : "DATE ADMINISTERED (PAST OR TODAY)"),
                     SizedBox(
                       width: double.infinity,
                       height: 46,
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           final now = DateTime.now();
-                          final picked = await showDatePicker(
+                          final firstDate = isUpcoming ? now.add(const Duration(days: 1)) : DateTime(2000);
+                          final lastDate = isUpcoming ? now.add(const Duration(days: 3650)) : now;
+
+                          final picked = await _showScrollDatePicker(
                             context: context,
                             initialDate: selectedDate,
-                            firstDate: isUpcoming 
-                                ? now.add(const Duration(days: 1)) 
-                                : DateTime(2000),
-                            lastDate: isUpcoming 
-                                ? now.add(const Duration(days: 3650)) // Up to 10 years in future
-                                : now, // Up to today only
+                            firstDate: firstDate,
+                            lastDate: lastDate,
                           );
                           if (picked != null) setMState(() => selectedDate = picked);
                         },
@@ -161,47 +294,6 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
-                    // Reminder Time Selector (3 Days Prior - Customizable Time of Day)
-                    if (isUpcoming) ...[
-                      _buildLabel("REMINDER ALERT TIME (3 DAYS PRIOR)"),
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _darkCharcoal.withAlpha(50)),
-                        ),
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(Icons.access_time_rounded, color: _dustyOlive),
-                          title: Text(
-                            selectedReminderTime.format(context),
-                            style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
-                          ),
-                          subtitle: Text(
-                            selectedReminderTime.hour == 9 && selectedReminderTime.minute == 0
-                                ? "09:00 AM (Default)"
-                                : "Selected trigger time",
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                          ),
-                          trailing: TextButton.icon(
-                            onPressed: () async {
-                              final TimeOfDay? picked = await showTimePicker(
-                                context: context,
-                                initialTime: selectedReminderTime,
-                              );
-                              if (picked != null) {
-                                setMState(() => selectedReminderTime = picked);
-                              }
-                            },
-                            icon: Icon(Icons.edit_calendar_rounded, size: 16, color: _dustyOlive),
-                            label: Text("Change Time", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
 
                     // Vet Name & Dosage
                     Row(
@@ -248,6 +340,53 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
+
+                    // Reminder Time Selector (Below Vet/Clinic Name & Dosage)
+                    if (isUpcoming) ...[
+                      _buildLabel("REMINDER ALERT TIME (3 DAYS PRIOR)"),
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _darkCharcoal.withAlpha(50)),
+                        ),
+                        child: Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          child: ListTile(
+                            dense: true,
+                            onTap: () async {
+                              final TimeOfDay? picked = await _showScrollTimePicker(context, selectedReminderTime);
+                              if (picked != null) {
+                                setMState(() => selectedReminderTime = picked);
+                              }
+                            },
+                            leading: Icon(Icons.access_time_rounded, color: _dustyOlive),
+                            title: Text(
+                              selectedReminderTime.format(context),
+                              style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
+                            ),
+                            subtitle: (selectedReminderTime.hour == 9 && selectedReminderTime.minute == 0)
+                                ? Text(
+                                    "(Default)",
+                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                  )
+                                : null,
+                            trailing: TextButton.icon(
+                              onPressed: () async {
+                                final TimeOfDay? picked = await _showScrollTimePicker(context, selectedReminderTime);
+                                if (picked != null) {
+                                  setMState(() => selectedReminderTime = picked);
+                                }
+                              },
+                              icon: Icon(Icons.unfold_more_rounded, size: 18, color: _dustyOlive),
+                              label: Text("Set Time", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 12)),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                     // Notes
                     _buildLabel("NOTES / BATCH NO"),
