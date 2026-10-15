@@ -35,7 +35,6 @@ class VetHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = context.watch<UserProvider>();
     final String clinicName = "PawKODA Central Clinic"; // Placeholder
 
     return Scaffold(

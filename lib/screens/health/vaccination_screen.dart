@@ -20,7 +20,6 @@ class VaccinationScreen extends StatefulWidget {
 
 class _VaccinationScreenState extends State<VaccinationScreen> {
   final Color _dustyOlive = const Color(0xFF6B705C);
-  final Color _powderPetal = const Color(0xFFFFE8D6);
   final Color _desertSand = const Color(0xFFDDBEA9);
   final Color _drySage = const Color(0xFFA5A58D);
   final Color _darkCharcoal = const Color(0xFF2D3142);
