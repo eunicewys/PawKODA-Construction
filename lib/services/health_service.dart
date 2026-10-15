@@ -66,14 +66,15 @@ class HealthService {
             .toList());
   }
 
-  Future<void> addVaccination(String userId, String petId, VaccinationRecord record) async {
-    await _db
+  Future<String> addVaccination(String userId, String petId, VaccinationRecord record) async {
+    final ref = await _db
         .collection('USERS')
         .doc(userId)
         .collection('PETS')
         .doc(petId)
         .collection('VACCINATIONS')
         .add(record.toMap());
+    return ref.id;
   }
 
   Future<void> updateVaccination(String userId, String petId, String recordId, VaccinationRecord record) async {

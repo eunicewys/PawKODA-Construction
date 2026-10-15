@@ -7,14 +7,16 @@ import 'providers/nutritional_provider.dart';
 import 'screens/login_screen.dart';
 
 import 'services/breed_service.dart';
+import 'services/notification_service.dart';
 
 /// main: The starting point of the app.
 void main() async {
-  // 1. Initialize Flutter, Firebase, and BreedService
+  // 1. Initialize Flutter, Firebase, NotificationService, and BreedService
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService().init();
   await BreedService().loadBreeds();
 
   // 2. Wrap the entire app in MultiProvider to share data

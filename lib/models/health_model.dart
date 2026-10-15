@@ -60,6 +60,7 @@ class VaccinationRecord {
   final DateTime? dueDate; // Next due date
   final bool isCompleted;
   final String notes;
+  final String? reminderTime; // e.g. "9:0" or "14:30"
 
   VaccinationRecord({
     required this.id,
@@ -72,6 +73,7 @@ class VaccinationRecord {
     this.dueDate,
     required this.isCompleted,
     required this.notes,
+    this.reminderTime,
   });
 
   Map<String, dynamic> toMap() {
@@ -85,6 +87,7 @@ class VaccinationRecord {
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'isCompleted': isCompleted,
       'notes': notes,
+      'reminderTime': reminderTime,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -101,6 +104,7 @@ class VaccinationRecord {
       dueDate: (map['dueDate'] as Timestamp?)?.toDate(),
       isCompleted: map['isCompleted'] ?? true,
       notes: map['notes'] ?? '',
+      reminderTime: map['reminderTime'],
     );
   }
 }
