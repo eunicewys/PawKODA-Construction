@@ -16,7 +16,11 @@ import '../nutrition/nutrition_engine_screen.dart';
 import '../nutrition/saved_recipes_screen.dart';
 import '../pet/pet_details_screen.dart';
 import '../health/health_screen.dart';
+import '../booking/booking_screen.dart';
+import '../health/vaccination_screen.dart';
 import '../widgets/fringe_header.dart';
+import '../../models/reminder_model.dart';
+import '../../services/reminder_service.dart';
 
 /// UserHomeScreen: Redesigned dashboard for Pet Owners.
 /// Features a "Modern Layered" pet passport experience and functional navigation.
@@ -40,6 +44,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   final Color _errorCoral = const Color(0xFFB56576);
 
   final PetService _petService = PetService();
+  final ReminderService _reminderService = ReminderService();
   final ImagePicker _picker = ImagePicker();
 
   late int _selectedIndex;
@@ -514,22 +519,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 
-  void _showComingSoon(String feature) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text("$feature Coming Soon!", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
-        content: Text("We are working hard to bring the $feature module to PawKODA. Stay tuned!", style: TextStyle(color: _darkCharcoal)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Okay", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showAddPetDialog() {
     final TextEditingController nameCtrl = TextEditingController();
@@ -1160,7 +1150,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         final views = [
           _buildDashboard(context, pets),
           HealthScreen(onBackPressed: () => setState(() => _selectedIndex = 0)),
-          _buildPlaceholderView("Bookings", Icons.calendar_month, _desertSand),
+          BookingScreen(onBackPressed: () => setState(() => _selectedIndex = 0)),
           _buildProfileView(context)
         ];
         return Scaffold(backgroundColor: _drySage, body: views[_selectedIndex], bottomNavigationBar: _buildBottomNav());
@@ -1265,14 +1255,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Upcoming Reminders", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
-                const SizedBox(height: 16),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: InkWell(onTap: () => _showComingSoon("Reminders"), child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))]), child: Row(children: [
-                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _lightBronze.withAlpha(30), shape: BoxShape.circle), child: Icon(Icons.vaccines, color: _lightBronze, size: 26)),
-                  const SizedBox(width: 16),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Vaccine Checkup", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _darkCharcoal)), Text(pets.isNotEmpty ? "${pets.first.name} • 5 Nov 2024" : "Add a pet to set reminders", style: TextStyle(color: _ashGrey, fontSize: 16))])),
-                  Icon(Icons.chevron_right, color: _ashGrey),
-                ])))),
+                _buildUpcomingRemindersSection(context, context.watch<UserProvider>().uid ?? "", pets),
                 const SizedBox(height: 80),
               ],
             ),
@@ -1281,38 +1264,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       ],
     );
   }
-
-  Widget _buildPlaceholderView(String t, IconData i, Color c) => Scaffold(
-    backgroundColor: _powderPetal,
-    body: Column(
-      children: [
-        FringeHeader(
-          title: t,
-          onBack: () => setState(() => _selectedIndex = 0),
-        ),
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center, 
-              children: [
-                Icon(i, size: 80, color: _dustyOlive.withAlpha(100)), 
-                const SizedBox(height: 20), 
-                Text(t, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _darkCharcoal)), 
-                const SizedBox(height: 10), 
-                const Text("Coming Soon", style: TextStyle(color: Colors.grey)), 
-                const SizedBox(height: 30), 
-                ElevatedButton(
-                  onPressed: () => setState(() => _selectedIndex = 0), 
-                  style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive), 
-                  child: const Text("Back to Dashboard", style: TextStyle(color: Colors.white))
-                )
-              ]
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
 
   Widget _buildProfileView(BuildContext context) {
     final up = context.watch<UserProvider>();
@@ -1476,6 +1427,411 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // --- UPCOMING REMINDERS SYNC SECTION ---
+
+  Widget _buildUpcomingRemindersSection(BuildContext context, String uid, List<PetProfile> pets) {
+    if (uid.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<List<ReminderItem>>(
+      stream: _reminderService.streamUpcomingReminders(uid, pets),
+      builder: (context, snapshot) {
+        final reminders = snapshot.data ?? [];
+        final isLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Upcoming Reminders",
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  if (reminders.length > 3)
+                    GestureDetector(
+                      onTap: () => _showAllRemindersBottomSheet(context, reminders, pets),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(40),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          "View All (${reminders.length})",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (isLoading)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: _dustyOlive),
+                      ),
+                      const SizedBox(width: 16),
+                      Text("Loading upcoming reminders...", style: TextStyle(color: _ashGrey, fontSize: 15)),
+                    ],
+                  ),
+                ),
+              )
+            else if (reminders.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(8),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _powderPetal,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.event_available_rounded, color: _dustyOlive, size: 28),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "All Caught Up!",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 17,
+                                    color: _darkCharcoal,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "No pending vet bookings or vaccine/deworm reminders.",
+                                  style: TextStyle(color: _ashGrey, fontSize: 13, height: 1.2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => setState(() => _selectedIndex = 2),
+                              icon: Icon(Icons.calendar_month_rounded, size: 16, color: _dustyOlive),
+                              label: Text("Book Vet", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 13)),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: _dustyOlive.withAlpha(100)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => setState(() => _selectedIndex = 1),
+                              icon: const Icon(Icons.vaccines_rounded, size: 16, color: Colors.white),
+                              label: const Text("Vax & Deworm", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _dustyOlive,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: reminders.take(3).map((item) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildReminderCard(context, item, pets),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildReminderCard(BuildContext context, ReminderItem item, List<PetProfile> pets) {
+    IconData iconData;
+    Color iconBgColor;
+    Color iconColor;
+    String badgeText;
+
+    switch (item.type) {
+      case ReminderType.booking:
+        iconData = Icons.calendar_month_rounded;
+        iconBgColor = _dustyOlive.withAlpha(30);
+        iconColor = _dustyOlive;
+        badgeText = "VET BOOKING";
+        break;
+      case ReminderType.vaccine:
+        iconData = Icons.vaccines_rounded;
+        iconBgColor = _lightBronze.withAlpha(35);
+        iconColor = _lightBronze;
+        badgeText = "VACCINE";
+        break;
+      case ReminderType.deworming:
+        iconData = Icons.medication_liquid_rounded;
+        iconBgColor = _desertSand.withAlpha(60);
+        iconColor = _darkCharcoal;
+        badgeText = "DEWORMS";
+        break;
+    }
+
+    final isUrgent = item.isUrgent;
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      elevation: 0,
+      child: InkWell(
+        onTap: () => _handleReminderTap(context, item, pets),
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: isUrgent ? _errorCoral.withAlpha(80) : Colors.black.withAlpha(15),
+              width: isUrgent ? 1.5 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(6),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(iconData, color: iconColor, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: iconBgColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            badgeText,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: iconColor,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isUrgent ? _errorCoral.withAlpha(25) : _dustyOlive.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            item.dateStatusText,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isUrgent ? _errorCoral : _dustyOlive,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: _darkCharcoal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.subtitle,
+                      style: TextStyle(
+                        color: _ashGrey,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: _ashGrey, size: 22),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleReminderTap(BuildContext context, ReminderItem item, List<PetProfile> pets) {
+    if (item.type == ReminderType.booking) {
+      // Switch to Booking tab
+      setState(() => _selectedIndex = 2);
+    } else {
+      // Find matching pet
+      PetProfile? pet;
+      try {
+        pet = pets.firstWhere((p) => p.id == item.petId);
+      } catch (_) {
+        try {
+          pet = pets.firstWhere((p) => p.name.toLowerCase() == item.petName.toLowerCase());
+        } catch (_) {
+          pet = pets.isNotEmpty ? pets.first : null;
+        }
+      }
+
+      if (pet != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => VaccinationScreen(pet: pet!)),
+        );
+      } else {
+        setState(() => _selectedIndex = 1);
+      }
+    }
+  }
+
+  void _showAllRemindersBottomSheet(BuildContext context, List<ReminderItem> reminders, List<PetProfile> pets) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.75,
+          ),
+          decoration: BoxDecoration(
+            color: _powderPetal,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _ashGrey.withAlpha(120),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "All Upcoming Reminders (${reminders.length})",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _darkCharcoal,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: _darkCharcoal),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: reminders.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final item = reminders[index];
+                    return _buildReminderCard(context, item, pets);
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 

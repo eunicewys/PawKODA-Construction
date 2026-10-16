@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:intl/intl.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -17,30 +16,38 @@ class NotificationService {
   bool get isInitialized => _isInitialized;
 
   /// Default Channel ID for general high priority health alerts
-  static const String channelId = 'pawkoda_health_channel';
+  static const String channelId = 'pawkoda_health_channel_v2';
   static const String channelName = 'Health Alerts & Reminders';
   static const String channelDescription = 
       'Notifications for pet vaccinations, deworming, medical issues, and bookings.';
 
-  /// Health Reminders Channel ID
-  static const String healthRemindersChannelId = 'pawkoda_health_reminders';
+  /// Health Reminders Channel ID (V2 for High Priority Heads-up Banners)
+  static const String healthRemindersChannelId = 'pawkoda_health_reminders_v2';
   static const String healthRemindersChannelName = 'Pet Health & Vaccine Reminders';
   static const String healthRemindersChannelDescription = 
       'Notifications for upcoming vaccinations and deworming boosters.';
+
+  /// Safely format any integer ID to fit within Android 32-bit signed integer limits (0 to 2,147,483,647)
+  int _to32BitId(int rawId) {
+    return rawId.abs() % 100000000; // Always returns 0 to 99,999,999
+  }
 
   /// Initialize timezones, local notification plugin, permissions, and channels
   Future<void> init() async {
     if (_isInitialized) return;
 
-    // 1. Initialize Timezone database and set local timezone to Kuala Lumpur
     tz.initializeTimeZones();
     try {
-      tz.setLocalLocation(tz.getLocation('Asia/Kuala_Lumpur'));
-    } catch (e) {
-      debugPrint("NotificationService Timezone Error: $e");
+      final String timeZoneName = DateTime.now().timeZoneName;
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (_) {
+      try {
+        tz.setLocalLocation(tz.getLocation('Asia/Kuala_Lumpur'));
+      } catch (e) {
+        debugPrint("NotificationService Timezone Error: $e");
+      }
     }
 
-    // 2. Configure Android & iOS Initialization Settings
     const AndroidInitializationSettings androidSettings = 
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -55,7 +62,6 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    // 3. Initialize Flutter Local Notifications Plugin
     await _notificationsPlugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
@@ -63,7 +69,6 @@ class NotificationService {
       },
     );
 
-    // 4. Create High-Importance Notification Channels for Android
     final androidPlugin = _notificationsPlugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
 
@@ -90,7 +95,6 @@ class NotificationService {
       await androidPlugin.createNotificationChannel(healthRemindersChannel);
     }
 
-    // 5. Request Runtime Permissions (Android 13+ & Exact Alarms)
     await requestNotificationsPermission();
     await requestExactAlarmsPermission();
 
@@ -98,7 +102,6 @@ class NotificationService {
     debugPrint("NotificationService initialized successfully.");
   }
 
-  /// Request POST_NOTIFICATIONS permission for Android 13+ (API 33+)
   Future<bool?> requestNotificationsPermission() async {
     final androidPlugin = _notificationsPlugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
@@ -110,7 +113,6 @@ class NotificationService {
     return false;
   }
 
-  /// Request Exact Alarms permission for precise time triggers (Android 12+)
   Future<bool?> requestExactAlarmsPermission() async {
     final androidPlugin = _notificationsPlugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
@@ -124,17 +126,19 @@ class NotificationService {
 
   /// Trigger an instant local notification banner
   Future<void> showNotification({
-    required int id,
+    int? baseId,
+    int? id,
     required String title,
     required String body,
     String? payload,
   }) async {
+    final int targetId = _to32BitId(baseId ?? id ?? title.hashCode);
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelName,
-      channelDescription: channelDescription,
+      healthRemindersChannelId,
+      healthRemindersChannelName,
+      channelDescription: healthRemindersChannelDescription,
       importance: Importance.max,
-      priority: Priority.high,
+      priority: Priority.max,
       playSound: true,
       enableVibration: true,
       icon: '@mipmap/ic_launcher',
@@ -146,7 +150,7 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      id,
+      targetId,
       title,
       body,
       platformDetails,
@@ -154,137 +158,137 @@ class NotificationService {
     );
   }
 
-  /// Schedule a local notification banner at a specific future date and time
-  Future<void> scheduleNotification({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime scheduledDate,
-    String? payload,
-  }) async {
-    // Prevent scheduling dates in the past
-    if (scheduledDate.isBefore(DateTime.now())) {
-      debugPrint("Cannot schedule notification in the past ($scheduledDate)");
-      return;
-    }
-
-    final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
-
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelName,
-      channelDescription: channelDescription,
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-      icon: '@mipmap/ic_launcher',
-    );
-
-    const NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
-    );
-
-    await _notificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tzScheduledDate,
-      platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: payload,
-    );
-
-    debugPrint("Scheduled Notification #$id for $scheduledDate ($tzScheduledDate)");
-  }
-
-  /// Schedule a health reminder 3 days before `nextDueDate` at user's preferred time (defaults to 09:00 AM) in Kuala Lumpur timezone.
-  /// If the calculated reminder date/time is in the past, triggers an immediate overdue notice instead.
-  Future<void> scheduleHealthReminder({
-    required int id,
+  /// Schedule daily 09:00 AM health reminders starting 3 days prior up to the due date.
+  /// Formats titles and bodies without emojis according to exact user spec:
+  /// - 3 days, 2 days, 1 day prior:
+  ///   Title: "Reminder: [Pet's Name] [Vaccination/Deworming] ([Vaccine/Deworm Name]) due in [how many] days!"
+  ///   Body: "Arrange vet appointments for [Pet's Name] now"
+  /// - On the Due Date:
+  ///   Title: "Alert: TODAY is [Pet's Name] [Vaccination/Deworming] day!"
+  ///   Body: "Please visit the vet at scheduled time."
+  Future<void> scheduleDailyHealthReminders({
+    int? baseId,
+    int? id,
     required String petName,
     required String treatmentName,
+    required String type, // 'Vaccine' or 'Deworming'
     required DateTime nextDueDate,
-    TimeOfDay reminderTime = const TimeOfDay(hour: 9, minute: 0),
   }) async {
-    // 1. Calculate target date: strictly 3 days before nextDueDate
-    final targetDate = nextDueDate.subtract(const Duration(days: 3));
+    final int targetBaseId = _to32BitId(baseId ?? id ?? treatmentName.hashCode);
+    final DateTime now = DateTime.now();
+    final String doseTypeLabel = (type.toLowerCase() == 'vaccine') ? 'Vaccination' : 'Deworming';
 
-    // 2. Combine with user's selected time in 'Asia/Kuala_Lumpur' timezone
-    final tz.TZDateTime scheduledDate = tz.TZDateTime(
-      tz.local,
-      targetDate.year,
-      targetDate.month,
-      targetDate.day,
-      reminderTime.hour,
-      reminderTime.minute,
-    );
+    // Cancel any previously scheduled alerts for this record ID
+    await cancelReminder(targetBaseId);
 
-    // 3. Check if scheduledDate is already in the past
-    if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
-      await showImmediateOverdueNotice(
-        id: id,
-        petName: petName,
-        treatmentName: treatmentName,
+    // Schedule 4 daily alerts at 09:00 AM (3 days prior, 2 days prior, 1 day prior, and on due date)
+    for (int daysPrior = 3; daysPrior >= 0; daysPrior--) {
+      final DateTime targetDate = nextDueDate.subtract(Duration(days: daysPrior));
+      final DateTime triggerDateTime = DateTime(
+        targetDate.year,
+        targetDate.month,
+        targetDate.day,
+        9, // Fixed 09:00 AM
+        0,
       );
-      return;
+
+      // Skip past dates/times relative to current device time
+      if (triggerDateTime.isBefore(now)) {
+        continue;
+      }
+
+      // Convert local triggerDateTime into TZDateTime for exact AlarmManager trigger
+      final tz.TZDateTime scheduledTZDate = tz.TZDateTime.from(
+        triggerDateTime,
+        tz.local,
+      );
+
+      // Construct Title and Body without emojis according to exact user spec
+      String title;
+      String body;
+
+      if (daysPrior > 0) {
+        final String daysText = daysPrior == 1 ? "1 day" : "$daysPrior days";
+        title = "Reminder: $petName $doseTypeLabel ($treatmentName) due in $daysText!";
+        body = "Arrange vet appointments for $petName now";
+      } else {
+        title = "Alert: TODAY is $petName $doseTypeLabel day!";
+        body = "Please visit the vet at scheduled time.";
+      }
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        healthRemindersChannelId,
+        healthRemindersChannelName,
+        channelDescription: healthRemindersChannelDescription,
+        importance: Importance.max,
+        priority: Priority.max,
+        playSound: true,
+        enableVibration: true,
+        icon: '@mipmap/ic_launcher',
+      );
+
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+      );
+
+      final int notificationId = targetBaseId * 10 + daysPrior;
+
+      await _notificationsPlugin.zonedSchedule(
+        notificationId,
+        title,
+        body,
+        scheduledTZDate,
+        platformDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'health_reminder_${targetBaseId}_$daysPrior',
+      );
+
+      debugPrint("Scheduled Reminder #$notificationId for $petName on $triggerDateTime ($title)");
     }
+  }
 
-    // 4. Format Date for notification body
-    final String formattedDueDate = DateFormat('dd MMM yyyy').format(nextDueDate);
-
-    final String title = "Reminder: $petName's $treatmentName Due Soon! 🐾";
-    final String body = "$petName is due for their $treatmentName dose in 3 days ($formattedDueDate). Book a clinic visit today!";
-
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      healthRemindersChannelId,
-      healthRemindersChannelName,
-      channelDescription: healthRemindersChannelDescription,
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-      icon: '@mipmap/ic_launcher',
+  /// Backward compatible alias for scheduleHealthReminder
+  Future<void> scheduleHealthReminder({
+    int? baseId,
+    int? id,
+    required String petName,
+    required String treatmentName,
+    String type = 'Vaccine',
+    required DateTime nextDueDate,
+    TimeOfDay? reminderTime,
+  }) async {
+    await scheduleDailyHealthReminders(
+      baseId: baseId,
+      id: id,
+      petName: petName,
+      treatmentName: treatmentName,
+      type: type,
+      nextDueDate: nextDueDate,
     );
-
-    const NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
-    );
-
-    await _notificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledDate,
-      platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: 'health_reminder_$id',
-    );
-
-    debugPrint("Scheduled Health Reminder #$id for $petName's $treatmentName on $scheduledDate");
   }
 
   /// Trigger an immediate heads-up notice for an overdue or due health treatment
   Future<void> showImmediateOverdueNotice({
-    required int id,
+    int? baseId,
+    int? id,
     required String petName,
     required String treatmentName,
+    required String type,
   }) async {
-    final String title = "Attention: $petName's $treatmentName is Due!";
-    final String body = "$treatmentName for $petName is due or overdue. Please arrange a veterinary checkup.";
+    final int targetBaseId = _to32BitId(baseId ?? id ?? treatmentName.hashCode);
+    final String doseTypeLabel = (type.toLowerCase() == 'vaccine') ? 'Vaccination' : 'Deworming';
+    final String title = "Alert: TODAY is $petName $doseTypeLabel day!";
+    final String body = "Please visit the vet at scheduled time.";
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthRemindersChannelId,
       healthRemindersChannelName,
       channelDescription: healthRemindersChannelDescription,
       importance: Importance.max,
-      priority: Priority.high,
+      priority: Priority.max,
       playSound: true,
       enableVibration: true,
       icon: '@mipmap/ic_launcher',
@@ -296,25 +300,32 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      id,
+      targetBaseId,
       title,
       body,
       platformDetails,
-      payload: 'health_overdue_$id',
+      payload: 'health_overdue_$targetBaseId',
     );
 
-    debugPrint("Showed Immediate Overdue Notice #$id for $petName's $treatmentName");
+    debugPrint("Showed Immediate Overdue Notice #$targetBaseId for $petName's $treatmentName");
   }
 
-  /// Cancel a scheduled health reminder or notification by unique ID
-  Future<void> cancelReminder(int id) async {
-    await cancelNotification(id);
+  /// Cancel all scheduled health reminders for a record
+  Future<void> cancelReminder(int baseId) async {
+    final int safeBaseId = _to32BitId(baseId);
+    for (int offset = 0; offset <= 3; offset++) {
+      final int notificationId = safeBaseId * 10 + offset;
+      await cancelNotification(notificationId);
+    }
+    // Also cancel viva demo ID
+    await cancelNotification(safeBaseId * 10 + 99);
   }
 
   /// Cancel a scheduled notification by ID
   Future<void> cancelNotification(int id) async {
-    await _notificationsPlugin.cancel(id);
-    debugPrint("Cancelled Notification #$id");
+    final int safeId = _to32BitId(id);
+    await _notificationsPlugin.cancel(safeId);
+    debugPrint("Cancelled Notification #$safeId");
   }
 
   /// Cancel all scheduled notifications

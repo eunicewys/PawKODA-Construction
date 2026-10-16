@@ -11,7 +11,7 @@ import '../../services/notification_service.dart';
 import '../widgets/fringe_header.dart';
 
 /// VaccinationScreen: Log past immunization records (syncs to Passport)
-/// and schedule future upcoming dosage reminders with local phone notifications.
+/// and schedule future upcoming dosage reminders with daily local phone notifications starting 3 days prior at 09:00 AM.
 class VaccinationScreen extends StatefulWidget {
   final PetProfile pet;
   const VaccinationScreen({super.key, required this.pet});
@@ -29,71 +29,6 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
   final Color _sageGreenAlert = const Color(0xFF759C86); // Morandi Sage Green SnackBar color
 
   final HealthService _healthService = HealthService();
-
-  /// Show iOS/Android Alarm-style scroll wheel picker for Time selection
-  Future<TimeOfDay?> _showScrollTimePicker(BuildContext context, TimeOfDay initialTime) async {
-    DateTime tempDateTime = DateTime(
-      2025, 1, 1,
-      initialTime.hour,
-      initialTime.minute,
-    );
-
-    TimeOfDay? result = initialTime;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext modalContext) {
-        return Container(
-          height: 280,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(modalContext),
-                      child: Text("Cancel", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                    Text(
-                      "Set Time",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkCharcoal),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        result = TimeOfDay(hour: tempDateTime.hour, minute: tempDateTime.minute);
-                        Navigator.pop(modalContext);
-                      },
-                      child: Text("Done", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.time,
-                  initialDateTime: tempDateTime,
-                  use24hFormat: false,
-                  onDateTimeChanged: (DateTime newDateTime) {
-                    tempDateTime = newDateTime;
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    return result;
-  }
 
   /// Show iOS/Android Alarm-style scroll wheel picker for Date selection
   Future<DateTime?> _showScrollDatePicker({
@@ -176,15 +111,6 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
           : DateTime.now()
     );
 
-    // Initialize reminder time state (Default: 09:00 AM)
-    TimeOfDay selectedReminderTime = const TimeOfDay(hour: 9, minute: 0);
-    if (existingRecord?.reminderTime != null && existingRecord!.reminderTime!.contains(':')) {
-      try {
-        final parts = existingRecord.reminderTime!.split(':');
-        selectedReminderTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-      } catch (_) {}
-    }
-
     bool isSaving = false;
 
     showModalBottomSheet(
@@ -196,7 +122,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
           return Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.85,
+              height: MediaQuery.of(context).size.height * 0.82,
               decoration: BoxDecoration(
                 color: _desertSand,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -341,53 +267,6 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Reminder Time Selector (Below Vet/Clinic Name & Dosage)
-                    if (isUpcoming) ...[
-                      _buildLabel("REMINDER ALERT TIME (3 DAYS PRIOR)"),
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _darkCharcoal.withAlpha(50)),
-                        ),
-                        child: Material(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          child: ListTile(
-                            dense: true,
-                            onTap: () async {
-                              final TimeOfDay? picked = await _showScrollTimePicker(context, selectedReminderTime);
-                              if (picked != null) {
-                                setMState(() => selectedReminderTime = picked);
-                              }
-                            },
-                            leading: Icon(Icons.access_time_rounded, color: _dustyOlive),
-                            title: Text(
-                              selectedReminderTime.format(context),
-                              style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
-                            ),
-                            subtitle: (selectedReminderTime.hour == 9 && selectedReminderTime.minute == 0)
-                                ? Text(
-                                    "(Default)",
-                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                  )
-                                : null,
-                            trailing: TextButton.icon(
-                              onPressed: () async {
-                                final TimeOfDay? picked = await _showScrollTimePicker(context, selectedReminderTime);
-                                if (picked != null) {
-                                  setMState(() => selectedReminderTime = picked);
-                                }
-                              },
-                              icon: Icon(Icons.unfold_more_rounded, size: 18, color: _dustyOlive),
-                              label: Text("Set Time", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 12)),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-
                     // Notes
                     _buildLabel("NOTES / BATCH NO"),
                     TextField(
@@ -426,8 +305,6 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                               return;
                             }
 
-                            final String reminderTimeStr = "${selectedReminderTime.hour}:${selectedReminderTime.minute.toString().padLeft(2, '0')}";
-
                             final record = VaccinationRecord(
                               id: existingRecord?.id ?? '',
                               petId: widget.pet.id,
@@ -439,7 +316,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                               dueDate: isUpcoming ? selectedDate : null,
                               isCompleted: !isUpcoming,
                               notes: notesCtrl.text.trim(),
-                              reminderTime: isUpcoming ? reminderTimeStr : null,
+                              reminderTime: "09:00",
                             );
 
                             String recordId = existingRecord?.id ?? '';
@@ -450,19 +327,20 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                             }
 
                             // Trigger On-Phone Notification Logic
-                            final int notificationId = recordId.hashCode;
+                            final int notificationTagHash = recordId.hashCode;
 
                             if (isUpcoming) {
                               await NotificationService().scheduleHealthReminder(
-                                id: notificationId,
+                                baseId: notificationTagHash,
+                                id: notificationTagHash,
                                 petName: widget.pet.name,
                                 treatmentName: nameCtrl.text.trim(),
+                                type: selectedType,
                                 nextDueDate: selectedDate,
-                                reminderTime: selectedReminderTime,
                               );
                             } else if (existingRecord != null) {
-                              // If converting an upcoming item to completed/past, cancel old notification
-                              await NotificationService().cancelReminder(notificationId);
+                              // If converting an upcoming item to completed/past, cancel old notifications
+                              await NotificationService().cancelReminder(notificationTagHash);
                             }
 
                             if (context.mounted) {
@@ -480,7 +358,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            "Record saved! Reminder set for 3 days before due date at ${selectedReminderTime.format(context)}.",
+                                            "Reminder set! Daily 9:00 AM alerts enabled starting 3 days before due date.",
                                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                                           ),
                                         ),
@@ -809,17 +687,6 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                             final rec = upcomingRecords[index];
                             bool isVaccine = rec.type.toLowerCase() == 'vaccine';
 
-                            String formattedTimeStr = "";
-                            if (rec.reminderTime != null && rec.reminderTime!.contains(':')) {
-                              try {
-                                final parts = rec.reminderTime!.split(':');
-                                final tod = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-                                final now = DateTime.now();
-                                final dt = DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
-                                formattedTimeStr = " @ ${DateFormat('hh:mm a').format(dt)}";
-                              } catch (_) {}
-                            }
-
                             return Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -897,7 +764,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            "Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(rec.dueDate ?? rec.dateGiven)}$formattedTimeStr",
+                                            "Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(rec.dueDate ?? rec.dateGiven)} (Daily 9:00 AM Alert)",
                                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal),
                                           ),
                                         ),
