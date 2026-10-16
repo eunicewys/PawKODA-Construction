@@ -21,6 +21,9 @@ import '../health/vaccination_screen.dart';
 import '../widgets/fringe_header.dart';
 import '../../models/reminder_model.dart';
 import '../../services/reminder_service.dart';
+import '../profile/notification_center_screen.dart';
+import '../profile/privacy_security_screen.dart';
+import '../profile/help_support_screen.dart';
 
 /// UserHomeScreen: Redesigned dashboard for Pet Owners.
 /// Features a "Modern Layered" pet passport experience and functional navigation.
@@ -1267,20 +1270,150 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Widget _buildProfileView(BuildContext context) {
     final up = context.watch<UserProvider>();
-    return Container(color: _drySage, child: SafeArea(child: Padding(padding: const EdgeInsets.all(24.0), child: Column(children: [
-      const SizedBox(height: 40),
-      CircleAvatar(radius: 60, backgroundColor: _powderPetal, child: Text(up.displayName?.isNotEmpty == true ? up.displayName!.substring(0, 1).toUpperCase() : "?", style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: _dustyOlive))),
-      const SizedBox(height: 20),
-      Text(up.displayName ?? "User", style: const TextStyle(fontSize: 31, fontWeight: FontWeight.bold, color: Colors.white)),
-      Text(up.email ?? "", style: const TextStyle(color: Colors.white70, fontSize: 17)),
-      const SizedBox(height: 40),
-      _profileTile(Icons.person, "Edit Profile"), _profileTile(Icons.pets, "Manage My Pets"), _profileTile(Icons.notifications, "Notifications"),
-      const Spacer(),
-      SizedBox(width: double.infinity, height: 55, child: ElevatedButton.icon(onPressed: () => _handleLogout(context), icon: const Icon(Icons.logout, color: Colors.white), label: const Text("Logout", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), style: ElevatedButton.styleFrom(backgroundColor: _errorCoral))),
-    ]))));
+    return Container(
+      color: _drySage,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 40),
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: _powderPetal,
+                child: Text(
+                  up.displayName?.isNotEmpty == true
+                      ? up.displayName!.substring(0, 1).toUpperCase()
+                      : "?",
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: _dustyOlive,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                up.displayName ?? "User",
+                style: const TextStyle(
+                  fontSize: 31,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                up.email ?? "",
+                style: const TextStyle(color: Colors.white70, fontSize: 17),
+              ),
+              const SizedBox(height: 40),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _profileTile(
+                        Icons.person,
+                        "Edit Profile",
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Edit Profile module coming soon!")),
+                          );
+                        },
+                      ),
+                      _profileTile(
+                        Icons.pets,
+                        "Manage My Pets",
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Manage My Pets module coming soon!")),
+                          );
+                        },
+                      ),
+                      _profileTile(
+                        Icons.notifications,
+                        "Notifications",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationCenterScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _profileTile(
+                        Icons.security,
+                        "Privacy & Security",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PrivacySecurityScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _profileTile(
+                        Icons.help_outline,
+                        "Help & Support",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HelpSupportScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton.icon(
+                  onPressed: () => _handleLogout(context),
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  label: const Text(
+                    "Logout",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _errorCoral,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget _profileTile(IconData i, String t) => Container(margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(16)), child: ListTile(leading: Icon(i, color: Colors.white), title: Text(t, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 17)), trailing: const Icon(Icons.chevron_right, color: Colors.white70)));
+  Widget _profileTile(IconData i, String t, {VoidCallback? onTap}) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(30),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: ListTile(
+          onTap: onTap,
+          leading: Icon(i, color: Colors.white),
+          title: Text(
+            t,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              fontSize: 17,
+            ),
+          ),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white70),
+        ),
+      );
 
   Widget _buildPetCard({
     required double scale, 

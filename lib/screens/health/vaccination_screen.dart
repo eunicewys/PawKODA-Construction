@@ -8,6 +8,7 @@ import '../../models/health_model.dart';
 import '../../providers/user_provider.dart';
 import '../../services/health_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/user_notification_service.dart';
 import '../widgets/fringe_header.dart';
 
 /// VaccinationScreen: Log past immunization records (syncs to Passport)
@@ -337,6 +338,13 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                 treatmentName: nameCtrl.text.trim(),
                                 type: selectedType,
                                 nextDueDate: selectedDate,
+                              );
+
+                              await UserNotificationService().logNotification(
+                                userId: uid,
+                                title: "Health Reminder Set: ${widget.pet.name} 🐾",
+                                body: "${selectedType} (${nameCtrl.text.trim()}) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
+                                type: selectedType.toLowerCase() == 'deworming' ? 'deworming' : 'vaccine',
                               );
                             } else if (existingRecord != null) {
                               // If converting an upcoming item to completed/past, cancel old notifications
