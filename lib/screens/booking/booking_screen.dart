@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../providers/user_provider.dart';
 import '../../models/pet_model.dart';
 import '../../models/clinic_model.dart';
@@ -33,6 +35,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
   final BookingService _bookingService = BookingService();
   final PetService _petService = PetService();
+  final MapController _mapController = MapController();
 
   late TabController _tabController;
   String _selectedCity = 'All Cities (Penang)';
@@ -74,15 +77,14 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
     return Scaffold(
       backgroundColor: _drySage,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header Fringe
-            FringeHeader(
-              title: "Book a Vet",
-              subtitle: "FIND CLINICS NEAR YOU IN PENANG, MALAYSIA",
-              onBack: widget.onBackPressed,
-            ),
+      body: Column(
+        children: [
+          // Header Fringe (Sticks directly to top)
+          FringeHeader(
+            title: "Book a Vet",
+            subtitle: "FIND CLINICS NEAR YOU IN PENANG, MALAYSIA",
+            onBack: widget.onBackPressed,
+          ),
 
             // Top Tab Toggle: Discover Clinics vs My Bookings (Kept as requested)
             Container(
@@ -149,7 +151,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -621,10 +622,10 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   }
 
   // ===========================================================================
-  // INTERACTIVE PENANG GOOGLE MAP VIEW (Official Google Maps styling)
+  // INTERACTIVE PENANG GOOGLE MAP VIEW (Powered by real Google Maps vector tiles)
   // ===========================================================================
   Widget _buildPenangInteractiveMap(List<ClinicModel> clinics, String userId) {
-    final activeClinic = _selectedMapClinic ?? (clinics.isNotEmpty ? clinics.first : null);
+    final selectedClinic = _selectedMapClinic;
 
     return Container(
       decoration: BoxDecoration(
@@ -641,11 +642,11 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Google Maps Top Bar
+          // Google Maps Dark Header Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: const BoxDecoration(
-              color: Color(0xFF263238), // Dark Google Maps header style
+              color: Color(0xFF263238), // Google Maps dark top bar
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Row(
@@ -662,9 +663,9 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     Text("e", style: TextStyle(color: Color(0xFFEA4335), fontWeight: FontWeight.bold, fontSize: 15)),
                   ],
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 const Text(
-                  "Maps • Penang Vet Pins",
+                  "Maps • Penang (Interactive)",
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
                 ),
                 const Spacer(),
@@ -675,7 +676,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    activeClinic != null ? activeClinic.name : "Official Vet Map",
+                    "${clinics.length} Vet Pins",
                     style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -683,136 +684,179 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             ),
           ),
 
-          // Official Clinic Selection Switcher Pills (Kenique & Grace Vet branches)
+          // Real Interactive Google Map Container with Zoom In / Zoom Out / Drag
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            color: Colors.grey.shade100,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: clinics.map((c) {
-                  final isSel = activeClinic?.id == c.id;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      label: Text(c.name),
-                      selected: isSel,
-                      selectedColor: _dustyOlive,
-                      visualDensity: VisualDensity.compact,
-                      labelStyle: TextStyle(
-                        color: isSel ? Colors.white : _darkCharcoal,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                      onSelected: (sel) {
-                        if (sel) setState(() => _selectedMapClinic = c);
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-
-          // Authentic Google Maps Vector Canvas Container (Only official clinic pin shown)
-          Container(
-            height: 200,
+            height: 250,
             width: double.infinity,
-            color: const Color(0xFFAAD3DF), // Ocean light cyan
+            clipBehavior: Clip.antiAlias,
+            decoration: const BoxDecoration(),
             child: Stack(
               children: [
-                // Google Vector Map Canvas
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _PenangMapPainter(
-                      selectedClinic: activeClinic,
-                      allClinics: activeClinic != null ? [activeClinic] : clinics,
-                    ),
+                // Real Google Map Tile Layer with Gestures (Zoom, Pan)
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: const LatLng(5.3850, 100.3150), // Center of Penang Island & Channel
+                    initialZoom: 11.5,
+                    minZoom: 9.0,
+                    maxZoom: 18.0,
+                    onTap: (_, _) {
+                      // Tap on empty map space deselects pin
+                      setState(() => _selectedMapClinic = null);
+                    },
                   ),
-                ),
+                  children: [
+                    // High-Definition Real Google Maps Tile Layer
+                    TileLayer(
+                      urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                      userAgentPackageName: 'com.example.pawkoda_fyp',
+                    ),
+                    // Marker Layer for Kenique Vet & Grace Vet Branches
+                    MarkerLayer(
+                      markers: clinics.map((clinic) {
+                        final isSelected = selectedClinic?.id == clinic.id;
+                        final latLng = LatLng(clinic.latitude, clinic.longitude);
 
-                // Map Pin: ONLY showing the official selected clinic (No other vets shown)
-                if (activeClinic != null) ...[
-                  Builder(
-                    builder: (context) {
-                      final normPos = _getNormPosForClinic(activeClinic);
-                      String pinLabel = activeClinic.name
-                          .replaceAll('Veterinary Centre', 'Vet')
-                          .replaceAll('Veterinary Clinic', 'Vet')
-                          .replaceAll('Animal Hospital', 'Vet')
-                          .replaceAll('Animal Clinic', 'Vet');
+                        String pinLabel = clinic.name
+                            .replaceAll('Veterinary Centre', 'Vet')
+                            .replaceAll('Veterinary Clinic', 'Vet')
+                            .replaceAll('Animal Hospital', 'Vet')
+                            .replaceAll('Animal Clinic', 'Vet');
 
-                      return Positioned(
-                        left: normPos.dx,
-                        top: normPos.dy,
-                        child: GestureDetector(
-                          onTap: () => _openGoogleMapsForClinic(activeClinic),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Official Red Google Maps Location Pin
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.location_on_sharp,
-                                    color: Color(0xFFD32F2F),
-                                    size: 36,
-                                  ),
-                                  Positioned(
-                                    top: 6,
-                                    child: Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
+                        return Marker(
+                          point: latLng,
+                          width: 80,
+                          height: 55,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedMapClinic = clinic),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.location_on_sharp,
+                                      color: isSelected ? const Color(0xFFD32F2F) : const Color(0xFFE53935),
+                                      size: isSelected ? 34 : 26,
                                     ),
-                                  ),
-                                ],
-                              ),
-                              // Official Pin Label Badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _darkCharcoal,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: Colors.red,
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.2),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
+                                    Positioned(
+                                      top: isSelected ? 6 : 4,
+                                      child: Container(
+                                        width: isSelected ? 10 : 8,
+                                        height: isSelected ? 10 : 8,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                child: Text(
-                                  pinLabel,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? _darkCharcoal : Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: isSelected ? Colors.red : Colors.grey.shade400,
+                                      width: 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.18),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    pinLabel,
+                                    style: TextStyle(
+                                      color: isSelected ? Colors.white : _darkCharcoal,
+                                      fontSize: 8.0,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
 
-                // Google Watermark Banner
+                // On-Screen Zoom Controls (+ / - / Recenter Penang)
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: Column(
+                    children: [
+                      // Zoom In
+                      InkWell(
+                        onTap: () {
+                          final currentZoom = _mapController.camera.zoom;
+                          _mapController.move(_mapController.camera.center, currentZoom + 1.0);
+                        },
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
+                          ),
+                          child: const Icon(Icons.add, size: 18, color: Colors.black87),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Zoom Out
+                      InkWell(
+                        onTap: () {
+                          final currentZoom = _mapController.camera.zoom;
+                          _mapController.move(_mapController.camera.center, currentZoom - 1.0);
+                        },
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
+                          ),
+                          child: const Icon(Icons.remove, size: 18, color: Colors.black87),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Recenter Penang
+                      InkWell(
+                        onTap: () {
+                          _mapController.move(const LatLng(5.3850, 100.3150), 11.5);
+                        },
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
+                          ),
+                          child: Icon(Icons.my_location, size: 16, color: _dustyOlive),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Google Logo Watermark
                 Positioned(
                   left: 10,
                   bottom: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(6),
@@ -820,10 +864,10 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.map_rounded, size: 12, color: Colors.blue),
-                        const SizedBox(width: 4),
-                        const Text(
+                      children: const [
+                        Icon(Icons.map_rounded, size: 12, color: Colors.blue),
+                        SizedBox(width: 4),
+                        Text(
                           "Google Maps • Penang",
                           style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87),
                         ),
@@ -835,14 +879,14 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             ),
           ),
 
-          // Interactive Selected Clinic Card
-          if (activeClinic != null) ...[
+          // Instruction or Selected Clinic Details (ONLY appears when user taps a pin!)
+          if (selectedClinic != null) ...[
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
                       color: _dustyOlive.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
@@ -853,7 +897,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            "Pin Selected: ${activeClinic.name}",
+                            "Pin Selected: ${selectedClinic.name}",
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -863,14 +907,33 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                           ),
                         ),
                         Text(
-                          "⭐ ${activeClinic.rating}",
+                          "⭐ ${selectedClinic.rating}",
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedMapClinic = null),
+                          child: const Icon(Icons.close_rounded, size: 16, color: Colors.grey),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _buildClinicCard(activeClinic, userId),
+                  _buildClinicCard(selectedClinic, userId),
+                ],
+              ),
+            ),
+          ] else ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.touch_app_rounded, size: 16, color: _dustyOlive),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Tap any pin marker on the map to select a clinic",
+                    style: TextStyle(fontSize: 11, color: _ashGrey, fontWeight: FontWeight.w500),
+                  ),
                 ],
               ),
             ),
@@ -878,12 +941,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         ],
       ),
     );
-  }
-
-  Offset _getNormPosForClinic(ClinicModel clinic) {
-    double normX = ((clinic.longitude - 100.20) / (100.48 - 100.20)).clamp(0.08, 0.82);
-    double normY = (1.0 - ((clinic.latitude - 5.15) / (5.52 - 5.15))).clamp(0.08, 0.80);
-    return Offset(normX * 260 + 5, normY * 150 + 5);
   }
 
   Color _getClinicAvatarBg(String id) {
@@ -1481,95 +1538,4 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       ),
     );
   }
-}
-
-class _PenangMapPainter extends CustomPainter {
-  final ClinicModel? selectedClinic;
-  final List<ClinicModel> allClinics;
-
-  _PenangMapPainter({this.selectedClinic, required this.allClinics});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Official Google Maps Vector Palette
-    final landPaint = Paint()
-      ..color = const Color(0xFFF4F3F0) // Google Maps land light cream
-      ..style = PaintingStyle.fill;
-
-    final seaPaint = Paint()
-      ..color = const Color(0xFFAAD3DF) // Google Maps ocean light cyan
-      ..style = PaintingStyle.fill;
-
-    final parkPaint = Paint()
-      ..color = const Color(0xFFC8E6C9) // Google Maps park light green
-      ..style = PaintingStyle.fill;
-
-    final highwayPaint = Paint()
-      ..color = const Color(0xFFFFD54F) // Google Maps yellow/orange highway
-      ..strokeWidth = 3.5
-      ..style = PaintingStyle.stroke;
-
-    final roadPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    // 1. Draw Sea Background (Straits of Malacca / Penang Channel)
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), seaPaint);
-
-    // 2. Draw Penang Island Landmass
-    final islandPath = Path();
-    islandPath.moveTo(size.width * 0.12, size.height * 0.18);
-    islandPath.quadraticBezierTo(size.width * 0.35, size.height * 0.08, size.width * 0.46, size.height * 0.32);
-    islandPath.quadraticBezierTo(size.width * 0.42, size.height * 0.78, size.width * 0.22, size.height * 0.88);
-    islandPath.quadraticBezierTo(size.width * 0.08, size.height * 0.65, size.width * 0.12, size.height * 0.18);
-    islandPath.close();
-    canvas.drawPath(islandPath, landPaint);
-
-    // 3. Draw Penang Hill Greenery Park
-    final parkPath = Path();
-    parkPath.addOval(Rect.fromCenter(
-      center: Offset(size.width * 0.26, size.height * 0.45),
-      width: size.width * 0.16,
-      height: size.height * 0.22,
-    ));
-    canvas.drawPath(parkPath, parkPaint);
-
-    // 4. Draw Mainland Penang (Seberang Perai)
-    final mainlandPath = Path();
-    mainlandPath.moveTo(size.width * 0.54, size.height * 0.02);
-    mainlandPath.lineTo(size.width, size.height * 0.02);
-    mainlandPath.lineTo(size.width, size.height * 0.98);
-    mainlandPath.lineTo(size.width * 0.54, size.height * 0.98);
-    mainlandPath.quadraticBezierTo(size.width * 0.50, size.height * 0.5, size.width * 0.54, size.height * 0.02);
-    mainlandPath.close();
-    canvas.drawPath(mainlandPath, landPaint);
-
-    // 5. Draw Major Highways (Tun Dr Lim Chong Eu Expressway & Federal Routes)
-    final highwayPath = Path();
-    highwayPath.moveTo(size.width * 0.38, size.height * 0.25);
-    highwayPath.lineTo(size.width * 0.36, size.height * 0.82);
-    canvas.drawPath(highwayPath, highwayPaint);
-
-    // 6. Draw First & Second Penang Bridges
-    canvas.drawLine(
-      Offset(size.width * 0.36, size.height * 0.50),
-      Offset(size.width * 0.55, size.height * 0.50),
-      highwayPaint,
-    );
-
-    canvas.drawLine(
-      Offset(size.width * 0.30, size.height * 0.78),
-      Offset(size.width * 0.56, size.height * 0.82),
-      highwayPaint,
-    );
-
-    // 7. Draw Local Main Roads Grid
-    canvas.drawLine(Offset(size.width * 0.15, size.height * 0.30), Offset(size.width * 0.42, size.height * 0.30), roadPaint);
-    canvas.drawLine(Offset(size.width * 0.18, size.height * 0.60), Offset(size.width * 0.38, size.height * 0.60), roadPaint);
-    canvas.drawLine(Offset(size.width * 0.60, size.height * 0.10), Offset(size.width * 0.60, size.height * 0.90), roadPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
