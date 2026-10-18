@@ -236,9 +236,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final email = context.watch<UserProvider>().email ?? FirebaseAuth.instance.currentUser?.email ?? '';
-
-    const Color beachBg = Color(0xFFF2E6DC);
+    const Color beachBg = Color(0xFFE6CCB2);
 
     return Scaffold(
       backgroundColor: beachBg,

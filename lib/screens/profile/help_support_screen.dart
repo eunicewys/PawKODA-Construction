@@ -333,7 +333,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       return q.contains(s) || a.contains(s) || c.contains(s);
     }).toList();
 
-    const Color beachBg = Color(0xFFF2E6DC);
+    const Color beachBg = Color(0xFFE6CCB2);
 
     return Scaffold(
       backgroundColor: beachBg,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/image_helper.dart';
 
 class FringeHeader extends StatelessWidget {
   final String title;
@@ -108,12 +109,14 @@ class FringeHeader extends StatelessWidget {
 class DashboardFringeHeader extends StatelessWidget {
   final String greeting;
   final String userName;
+  final String? photoUrl;
   final VoidCallback onLogout;
 
   const DashboardFringeHeader({
     super.key,
     required this.greeting,
     required this.userName,
+    this.photoUrl,
     required this.onLogout,
   });
 
@@ -121,6 +124,7 @@ class DashboardFringeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     const Color dustyOlive = Color(0xFF6B705C);
     const Color powderPetal = Color(0xFFFFE8D6);
+    ImageProvider? avatarImgProvider = ImageHelper.getImageProvider(photoUrl);
 
     return SizedBox(
       height: 120,
@@ -203,14 +207,17 @@ class DashboardFringeHeader extends StatelessWidget {
                             child: CircleAvatar(
                               radius: 18,
                               backgroundColor: powderPetal,
-                              child: Text(
-                                userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
-                                style: const TextStyle(
-                                  color: dustyOlive,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                              ),
+                              backgroundImage: avatarImgProvider,
+                              child: avatarImgProvider == null
+                                  ? Text(
+                                      userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
+                                      style: const TextStyle(
+                                        color: dustyOlive,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    )
+                                  : null,
                             ),
                           ),
                         ],

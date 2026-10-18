@@ -53,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final data = userDoc.data() as Map<String, dynamic>;
         final String role = data['role'] ?? 'owner';
         final String name = data['displayName'] ?? 'User';
+        final String? photoUrl = data['photoUrl'];
 
         if (mounted) {
           Provider.of<UserProvider>(context, listen: false).setUser(
@@ -60,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
             name,
             role,
             userCredential.user!.email ?? '',
+            photoUrl: photoUrl,
           );
 
           Navigator.pushReplacement(

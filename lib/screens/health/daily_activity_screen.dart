@@ -569,7 +569,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                                       _badgeTile("Stool", log.stool, _dustyOlive),
                                       _badgeTile("Water", log.waterIntake, _dustyOlive),
                                       _badgeTile("Activity", log.activityLevel, _dustyOlive),
-                                      _badgeTile("Walk", log.wentForWalk ? "Yes 🐾" : "No", log.wentForWalk ? Colors.green.shade800 : Colors.grey),
+                                      _badgeTile("Walk", log.wentForWalk ? "Yes" : "No", log.wentForWalk ? Colors.green.shade800 : Colors.grey),
                                     ],
                                   ),
                                   if (log.notes.isNotEmpty) ...[

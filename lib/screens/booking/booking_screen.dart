@@ -1429,13 +1429,13 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
                           await NotificationService().showNotification(
                             id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                            title: "Vet Appointment Booked! 🐾",
+                            title: "Vet Appointment Booked!",
                             body: "Confirmed with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate)} at $selectedTime.",
                           );
 
                           await UserNotificationService().logNotification(
                             userId: userId,
-                            title: "Vet Appointment Booked! 🐾",
+                            title: "Vet Appointment Booked!",
                             body: "Confirmed with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate)} at $selectedTime.",
                             type: 'booking',
                           );

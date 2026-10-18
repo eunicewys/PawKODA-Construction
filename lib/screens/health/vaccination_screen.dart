@@ -342,7 +342,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
 
                               await UserNotificationService().logNotification(
                                 userId: uid,
-                                title: "Health Reminder Set: ${widget.pet.name} 🐾",
+                                title: "Health Reminder Set: ${widget.pet.name}",
                                 body: "${selectedType} (${nameCtrl.text.trim()}) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
                                 type: selectedType.toLowerCase() == 'deworming' ? 'deworming' : 'vaccine',
                               );

@@ -24,6 +24,7 @@ import '../../services/reminder_service.dart';
 import '../profile/notification_center_screen.dart';
 import '../profile/privacy_security_screen.dart';
 import '../profile/help_support_screen.dart';
+import '../profile/edit_profile_screen.dart';
 
 /// UserHomeScreen: Redesigned dashboard for Pet Owners.
 /// Features a "Modern Layered" pet passport experience and functional navigation.
@@ -1162,7 +1163,9 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   Widget _buildDashboard(BuildContext context, List<PetProfile> pets) {
-    final userName = context.watch<UserProvider>().displayName ?? 'Friend';
+    final userProvider = context.watch<UserProvider>();
+    final userName = userProvider.displayName ?? 'Friend';
+    final photoUrl = userProvider.photoUrl;
     final healthyCount = pets.where((p) => p.isHealthy == true).length;
     final attentionCount = pets.where((p) => p.isHealthy == false).length;
     return Column(
@@ -1171,6 +1174,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         DashboardFringeHeader(
           greeting: _getGreeting(),
           userName: userName,
+          photoUrl: photoUrl,
           onLogout: () => _handleLogout(context),
         ),
         // Scrollable Body Content
@@ -1270,6 +1274,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Widget _buildProfileView(BuildContext context) {
     final up = context.watch<UserProvider>();
+    ImageProvider? profileImgProvider = ImageHelper.getImageProvider(up.photoUrl);
+
     return Container(
       color: _drySage,
       child: Column(
@@ -1287,16 +1293,19 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: _powderPetal,
-                    child: Text(
-                      up.displayName?.isNotEmpty == true
-                          ? up.displayName!.substring(0, 1).toUpperCase()
-                          : "?",
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: _dustyOlive,
-                      ),
-                    ),
+                    backgroundImage: profileImgProvider,
+                    child: profileImgProvider == null
+                        ? Text(
+                            up.displayName?.isNotEmpty == true
+                                ? up.displayName!.substring(0, 1).toUpperCase()
+                                : "?",
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: _dustyOlive,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -1307,26 +1316,27 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  Text(
-                    up.email ?? "",
-                    style: const TextStyle(color: Colors.white70, fontSize: 15),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      up.email ?? "",
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   _profileTile(
                     Icons.person,
                     "Edit Profile",
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Edit Profile module coming soon!")),
-                      );
-                    },
-                  ),
-                  _profileTile(
-                    Icons.pets,
-                    "Manage My Pets",
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Manage My Pets module coming soon!")),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
                       );
                     },
                   ),
@@ -1402,21 +1412,35 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   Widget _profileTile(IconData i, String t, {VoidCallback? onTap}) => Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(30),
+          color: Colors.white.withAlpha(225),
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(12),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: ListTile(
           onTap: onTap,
-          leading: Icon(i, color: Colors.white),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDDB892).withAlpha(70),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(i, color: _dustyOlive, size: 20),
+          ),
           title: Text(
             t,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-              fontSize: 17,
+            style: TextStyle(
+              color: _darkCharcoal,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
-          trailing: const Icon(Icons.chevron_right, color: Colors.white70),
+          trailing: Icon(Icons.chevron_right_rounded, color: _dustyOlive),
         ),
       );
 

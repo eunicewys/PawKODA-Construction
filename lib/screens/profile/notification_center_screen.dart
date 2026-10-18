@@ -77,7 +77,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   Widget build(BuildContext context) {
     final uid = context.watch<UserProvider>().uid ?? '';
 
-    const Color beachBg = Color(0xFFF2E6DC);
+    const Color beachBg = Color(0xFFE6CCB2);
 
     return Scaffold(
       backgroundColor: beachBg,
