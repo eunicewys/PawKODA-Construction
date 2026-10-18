@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/user_notification_model.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_notification_service.dart';
+import '../widgets/fringe_header.dart';
 
 /// NotificationCenterScreen: Manages notification preferences (turn ON/OFF)
 /// and displays past notification logs stored for up to 30 days.
@@ -80,56 +81,50 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
     return Scaffold(
       backgroundColor: beachBg,
-      appBar: AppBar(
-        title: Text(
-          "Notification Settings",
-          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: beachBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _darkCharcoal),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (uid.isNotEmpty)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded, color: _darkCharcoal),
-              onSelected: (value) async {
-                if (value == 'mark_read') {
-                  await _notificationService.markAllAsRead(uid);
-                } else if (value == 'clear_all') {
-                  _showClearConfirmationDialog(uid);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'mark_read',
-                  child: Row(
-                    children: [
-                      Icon(Icons.done_all, color: Colors.blue, size: 20),
-                      SizedBox(width: 8),
-                      Text("Mark all as read"),
+      body: Column(
+        children: [
+          FringeHeader(
+            title: "Notifications",
+            subtitle: "Settings & History (30 Days)",
+            onBack: () => Navigator.pop(context),
+            trailing: uid.isNotEmpty
+                ? PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+                    onSelected: (value) async {
+                      if (value == 'mark_read') {
+                        await _notificationService.markAllAsRead(uid);
+                      } else if (value == 'clear_all') {
+                        _showClearConfirmationDialog(uid);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'mark_read',
+                        child: Row(
+                          children: [
+                            Icon(Icons.done_all, color: Colors.blue, size: 20),
+                            SizedBox(width: 8),
+                            Text("Mark all as read"),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'clear_all',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            SizedBox(width: 8),
+                            Text("Clear all notifications"),
+                          ],
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Text("Clear all notifications"),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
+                  )
+                : null,
+          ),
+          Expanded(
+            child: Column(
+              children: [
             // Master Switch Switch Card
             Container(
               margin: const EdgeInsets.all(16),
@@ -192,7 +187,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                         )
                       : Switch(
                           value: _notificationsEnabled,
-                          activeColor: _dustyOlive,
+                          activeThumbColor: _dustyOlive,
                           onChanged: _toggleNotificationPreference,
                         ),
                 ],
@@ -269,8 +264,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           ],
         ),
       ),
-    );
-  }
+    ],
+  ),
+);
+}
 
   Widget _buildFilterChip(String label, int days) {
     final bool isSelected = _selectedDaysFilter == days;

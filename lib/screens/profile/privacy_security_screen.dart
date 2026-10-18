@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
+import '../widgets/fringe_header.dart';
 
 /// PrivacySecurityScreen: Compact & sleek layout providing password change,
 /// security preferences, active session details, privacy policies, and account deletion options.
@@ -20,8 +21,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
   final Color _ashGrey = const Color(0xFF8A8A7C);
   final Color _errorCoral = const Color(0xFFB56576);
 
-  bool _biometricEnabled = false;
-  bool _dataSharingEnabled = true;
+
 
   void _showChangePasswordDialog() {
     final currentPassController = TextEditingController();
@@ -162,10 +162,9 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                             await user.reauthenticateWithCredential(cred);
                             await user.updatePassword(newPass);
 
-                            if (mounted) {
-                              Navigator.pop(context);
-                              _showSuccessDialog("Password Changed", "Your password has been updated successfully.");
-                            }
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                            _showSuccessDialog("Password Changed", "Your password has been updated successfully.");
                           } on FirebaseAuthException catch (e) {
                             setDialogState(() => isSubmitting = false);
                             String err = "Failed to update password.";
@@ -196,26 +195,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         );
       },
     );
-  }
-
-  Future<void> _sendPasswordResetEmail() async {
-    final user = FirebaseAuth.instance.currentUser;
-    final email = user?.email ?? Provider.of<UserProvider>(context, listen: false).email ?? '';
-
-    if (email.isEmpty) {
-      _showToast("No registered email found.");
-      return;
-    }
-
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      _showSuccessDialog(
-        "Reset Link Sent",
-        "A password reset email has been sent to $email. Please check your inbox.",
-      );
-    } catch (e) {
-      _showToast("Failed to send reset email: $e");
-    }
   }
 
   void _showToast(String message) {
@@ -263,25 +242,19 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
 
     return Scaffold(
       backgroundColor: beachBg,
-      appBar: AppBar(
-        title: Text(
-          "Privacy & Security",
-          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        backgroundColor: beachBg,
-        elevation: 0,
-        toolbarHeight: 48,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _darkCharcoal, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: Column(
+        children: [
+          FringeHeader(
+            title: "Privacy & Security",
+            subtitle: "Account Protection",
+            onBack: () => Navigator.pop(context),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               _buildSectionHeader("LOGIN & AUTHENTICATION"),
               const SizedBox(height: 6),
               _buildCard([
@@ -291,57 +264,12 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                   subtitle: "Update account password",
                   onTap: _showChangePasswordDialog,
                 ),
-                const Divider(height: 1, indent: 48),
-                _buildTile(
-                  icon: Icons.mark_email_read_outlined,
-                  title: "Send Reset Email",
-                  subtitle: email,
-                  onTap: _sendPasswordResetEmail,
-                ),
-              ]),
-
-              const SizedBox(height: 14),
-              _buildSectionHeader("SECURITY PREFERENCES"),
-              const SizedBox(height: 6),
-              _buildCard([
-                _buildSwitchTile(
-                  icon: Icons.fingerprint_rounded,
-                  title: "Biometric / Face ID",
-                  subtitle: "Enable biometric app lock",
-                  value: _biometricEnabled,
-                  onChanged: (val) {
-                    setState(() => _biometricEnabled = val);
-                    _showToast(val ? "Biometric lock enabled." : "Biometric lock disabled.");
-                  },
-                ),
-                const Divider(height: 1, indent: 48),
-                _buildTile(
-                  icon: Icons.devices_rounded,
-                  title: "Active Device Session",
-                  subtitle: "Android Phone • Penang, MY",
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.green.withAlpha(25), borderRadius: BorderRadius.circular(8)),
-                    child: const Text("Active", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11)),
-                  ),
-                ),
               ]),
 
               const SizedBox(height: 14),
               _buildSectionHeader("PRIVACY & DATA PROTECTION"),
               const SizedBox(height: 6),
               _buildCard([
-                _buildSwitchTile(
-                  icon: Icons.analytics_outlined,
-                  title: "Anonymized Data Sharing",
-                  subtitle: "Share anonymized stats for pet research",
-                  value: _dataSharingEnabled,
-                  onChanged: (val) {
-                    setState(() => _dataSharingEnabled = val);
-                    _showToast(val ? "Data sharing preference saved." : "Data sharing disabled.");
-                  },
-                ),
-                const Divider(height: 1, indent: 48),
                 _buildTile(
                   icon: Icons.privacy_tip_outlined,
                   title: "Privacy Policy",
@@ -358,8 +286,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
               ]),
 
               const SizedBox(height: 14),
-              _buildSectionHeader("DANGER ZONE"),
-              const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -381,8 +307,10 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
           ),
         ),
       ),
-    );
-  }
+    ],
+  ),
+);
+}
 
   Widget _buildSectionHeader(String title) {
     return Padding(
@@ -454,33 +382,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       ),
       trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: _ashGrey, size: 18),
       onTap: onTap,
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return SwitchListTile(
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-      secondary: Container(
-        padding: const EdgeInsets.all(5),
-        decoration: BoxDecoration(color: _powderPetal, borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, color: _dustyOlive, size: 18),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _darkCharcoal),
-      ),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: _ashGrey)),
-      activeColor: _dustyOlive,
-      value: value,
-      onChanged: onChanged,
     );
   }
 

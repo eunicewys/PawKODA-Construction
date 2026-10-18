@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
+import '../widgets/fringe_header.dart';
 
 /// HelpSupportScreen: Displays searchable FAQ questions & solutions and
 /// official PawKODA Support Desk contact options (email, mailto launcher, support ticket submission).
@@ -336,24 +337,19 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
 
     return Scaffold(
       backgroundColor: beachBg,
-      appBar: AppBar(
-        title: Text(
-          "Help & Support",
-          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: beachBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _darkCharcoal),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: Column(
+        children: [
+          FringeHeader(
+            title: "Help & Support",
+            subtitle: "FAQ & Support Desk",
+            onBack: () => Navigator.pop(context),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Support Desk Highlight Banner
               Container(
                 padding: const EdgeInsets.all(20),
@@ -596,6 +592,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           ),
         ),
       ),
-    );
-  }
+    ],
+  ),
+);
+}
 }
