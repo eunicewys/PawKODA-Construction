@@ -52,6 +52,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   final ImagePicker _picker = ImagePicker();
 
   late int _selectedIndex;
+  int _bookingInitialTab = 0;
   late PageController _pageController;
   double _currentPage = 0;
   Map<String, dynamic> _breedData = {};
@@ -1170,7 +1171,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         final views = [
           _buildDashboard(context, pets),
           HealthScreen(onBackPressed: () => setState(() => _selectedIndex = 0)),
-          BookingScreen(onBackPressed: () => setState(() => _selectedIndex = 0)),
+          BookingScreen(
+            onBackPressed: () => setState(() => _selectedIndex = 0),
+            initialTabIndex: _bookingInitialTab,
+          ),
           _buildProfileView(context)
         ];
         return Scaffold(backgroundColor: _drySage, body: views[_selectedIndex], bottomNavigationBar: _buildBottomNav());
@@ -1215,27 +1219,29 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ]),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("My Pet Passports", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: Colors.white)),
-                        const SizedBox(width: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6), 
-                          decoration: BoxDecoration(color: _darkCharcoal, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10)]), 
-                          child: InkWell(
-                            onTap: _showAddPetDialog, 
-                            child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 17)),
-                          ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "My Pet Passports",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5), 
+                        decoration: BoxDecoration(
+                          color: _darkCharcoal,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 8)],
+                        ), 
+                        child: InkWell(
+                          onTap: _showAddPetDialog, 
+                          child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1262,9 +1268,9 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       ),
                     );
                   })),
-                const SizedBox(height: 30),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Quick Actions", style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white))),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5))),
+                const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16), 
                   child: Row(
@@ -1272,7 +1278,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     children: [
                       Flexible(child: _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets))),
                       Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1))),
-                      Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() => _selectedIndex = 2))),
+                      Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() { _bookingInitialTab = 0; _selectedIndex = 2; }))),
                       Flexible(child: _buildActionItem(Icons.menu_book_rounded, "Recipes", _powderPetal, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SavedRecipesScreen())))),
                     ],
                   ),
@@ -1629,22 +1635,22 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 children: [
                   const Text(
                     "Upcoming Reminders",
-                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5),
                   ),
                   if (reminders.length > 3)
                     GestureDetector(
                       onTap: () => _showAllRemindersBottomSheet(context, reminders, pets),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withAlpha(40),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           "View All (${reminders.length})",
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1732,7 +1738,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => setState(() => _selectedIndex = 2),
+                              onPressed: () => setState(() {
+                                _bookingInitialTab = 0;
+                                _selectedIndex = 2;
+                              }),
                               icon: Icon(Icons.calendar_month_rounded, size: 16, color: _dustyOlive),
                               label: Text("Book Vet", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 13)),
                               style: OutlinedButton.styleFrom(
@@ -1811,72 +1820,73 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       elevation: 0,
       child: InkWell(
         onTap: () => _handleReminderTap(context, item, pets),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: isUrgent ? _errorCoral.withAlpha(80) : Colors.black.withAlpha(15),
-              width: isUrgent ? 1.5 : 1.0,
+              color: isUrgent ? _errorCoral.withAlpha(80) : Colors.black.withAlpha(12),
+              width: isUrgent ? 1.2 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(6),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: Colors.black.withAlpha(5),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               )
             ],
           ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: iconBgColor,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(iconData, color: iconColor, size: 24),
+                child: Icon(iconData, color: iconColor, size: 20),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: iconBgColor,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             badgeText,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
                               color: iconColor,
-                              letterSpacing: 0.5,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: isUrgent ? _errorCoral.withAlpha(25) : _dustyOlive.withAlpha(20),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             item.dateStatusText,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
                               color: isUrgent ? _errorCoral : _dustyOlive,
                             ),
@@ -1884,23 +1894,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       item.title,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 14,
                         color: _darkCharcoal,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     Text(
                       item.subtitle,
                       style: TextStyle(
-                        color: _ashGrey,
-                        fontSize: 13,
+                        color: _darkCharcoal.withAlpha(180),
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -1910,7 +1920,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: _ashGrey, size: 22),
+              Icon(Icons.chevron_right_rounded, color: _ashGrey, size: 20),
             ],
           ),
         ),
@@ -1920,8 +1930,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   void _handleReminderTap(BuildContext context, ReminderItem item, List<PetProfile> pets) {
     if (item.type == ReminderType.booking) {
-      // Switch to Booking tab
-      setState(() => _selectedIndex = 2);
+      // Switch to Booking tab and explicitly open "My Bookings" tab (tab index 1)
+      setState(() {
+        _bookingInitialTab = 1;
+        _selectedIndex = 2;
+      });
     } else {
       // Find matching pet
       PetProfile? pet;
@@ -2030,5 +2043,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   );
   Widget _buildActionItem(IconData i, String l, Color c, VoidCallback o) => InkWell(onTap: o, borderRadius: BorderRadius.circular(18), child: Column(mainAxisSize: MainAxisSize.min, children: [Container(height: 60, width: 60, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 8, offset: const Offset(0, 3))]), child: Icon(i, color: _dustyOlive, size: 26)), const SizedBox(height: 6), Text(l, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis)]));
   Widget _buildBottomNav() => Container(height: 75, decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)), boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 15)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_navIcon(Icons.home_filled, "Home", 0), _navIcon(Icons.favorite_border, "Health", 1), _navIcon(Icons.calendar_month_outlined, "Bookings", 2), _navIcon(Icons.person_outline, "Profile", 3)]));
-  Widget _navIcon(IconData i, String l, int idx) => InkWell(onTap: () => setState(() => _selectedIndex = idx), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(i, color: _selectedIndex == idx ? _dustyOlive : _ashGrey, size: 26), const SizedBox(height: 4), Text(l, style: TextStyle(fontSize: 10, color: _selectedIndex == idx ? _dustyOlive : _ashGrey, fontWeight: _selectedIndex == idx ? FontWeight.bold : FontWeight.normal))]));
+  Widget _navIcon(IconData i, String l, int idx) => InkWell(onTap: () => setState(() {
+    if (idx == 2) _bookingInitialTab = 0;
+    _selectedIndex = idx;
+  }), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(i, color: _selectedIndex == idx ? _dustyOlive : _ashGrey, size: 26), const SizedBox(height: 4), Text(l, style: TextStyle(fontSize: 10, color: _selectedIndex == idx ? _dustyOlive : _ashGrey, fontWeight: _selectedIndex == idx ? FontWeight.bold : FontWeight.normal))]));
 }

@@ -17,7 +17,13 @@ import '../widgets/fringe_header.dart';
 /// focusing strictly on Penang, Malaysia with Google Maps integration.
 class BookingScreen extends StatefulWidget {
   final VoidCallback? onBackPressed;
-  const BookingScreen({super.key, this.onBackPressed});
+  final int initialTabIndex;
+
+  const BookingScreen({
+    super.key,
+    this.onBackPressed,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
@@ -50,8 +56,20 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
     _initUserLocation();
+  }
+
+  @override
+  void didUpdateWidget(covariant BookingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTabIndex != oldWidget.initialTabIndex) {
+      _tabController.animateTo(widget.initialTabIndex);
+    }
   }
 
   Future<void> _initUserLocation() async {

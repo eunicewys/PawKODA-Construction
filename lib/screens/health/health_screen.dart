@@ -264,32 +264,32 @@ class _HealthScreenState extends State<HealthScreen> {
     required VoidCallback onTap,
   }) {
     return Container(
-      height: 90, // Fixed height to make all boxes the same size
+      height: 76,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 12, offset: const Offset(0, 4))],
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(icon, color: _dustyOlive, size: 28),
+                  child: Icon(icon, color: _dustyOlive, size: 22),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,14 +297,14 @@ class _HealthScreenState extends State<HealthScreen> {
                     children: [
                       Text(
                         title,
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.2),
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600, height: 1.2),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -312,7 +312,7 @@ class _HealthScreenState extends State<HealthScreen> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 24),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 20),
               ],
             ),
           ),
