@@ -305,6 +305,10 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   // LOCATION CARD (Scaled down compactness)
   // ===========================================================================
   Widget _buildLocationCard() {
+    final String activeCityValue = BookingService.penangCities.contains(_selectedCity)
+        ? _selectedCity
+        : BookingService.penangCities.first;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -326,7 +330,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
               Icon(Icons.location_on, color: _lightBronze, size: 16),
               const SizedBox(width: 4),
               Text(
-                "LOCATION",
+                "LOCATION (PENANG)",
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
@@ -334,40 +338,11 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                   color: _ashGrey,
                 ),
               ),
-              const Spacer(),
-              GestureDetector(
-                onTap: _initUserLocation,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _desertSand.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _userLat != null ? Icons.my_location : Icons.check_circle,
-                        size: 11,
-                        color: _dustyOlive,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _userLat != null ? "GPS Active (Precise Distance)" : "Penang, Malaysia",
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: _dustyOlive,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 8),
 
-          // City Selection Dropdown (Scaled down)
+          // City Selection Dropdown
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
             decoration: BoxDecoration(
@@ -377,7 +352,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _selectedCity,
+                value: activeCityValue,
                 isExpanded: true,
                 isDense: true,
                 icon: Icon(Icons.keyboard_arrow_down_rounded, color: _darkCharcoal, size: 20),
@@ -402,7 +377,10 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                           color: _dustyOlive,
                         ),
                         const SizedBox(width: 8),
-                        Text(city, style: const TextStyle(fontSize: 13)),
+                        Text(
+                          city,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
                   );
@@ -665,20 +643,8 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                 ),
                 const SizedBox(width: 6),
                 const Text(
-                  "Maps • Penang (Interactive)",
+                  "Maps • Penang",
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    "${clinics.length} Vet Pins",
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
                 ),
               ],
             ),
@@ -931,7 +897,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                   Icon(Icons.touch_app_rounded, size: 16, color: _dustyOlive),
                   const SizedBox(width: 6),
                   Text(
-                    "Tap any pin marker on the map to select a clinic",
+                    "Tap any pin to show details",
                     style: TextStyle(fontSize: 11, color: _ashGrey, fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -944,16 +910,14 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   }
 
   Color _getClinicAvatarBg(String id) {
-    if (id.startsWith('grace_')) return const Color(0xFFE8F5E9);
     if (id.startsWith('kenique_')) return const Color(0xFFFFF3E0);
-    switch (id) {
-      case 'clinic_01':
-        return const Color(0xFFE8F5E9);
-      case 'clinic_03':
-        return const Color(0xFFF3E5F5);
-      default:
-        return _powderPetal;
-    }
+    if (id.startsWith('neko_inu')) return const Color(0xFFF3E5F5);
+    if (id.startsWith('ark_vet')) return const Color(0xFFE8F5E9);
+    if (id.startsWith('ppv_barat')) return const Color(0xFFE0F2F1);
+    if (id.startsWith('jpv_penang')) return const Color(0xFFE3F2FD);
+    if (id.startsWith('angsana_vet')) return const Color(0xFFFFF8E1);
+    if (id.startsWith('joyful_pet')) return const Color(0xFFFCE4EC);
+    return _powderPetal;
   }
 
   Future<void> _openGoogleMapsForClinic(ClinicModel clinic) async {
@@ -1309,7 +1273,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     const SizedBox(height: 14),
                     Divider(color: _drySage.withValues(alpha: 0.2)),
 
-                    _buildStepLabel("1. SELECT PET"),
+                    _buildStepLabel("1. SELECT PET", isRequired: true),
                     StreamBuilder<List<PetProfile>>(
                       stream: _petService.streamUserPets(userId),
                       builder: (context, snapshot) {
@@ -1347,7 +1311,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     ),
                     const SizedBox(height: 12),
 
-                    _buildStepLabel("2. SERVICE TYPE"),
+                    _buildStepLabel("2. SERVICE TYPE", isRequired: true),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
@@ -1370,7 +1334,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     ),
                     const SizedBox(height: 12),
 
-                    _buildStepLabel("3. APPOINTMENT DATE"),
+                    _buildStepLabel("3. APPOINTMENT DATE", isRequired: true),
                     InkWell(
                       onTap: () async {
                         final picked = await showDatePicker(
@@ -1404,7 +1368,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     ),
                     const SizedBox(height: 12),
 
-                    _buildStepLabel("4. TIME SLOT"),
+                    _buildStepLabel("4. TIME SLOT", isRequired: true),
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
@@ -1524,16 +1488,26 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildStepLabel(String label) {
+  Widget _buildStepLabel(String label, {bool isRequired = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          color: _ashGrey,
-          letterSpacing: 0.8,
+      child: Text.rich(
+        TextSpan(
+          text: label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: _ashGrey,
+            letterSpacing: 0.8,
+          ),
+          children: isRequired
+              ? [
+                  const TextSpan(
+                    text: " *",
+                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                  ),
+                ]
+              : [],
         ),
       ),
     );

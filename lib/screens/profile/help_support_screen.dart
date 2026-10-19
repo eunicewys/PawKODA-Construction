@@ -184,9 +184,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
 
                     // Category Dropdown
                     DropdownButtonFormField<String>(
-                      value: selectedCategory,
+                      initialValue: selectedCategory,
                       decoration: InputDecoration(
-                        labelText: "Issue Category",
+                        labelText: "Issue Category *",
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       items: const [
@@ -206,7 +206,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     TextField(
                       controller: subjectCtrl,
                       decoration: InputDecoration(
-                        labelText: "Subject / Brief Summary",
+                        labelText: "Subject / Brief Summary *",
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         hintText: "e.g., Reminder notification delayed",
                       ),
@@ -218,7 +218,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                       controller: messageCtrl,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        labelText: "Detailed Description",
+                        labelText: "Detailed Description *",
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         hintText: "Please describe the problem you encountered...",
                       ),

@@ -149,7 +149,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     const SizedBox(height: 18),
 
                     // Type Choice (Vaccine vs Deworming)
-                    _buildLabel("DOSE TYPE"),
+                    _buildLabel("DOSE TYPE", isRequired: true),
                     Row(
                       children: ['Vaccine', 'Deworming'].map((t) {
                         final isSel = selectedType == t;
@@ -170,7 +170,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     const SizedBox(height: 14),
 
                     // Dose / Vaccine Name
-                    _buildLabel("VACCINE / DEWORM NAME"),
+                    _buildLabel("VACCINE / DEWORM NAME", isRequired: true),
                     TextField(
                       controller: nameCtrl,
                       decoration: InputDecoration(
@@ -186,14 +186,14 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     const SizedBox(height: 14),
 
                     // Date Selector (Scroll Wheel Picker)
-                    _buildLabel(isUpcoming ? "SCHEDULED DUE DATE" : "DATE ADMINISTERED (PAST OR TODAY)"),
+                    _buildLabel(isUpcoming ? "SCHEDULED DUE DATE" : "DATE ADMINISTERED (PAST OR TODAY)", isRequired: true),
                     SizedBox(
                       width: double.infinity,
                       height: 46,
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           final now = DateTime.now();
-                          final firstDate = isUpcoming ? now.add(const Duration(days: 1)) : DateTime(2000);
+                          final firstDate = isUpcoming ? DateTime(now.year, now.month, now.day) : DateTime(2000);
                           final lastDate = isUpcoming ? now.add(const Duration(days: 3650)) : now;
 
                           final picked = await _showScrollDatePicker(
@@ -289,7 +289,31 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: isSaving ? null : () async {
-                          if (nameCtrl.text.trim().isEmpty) return;
+                          if (nameCtrl.text.trim().isEmpty) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                                title: Row(
+                                  children: [
+                                    Icon(Icons.warning_amber_rounded, color: _errorCoral, size: 24),
+                                    const SizedBox(width: 8),
+                                    Text("Field Required", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                                  ],
+                                ),
+                                content: const Text("Please fill in the Vaccine / Deworm Name."),
+                                actions: [
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive),
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text("OK", style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                            return;
+                          }
                           setMState(() => isSaving = true);
 
                           try {
@@ -312,8 +336,8 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                               type: selectedType,
                               doseName: nameCtrl.text.trim(),
                               dateGiven: selectedDate,
-                              vetName: vetCtrl.text.trim().isEmpty ? 'Central Vet' : vetCtrl.text.trim(),
-                              dosage: dosageCtrl.text.trim().isEmpty ? '1 dose' : dosageCtrl.text.trim(),
+                              vetName: vetCtrl.text.trim(),
+                              dosage: dosageCtrl.text.trim(),
                               dueDate: isUpcoming ? selectedDate : null,
                               isCompleted: !isUpcoming,
                               notes: notesCtrl.text.trim(),
@@ -343,7 +367,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                               await UserNotificationService().logNotification(
                                 userId: uid,
                                 title: "Health Reminder Set: ${widget.pet.name}",
-                                body: "${selectedType} (${nameCtrl.text.trim()}) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
+                                body: "$selectedType (${nameCtrl.text.trim()}) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
                                 type: selectedType.toLowerCase() == 'deworming' ? 'deworming' : 'vaccine',
                               );
                             } else if (existingRecord != null) {
@@ -459,9 +483,22 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
     return result ?? false;
   }
 
-  Widget _buildLabel(String text) => Padding(
+  Widget _buildLabel(String text, {bool isRequired = false}) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5)),
+    child: Text.rich(
+      TextSpan(
+        text: text,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
+        children: isRequired
+            ? [
+                const TextSpan(
+                  text: " *",
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                ),
+              ]
+            : [],
+      ),
+    ),
   );
 
   @override
@@ -489,14 +526,14 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                 final DateTime now = DateTime.now();
 
                 // Partition Records
-                // Past Dosage Records: isCompleted == true OR (dueDate == null && dateGiven <= now)
+                // Past Dosage Records: isCompleted == true OR dueDate == null
                 final pastRecords = allRecords.where((r) {
-                  return r.isCompleted || r.dueDate == null || r.dateGiven.isBefore(now) || (r.dateGiven.year == now.year && r.dateGiven.month == now.month && r.dateGiven.day == now.day);
+                  return r.isCompleted || r.dueDate == null;
                 }).toList();
 
-                // Upcoming Dosages: isCompleted == false OR (dueDate != null && dueDate > now)
+                // Upcoming Dosages: isCompleted == false AND dueDate != null (includes Future, Today, and Overdue)
                 final upcomingRecords = allRecords.where((r) {
-                  return !r.isCompleted && r.dueDate != null && r.dueDate!.isAfter(now);
+                  return !r.isCompleted && r.dueDate != null;
                 }).toList();
 
                 return SingleChildScrollView(
@@ -695,12 +732,27 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                             final rec = upcomingRecords[index];
                             bool isVaccine = rec.type.toLowerCase() == 'vaccine';
 
+                            final DateTime dueDate = rec.dueDate ?? rec.dateGiven;
+                            final DateTime today = DateTime(now.year, now.month, now.day);
+                            final DateTime targetDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
+                            final int diffDays = targetDate.difference(today).inDays;
+
+                            final bool isDueToday = diffDays == 0;
+                            final bool isOverdue = diffDays < 0;
+
+                            Color cardBorderColor = _dustyOlive.withAlpha(80);
+                            if (isOverdue) {
+                              cardBorderColor = _errorCoral;
+                            } else if (isDueToday) {
+                              cardBorderColor = _dustyOlive;
+                            }
+
                             return Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: _errorCoral.withAlpha(120), width: 1.2),
+                                border: Border.all(color: cardBorderColor, width: isOverdue ? 1.8 : 1.2),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -759,21 +811,42 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _darkCharcoal),
                                   ),
                                   const SizedBox(height: 8),
+
+                                  // Status Banner
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFE8D6),
+                                      color: isOverdue
+                                          ? _errorCoral.withAlpha(25)
+                                          : const Color(0xFFFFE8D6),
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: _dustyOlive, width: 1),
+                                      border: Border.all(
+                                        color: isOverdue ? _errorCoral : _dustyOlive,
+                                        width: 1,
+                                      ),
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(Icons.notifications_active_rounded, size: 16, color: _dustyOlive),
+                                        Icon(
+                                          isOverdue
+                                              ? Icons.warning_amber_rounded
+                                              : Icons.notifications_active_rounded,
+                                          size: 16,
+                                          color: isOverdue ? _errorCoral : _dustyOlive,
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            "Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(rec.dueDate ?? rec.dateGiven)} (Daily 9:00 AM Alert)",
-                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                                            isOverdue
+                                                ? "Overdue ${diffDays.abs()} day${diffDays.abs() == 1 ? '' : 's'}"
+                                                : (isDueToday
+                                                    ? "Due Today! (${DateFormat('dd MMM yyyy').format(dueDate)})"
+                                                    : "Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(dueDate)} (Daily 9:00 AM Alert)"),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: isOverdue ? _errorCoral : _darkCharcoal,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -786,6 +859,79 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                   if (rec.notes.isNotEmpty) ...[
                                     const SizedBox(height: 6),
                                     Text("Notes: ${rec.notes}", style: TextStyle(fontSize: 12, color: _darkCharcoal, fontStyle: FontStyle.italic)),
+                                  ],
+
+                                  // Extended Attached Action Row for Due Today & Overdue
+                                  if (isDueToday || isOverdue) ...[
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isOverdue ? _errorCoral.withAlpha(15) : Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isOverdue ? _errorCoral.withAlpha(60) : Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () async {
+                                                final updatedRecord = VaccinationRecord(
+                                                  id: rec.id,
+                                                  petId: rec.petId,
+                                                  type: rec.type,
+                                                  doseName: rec.doseName,
+                                                  dateGiven: DateTime.now(),
+                                                  vetName: rec.vetName,
+                                                  dosage: rec.dosage,
+                                                  dueDate: null,
+                                                  isCompleted: true,
+                                                  notes: rec.notes,
+                                                  reminderTime: rec.reminderTime,
+                                                );
+                                                await NotificationService().cancelReminder(rec.id.hashCode);
+                                                await _healthService.updateVaccination(uid, widget.pet.id, rec.id, updatedRecord);
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text("✓ '${rec.doseName}' completed and moved to Dosage Records!"),
+                                                      backgroundColor: _dustyOlive,
+                                                      behavior: SnackBarBehavior.floating,
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                              icon: const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
+                                              label: const Text("Done", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green.shade700,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                elevation: 0,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () {
+                                                _showAddDoseDialog(isUpcoming: true, existingRecord: rec);
+                                              },
+                                              icon: Icon(Icons.edit_calendar_rounded, size: 16, color: _darkCharcoal),
+                                              label: Text("Reschedule", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              style: OutlinedButton.styleFrom(
+                                                backgroundColor: Colors.white,
+                                                side: BorderSide(color: _darkCharcoal.withAlpha(100)),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ],
                               ),

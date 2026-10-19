@@ -21,7 +21,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // Morandi Palette
   final Color _dustyOlive = const Color(0xFF6B705C);
   final Color _powderPetal = const Color(0xFFFFE8D6);
-  final Color _lightBronze = const Color(0xFFCB997E);
   final Color _darkBronze = const Color(0xFF985B3E);
   final Color _darkCharcoal = const Color(0xFF2D3142);
   final Color _ashGrey = const Color(0xFF8A8A7C);
@@ -369,7 +368,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           controller: _nameController,
                           style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold),
                           decoration: InputDecoration(
-                            labelText: "Display Name",
+                            labelText: "Display Name *",
                             prefixIcon: Icon(Icons.person_outline_rounded, color: _dustyOlive),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),

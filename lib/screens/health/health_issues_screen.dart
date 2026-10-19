@@ -284,7 +284,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     const SizedBox(height: 20),
 
                     // Condition Title Dropdown
-                    _buildLabel("CONDITION / DISEASE NAME"),
+                    _buildLabel("CONDITION / DISEASE NAME", isRequired: true),
                     DropdownButtonFormField<String>(
                       initialValue: selectedCommon,
                       decoration: InputDecoration(
@@ -332,7 +332,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     ] else const SizedBox(height: 4),
 
                     // Diagnosis Date
-                    _buildLabel("DIAGNOSIS DATE"),
+                    _buildLabel("DIAGNOSIS DATE", isRequired: true),
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -361,7 +361,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     const SizedBox(height: 16),
 
                     // Severity Dropdown (Half-width)
-                    _buildLabel("SEVERITY LEVEL"),
+                    _buildLabel("SEVERITY LEVEL", isRequired: true),
                     SizedBox(
                       width: MediaQuery.of(context).size.width * 0.48,
                       child: DropdownButtonFormField<String>(
@@ -389,7 +389,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     const SizedBox(height: 16),
 
                     // Status (2 Options: Active vs Recovered)
-                    _buildLabel("CURRENT STATUS"),
+                    _buildLabel("CURRENT STATUS", isRequired: true),
                     Row(
                       children: ['Active', 'Recovered'].map((st) {
                         final isSel = status == st;
@@ -520,9 +520,22 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
     );
   }
 
-  Widget _buildLabel(String text) => Padding(
+  Widget _buildLabel(String text, {bool isRequired = false}) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5)),
+    child: Text.rich(
+      TextSpan(
+        text: text,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
+        children: isRequired
+            ? [
+                const TextSpan(
+                  text: " *",
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                ),
+              ]
+            : [],
+      ),
+    ),
   );
 
   @override

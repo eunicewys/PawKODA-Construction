@@ -1074,7 +1074,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 
-  Widget _buildFormLabel(String label) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal)));
+  Widget _buildFormLabel(String label, {bool isRequired = true}) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text.rich(
+      TextSpan(
+        text: label,
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal),
+        children: isRequired
+            ? [
+                const TextSpan(
+                  text: " *",
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ]
+            : [],
+      ),
+    ),
+  );
   Widget _buildTextField(TextEditingController ctrl, String hint) => TextField(controller: ctrl, style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold), decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)), fillColor: Colors.white.withAlpha(180), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
   
   Widget _buildSelectionChip(String label, bool isSelected, VoidCallback onSelect) {

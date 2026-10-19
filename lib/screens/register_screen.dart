@@ -295,11 +295,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false, bool isObscured = true, VoidCallback? onToggle, bool hasError = false}) {
+  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false, bool isObscured = true, VoidCallback? onToggle, bool hasError = false, bool isRequired = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey)),
+        Text.rich(
+          TextSpan(
+            text: label,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey),
+            children: isRequired
+                ? [
+                    const TextSpan(
+                      text: " *",
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  ]
+                : [],
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,

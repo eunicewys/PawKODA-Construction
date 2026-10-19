@@ -164,7 +164,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                     const SizedBox(height: 18),
 
                     // Log Date
-                    _buildLabel("DIARY DATE"),
+                    _buildLabel("DIARY DATE", isRequired: true),
                     SizedBox(
                       width: double.infinity,
                       height: 46,
@@ -193,7 +193,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                     const SizedBox(height: 16),
 
                     // Appetite
-                    _buildLabel("APPETITE"),
+                    _buildLabel("APPETITE", isRequired: true),
                     _buildDropdownField(
                       value: appetite,
                       options: const ['Good', 'Normal', 'Poor'],
@@ -202,7 +202,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                     const SizedBox(height: 16),
 
                     // Stool
-                    _buildLabel("STOOL CONDITION"),
+                    _buildLabel("STOOL CONDITION", isRequired: true),
                     _buildDropdownField(
                       value: stool,
                       options: const ['Normal', 'Soft', 'Hard', 'None'],
@@ -211,7 +211,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                     const SizedBox(height: 16),
 
                     // Water Intake
-                    _buildLabel("WATER INTAKE"),
+                    _buildLabel("WATER INTAKE", isRequired: true),
                     _buildDropdownField(
                       value: waterIntake,
                       options: const ['Good', 'Normal', 'Low'],
@@ -220,7 +220,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                     const SizedBox(height: 16),
 
                     // Activity Level
-                    _buildLabel("ACTIVITY / ENERGY LEVEL"),
+                    _buildLabel("ACTIVITY / ENERGY LEVEL", isRequired: true),
                     _buildDropdownField(
                       value: activityLevel,
                       options: const ['Active', 'Normal', 'Lethargic'],
@@ -384,9 +384,22 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
     );
   }
 
-  Widget _buildLabel(String text) => Padding(
+  Widget _buildLabel(String text, {bool isRequired = false}) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5)),
+    child: Text.rich(
+      TextSpan(
+        text: text,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
+        children: isRequired
+            ? [
+                const TextSpan(
+                  text: " *",
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                ),
+              ]
+            : [],
+      ),
+    ),
   );
 
   List<DailyActivityLog> _filterLogs(List<DailyActivityLog> logs) {

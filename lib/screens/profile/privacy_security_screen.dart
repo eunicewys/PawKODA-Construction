@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
-import '../../providers/user_provider.dart';
 import '../widgets/fringe_header.dart';
 
 /// PrivacySecurityScreen: Compact & sleek layout providing password change,
@@ -38,7 +36,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (dialogCtx, setDialogState) {
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -66,7 +64,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                       obscureText: obscureCurrent,
                       style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
-                        labelText: "Current Password",
+                        labelText: "Current Password *",
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -82,7 +80,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                       obscureText: obscureNew,
                       style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
-                        labelText: "New Password",
+                        labelText: "New Password *",
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -98,7 +96,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                       obscureText: obscureConfirm,
                       style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
-                        labelText: "Confirm New Password",
+                        labelText: "Confirm New Password *",
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -146,6 +144,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
 
                           setDialogState(() => isSubmitting = true);
 
+                          final nav = Navigator.of(dialogCtx);
                           try {
                             final user = FirebaseAuth.instance.currentUser;
                             if (user == null || user.email == null) {
@@ -162,9 +161,10 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                             await user.reauthenticateWithCredential(cred);
                             await user.updatePassword(newPass);
 
-                            if (!mounted) return;
-                            Navigator.pop(context);
-                            _showSuccessDialog("Password Changed", "Your password has been updated successfully.");
+                            nav.pop();
+                            if (mounted) {
+                              _showSuccessDialog("Password Changed", "Your password has been updated successfully.");
+                            }
                           } on FirebaseAuthException catch (e) {
                             setDialogState(() => isSubmitting = false);
                             String err = "Failed to update password.";

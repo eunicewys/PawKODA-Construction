@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'vet_login_screen.dart';
 
 /// LoginScreen: The first screen the user sees.
 /// Updated with official Morandi Natural Palette.
@@ -54,6 +55,17 @@ class _LoginScreenState extends State<LoginScreen> {
         final String role = data['role'] ?? 'owner';
         final String name = data['displayName'] ?? 'User';
         final String? photoUrl = data['photoUrl'];
+
+        // Enforce role separation: Vet accounts cannot log in on Pet Owner page
+        if (role == 'vet') {
+          await FirebaseAuth.instance.signOut();
+          _showPawDialog(
+            "Role Mismatch",
+            "Veterinary Organization accounts must log in via the Vet Login page.",
+            isError: true,
+          );
+          return;
+        }
 
         if (mounted) {
           Provider.of<UserProvider>(context, listen: false).setUser(
@@ -245,6 +257,32 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const VetLoginScreen()),
+                          ),
+                          child: Text.rich(
+                            TextSpan(
+                              text: "Are you Veterinary Organization? ",
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                              children: [
+                                TextSpan(
+                                  text: "Click Here",
+                                  style: TextStyle(
+                                    color: _dustyOlive,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -256,13 +294,23 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false}) {
+  Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false, bool isRequired = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey),
+        Text.rich(
+          TextSpan(
+            text: label,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _ashGrey),
+            children: isRequired
+                ? [
+                    const TextSpan(
+                      text: " *",
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  ]
+                : [],
+          ),
         ),
         const SizedBox(height: 8),
         TextField(

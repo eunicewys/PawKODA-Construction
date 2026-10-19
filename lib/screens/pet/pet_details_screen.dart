@@ -980,7 +980,23 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
   Widget _sourceTile(IconData i, String l, VoidCallback t) => Container(margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: _powderPetal.withAlpha(100), borderRadius: BorderRadius.circular(16)), child: ListTile(leading: Icon(i, color: _dustyOlive), title: Text(l, style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal)), onTap: t));
 
-  Widget _buildFormLabel(String label) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal)));
+  Widget _buildFormLabel(String label, {bool isRequired = true}) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text.rich(
+      TextSpan(
+        text: label,
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal),
+        children: isRequired
+            ? [
+                const TextSpan(
+                  text: " *",
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ]
+            : [],
+      ),
+    ),
+  );
   Widget _buildTextField(TextEditingController ctrl, String hint) => TextField(controller: ctrl, style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold), decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)), fillColor: Colors.white.withAlpha(180), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
   Widget _buildChoiceChip(String label, bool isSelected, VoidCallback onSelect) {
     return ChoiceChip(

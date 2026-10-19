@@ -62,6 +62,15 @@ class ReminderService {
           // Include uncompleted records that have a due date
           if (rec.isCompleted || rec.dueDate == null) continue;
 
+          final dueDateOnly = DateTime(
+            rec.dueDate!.year,
+            rec.dueDate!.month,
+            rec.dueDate!.day,
+          );
+
+          // Remove passed due dates from Homepage Upcoming Reminders
+          if (dueDateOnly.isBefore(startOfToday)) continue;
+
           final isDeworming = rec.type.toLowerCase() == 'deworming';
           final typeEnum = isDeworming ? ReminderType.deworming : ReminderType.vaccine;
 

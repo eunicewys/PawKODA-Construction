@@ -543,7 +543,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                     separatorBuilder: (context, index) => const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final item = provider.bowl[index];
-                      final style = _getFoodBitStyle(item.ingredient.category);
+                      final style = _getFoodBitStyle(item.ingredient);
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                         decoration: BoxDecoration(
@@ -692,7 +692,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                   separatorBuilder: (context, index) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
                     final item = searchResults[index];
-                    final style = _getFoodBitStyle(item.category);
+                    final style = _getFoodBitStyle(item);
                     return InkWell(
                       onTap: () => _handleIngredientTap(item),
                       borderRadius: BorderRadius.circular(12),
@@ -987,7 +987,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             TextField(
               controller: nameController,
               decoration: InputDecoration(
-                labelText: "Recipe Name",
+                labelText: "Recipe Name *",
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -1037,8 +1037,18 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
     );
   }
 
-  _FoodBitStyle _getFoodBitStyle(String category) {
-    String c = category.toLowerCase();
+  _FoodBitStyle _getFoodBitStyle(Ingredient item) {
+    String c = item.category.toLowerCase();
+    bool isToxic = c.contains('toxic') || item.isToxicToDogs || item.isToxicToCats || !item.safeForDogs || !item.safeForCats;
+
+    if (isToxic) {
+      return const _FoodBitStyle(
+        mainColor: Color(0xFFD32F2F),
+        gradientColors: [Color(0xFFEF5350), Color(0xFFD32F2F)],
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        icon: Icons.warning_amber_rounded,
+      );
+    }
 
     if (c.contains('veg') || c.contains('green') || c.contains('leafy') || c.contains('broccoli')) {
       return const _FoodBitStyle(
@@ -1087,8 +1097,8 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
 
     if (c.contains('fruit') || c.contains('berry')) {
       return const _FoodBitStyle(
-        mainColor: Color(0xFFC62828),
-        gradientColors: [Color(0xFFEF9A9A), Color(0xFFC62828)],
+        mainColor: Color(0xFF9C27B0),
+        gradientColors: [Color(0xFFCE93D8), Color(0xFF9C27B0)],
         borderRadius: BorderRadius.all(Radius.circular(15)),
         icon: Icons.circle_rounded,
       );

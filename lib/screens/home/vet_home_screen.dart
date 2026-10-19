@@ -4,10 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../login_screen.dart';
 
-/**
- * VetHomeScreen: Dashboard for Veterinarians.
- * Uses the Warm Brown/Sand Palette (Coffee/Toffee/Oak).
- */
+/// VetHomeScreen: Dashboard for Veterinarians.
+/// Uses the Warm Brown/Sand Palette (Coffee/Toffee/Oak).
 class VetHomeScreen extends StatelessWidget {
   const VetHomeScreen({super.key});
 
@@ -35,7 +33,8 @@ class VetHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String clinicName = "PawKODA Central Clinic"; // Placeholder
+    final userProvider = context.watch<UserProvider>();
+    final String clinicName = userProvider.displayName ?? "PawKODA Veterinary Clinic";
 
     return Scaffold(
       backgroundColor: _almondCream, // Warm background

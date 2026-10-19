@@ -51,7 +51,7 @@ class NutritionalProvider extends ChangeNotifier {
     }
   }
 
-  /// Filters _allIngredients by query string and species safety
+  /// Filters _allIngredients by query string
   void searchIngredients(String query) {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) {
@@ -62,15 +62,6 @@ class NutritionalProvider extends ChangeNotifier {
         bool matchesCategory = i.category.toLowerCase().contains(q);
         return matchesName || matchesCategory;
       }).toList();
-    }
-
-    // Apply species safety filter if pet is selected
-    if (_currentPet != null) {
-      if (_currentPet!.species == Species.dog) {
-        _searchResults = _searchResults.where((i) => i.safeForDogs && !i.isToxicToDogs).toList();
-      } else if (_currentPet!.species == Species.cat) {
-        _searchResults = _searchResults.where((i) => i.safeForCats && !i.isToxicToCats).toList();
-      }
     }
 
     notifyListeners();
