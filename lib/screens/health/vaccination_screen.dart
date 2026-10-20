@@ -99,13 +99,104 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
     return result;
   }
 
+  String _formatDoseName(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return trimmed;
+
+    // If input is all uppercase (e.g. "DHPP", "RABIES"), keep it as is
+    if (trimmed == trimmed.toUpperCase()) {
+      return trimmed;
+    }
+
+    // If input is all lowercase (e.g. "bravecto", "dhpp core"), capitalize the first character
+    if (trimmed == trimmed.toLowerCase()) {
+      return trimmed[0].toUpperCase() + trimmed.substring(1);
+    }
+
+    // Mixed case (e.g. "DHPP Core", "Bravecto 1ml") -> leave as entered
+    return trimmed;
+  }
+
+  void _showFormErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: _errorCoral.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline_rounded,
+                  color: _errorCoral,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal.withAlpha(200),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _dustyOlive,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAddDoseDialog({bool isUpcoming = false, VaccinationRecord? existingRecord}) {
     final nameCtrl = TextEditingController(text: existingRecord?.doseName ?? '');
     final vetCtrl = TextEditingController(text: existingRecord?.vetName ?? '');
     final dosageCtrl = TextEditingController(text: existingRecord?.dosage ?? '');
     final notesCtrl = TextEditingController(text: existingRecord?.notes ?? '');
     
-    String selectedType = existingRecord?.type ?? 'Vaccine';
+    String? selectedType = existingRecord?.type;
     DateTime selectedDate = existingRecord?.dueDate ?? existingRecord?.dateGiven ?? (
       isUpcoming 
           ? DateTime.now().add(const Duration(days: 1)) 
@@ -135,8 +226,8 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                   children: [
                     Text(
                       existingRecord != null 
-                          ? (isUpcoming ? "Edit Upcoming Reminder" : "Edit Past Dosage Record")
-                          : (isUpcoming ? "Schedule Upcoming Dosage" : "Log Past Dosage Record"),
+                          ? (isUpcoming ? "Edit Reminder" : "Edit Record")
+                          : (isUpcoming ? "Schedule Dosage" : "Log Dosage"),
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal),
                     ),
                     const SizedBox(height: 4),
@@ -156,13 +247,25 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(right: 12),
                           child: ChoiceChip(
-                            label: Text(t, style: TextStyle(color: isSel ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14)),
+                            label: Text(
+                              t, 
+                              style: TextStyle(
+                                color: isSel ? Colors.white : _darkCharcoal, 
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.w600, 
+                                fontSize: 13
+                              )
+                            ),
                             selected: isSel,
                             selectedColor: _dustyOlive,
                             backgroundColor: Colors.white,
+                            showCheckmark: false,
                             onSelected: (val) {
                               if (val) setMState(() => selectedType = t);
                             },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide.none,
+                            ),
                           ),
                         );
                       }).toList(),
@@ -179,9 +282,10 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         fillColor: Colors.white,
                         filled: true,
                         isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
-                      style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                     ),
                     const SizedBox(height: 14),
 
@@ -189,7 +293,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     _buildLabel(isUpcoming ? "SCHEDULED DUE DATE" : "DATE ADMINISTERED (PAST OR TODAY)", isRequired: true),
                     SizedBox(
                       width: double.infinity,
-                      height: 46,
+                      height: 44,
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           final now = DateTime.now();
@@ -207,11 +311,11 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         icon: Icon(
                           isUpcoming ? Icons.notifications_active_rounded : Icons.calendar_today_rounded, 
                           color: _dustyOlive, 
-                          size: 18
+                          size: 16
                         ),
                         label: Text(
                           DateFormat('dd MMM yyyy').format(selectedDate),
-                          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white,
@@ -238,8 +342,10 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                   fillColor: Colors.white,
                                   filled: true,
                                   isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                                 ),
+                                style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                               ),
                             ],
                           ),
@@ -258,8 +364,10 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                   fillColor: Colors.white,
                                   filled: true,
                                   isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                                 ),
+                                style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                               ),
                             ],
                           ),
@@ -278,8 +386,10 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                         fillColor: Colors.white,
                         filled: true,
                         isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                     ),
                     const SizedBox(height: 24),
 
@@ -289,31 +399,18 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: isSaving ? null : () async {
-                          if (nameCtrl.text.trim().isEmpty) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                backgroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                                title: Row(
-                                  children: [
-                                    Icon(Icons.warning_amber_rounded, color: _errorCoral, size: 24),
-                                    const SizedBox(width: 8),
-                                    Text("Field Required", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                                  ],
-                                ),
-                                content: const Text("Please fill in the Vaccine / Deworm Name."),
-                                actions: [
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive),
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text("OK", style: TextStyle(color: Colors.white)),
-                                  ),
-                                ],
-                              ),
-                            );
+                          if (selectedType == null || selectedType!.isEmpty) {
+                            _showFormErrorDialog("Dose Type Required", "Please select a Dose Type (Vaccine or Deworming).");
                             return;
                           }
+
+                          final String rawName = nameCtrl.text.trim();
+                          if (rawName.isEmpty) {
+                            _showFormErrorDialog("Name Required", "Please fill in the Vaccine / Deworm Name.");
+                            return;
+                          }
+
+                          final String formattedName = _formatDoseName(rawName);
                           setMState(() => isSaving = true);
 
                           try {
@@ -333,8 +430,8 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                             final record = VaccinationRecord(
                               id: existingRecord?.id ?? '',
                               petId: widget.pet.id,
-                              type: selectedType,
-                              doseName: nameCtrl.text.trim(),
+                              type: selectedType!,
+                              doseName: formattedName,
                               dateGiven: selectedDate,
                               vetName: vetCtrl.text.trim(),
                               dosage: dosageCtrl.text.trim(),
@@ -359,16 +456,16 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                 baseId: notificationTagHash,
                                 id: notificationTagHash,
                                 petName: widget.pet.name,
-                                treatmentName: nameCtrl.text.trim(),
-                                type: selectedType,
+                                treatmentName: formattedName,
+                                type: selectedType!,
                                 nextDueDate: selectedDate,
                               );
 
                               await UserNotificationService().logNotification(
                                 userId: uid,
                                 title: "Health Reminder Set: ${widget.pet.name}",
-                                body: "$selectedType (${nameCtrl.text.trim()}) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
-                                type: selectedType.toLowerCase() == 'deworming' ? 'deworming' : 'vaccine',
+                                body: "$selectedType ($formattedName) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
+                                type: selectedType!.toLowerCase() == 'deworming' ? 'deworming' : 'vaccine',
                               );
                             } else if (existingRecord != null) {
                               // If converting an upcoming item to completed/past, cancel old notifications
@@ -419,7 +516,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                           : Text(
                               existingRecord != null 
                                   ? (isUpcoming ? "Update Reminder" : "Update Record")
-                                  : (isUpcoming ? "Enable Upcoming Reminder" : "Save Record to Passport"), 
+                                  : (isUpcoming ? "Save Reminder" : "Save Record"), 
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
                             ),
                       ),
@@ -488,12 +585,12 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
     child: Text.rich(
       TextSpan(
         text: text,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
         children: isRequired
             ? [
                 const TextSpan(
                   text: " *",
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ]
             : [],

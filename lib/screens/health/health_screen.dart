@@ -111,6 +111,7 @@ class _HealthScreenState extends State<HealthScreen> {
                           ),
                           child: DropdownButtonFormField<String>(
                             initialValue: _selectedPetId ?? "",
+                            isExpanded: true,
                             decoration: InputDecoration(
                               prefixIcon: Icon(
                                 Icons.pets_rounded, 
@@ -129,13 +130,14 @@ class _HealthScreenState extends State<HealthScreen> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold, 
                               color: _darkCharcoal, 
-                              fontSize: 15
+                              fontSize: 14
                             ),
                             items: [
                               DropdownMenuItem<String>(
                                 value: "",
                                 child: Text(
                                   "-- Please select a pet --",
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold, 
                                     color: Colors.grey.shade600, 
@@ -147,6 +149,7 @@ class _HealthScreenState extends State<HealthScreen> {
                                 value: pet.id,
                                 child: Text(
                                   "${pet.name} (${pet.breed})",
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold, 
                                     color: _darkCharcoal

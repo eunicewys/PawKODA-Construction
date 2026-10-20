@@ -227,8 +227,8 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
     final titleCtrl = TextEditingController(text: existingIssue?.title ?? '');
     final notesCtrl = TextEditingController(text: existingIssue?.notes ?? '');
     DateTime selectedDate = existingIssue?.diagnosisDate ?? DateTime.now();
-    String severity = existingIssue?.severity ?? 'Mild';
-    String status = existingIssue?.status ?? 'Active';
+    String? severity = existingIssue?.severity;
+    String? status = existingIssue?.status;
     bool isSaving = false;
 
     // Common Diseases List
@@ -287,20 +287,21 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     _buildLabel("CONDITION / DISEASE NAME", isRequired: true),
                     DropdownButtonFormField<String>(
                       initialValue: selectedCommon,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         hintText: "Select condition or disease...",
                         hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                         fillColor: Colors.white,
                         filled: true,
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
                       dropdownColor: Colors.white,
-                      style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                       items: commonDiseases.map((d) => DropdownMenuItem<String>(
                         value: d,
-                        child: Text(d),
+                        child: Text(d, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
                       )).toList(),
                       onChanged: (val) {
                         setMState(() {
@@ -324,9 +325,10 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                           fillColor: Colors.white,
                           filled: true,
                           isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                         ),
-                        style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal),
+                        style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                       ),
                       const SizedBox(height: 16),
                     ] else const SizedBox(height: 4),
@@ -335,7 +337,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     _buildLabel("DIAGNOSIS DATE", isRequired: true),
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 44,
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           final picked = await showDatePicker(
@@ -346,10 +348,10 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                           );
                           if (picked != null) setMState(() => selectedDate = picked);
                         },
-                        icon: Icon(Icons.calendar_today_rounded, color: _dustyOlive, size: 18),
+                        icon: Icon(Icons.calendar_today_rounded, color: _dustyOlive, size: 16),
                         label: Text(
                           DateFormat('dd MMM yyyy').format(selectedDate),
-                          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white,
@@ -360,31 +362,31 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Severity Dropdown (Half-width)
+                    // Severity Dropdown
                     _buildLabel("SEVERITY LEVEL", isRequired: true),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.48,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: severity,
-                        decoration: InputDecoration(
-                          fillColor: Colors.white,
-                          filled: true,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                        ),
-                        dropdownColor: Colors.white,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 14),
-                        items: ['Mild', 'Moderate', 'Severe'].map((sev) => DropdownMenuItem<String>(
-                          value: sev,
-                          child: Text(sev),
-                        )).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setMState(() => severity = val);
-                          }
-                        },
+                    DropdownButtonFormField<String>(
+                      initialValue: severity,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        hintText: "Select severity...",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
+                        fillColor: Colors.white,
+                        filled: true,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
+                      dropdownColor: Colors.white,
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
+                      items: ['Mild', 'Moderate', 'Severe'].map((sev) => DropdownMenuItem<String>(
+                        value: sev,
+                        child: Text(sev, style: const TextStyle(fontSize: 13)),
+                      )).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setMState(() => severity = val);
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
 
@@ -396,13 +398,25 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(right: 12),
                           child: ChoiceChip(
-                            label: Text(st, style: TextStyle(color: isSel ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
+                            label: Text(
+                              st, 
+                              style: TextStyle(
+                                color: isSel ? Colors.white : _darkCharcoal, 
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.w600, 
+                                fontSize: 13
+                              )
+                            ),
                             selected: isSel,
                             selectedColor: st == 'Recovered' ? Colors.green : _dustyOlive,
                             backgroundColor: Colors.white,
+                            showCheckmark: false,
                             onSelected: (val) {
                               if (val) setMState(() => status = st);
                             },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide.none,
+                            ),
                           ),
                         );
                       }).toList(),
@@ -419,8 +433,10 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                         hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
                         fillColor: Colors.white,
                         filled: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                     ),
                     const SizedBox(height: 24),
 
@@ -447,6 +463,16 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                             return;
                           }
 
+                          if (severity == null || severity!.isEmpty) {
+                            _showErrorDialog("Severity Required", "Please select a severity level for this condition.");
+                            return;
+                          }
+
+                          if (status == null || status!.isEmpty) {
+                            _showErrorDialog("Status Required", "Please select the current status (Active or Recovered).");
+                            return;
+                          }
+
                           setMState(() => isSaving = true);
 
                           try {
@@ -468,8 +494,8 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                               petId: widget.pet.id,
                               title: enteredTitle,
                               diagnosisDate: selectedDate,
-                              severity: severity,
-                              status: status,
+                              severity: severity!,
+                              status: status!,
                               notes: notesCtrl.text.trim(),
                             );
 
@@ -525,12 +551,12 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
     child: Text.rich(
       TextSpan(
         text: text,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
         children: isRequired
             ? [
                 const TextSpan(
                   text: " *",
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ]
             : [],

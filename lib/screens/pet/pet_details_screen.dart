@@ -166,9 +166,9 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
           Text("${pet.breed} • ${pet.species.name.toUpperCase()}", style: TextStyle(fontSize: 16, color: _ashGrey, fontWeight: FontWeight.w500)),
           const SizedBox(height: 12),
           InkWell(
-            onTap: pet.isHealthy == null ? () {
+            onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => HealthIssuesScreen(pet: pet)));
-            } : null,
+            },
             borderRadius: BorderRadius.circular(20),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -997,9 +997,25 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       }
 
                       final updatedPet = PetProfile(
-                        id: pet.id, name: nameCtrl.text.trim(), species: selectedSpecies!, gender: selectedGender!,
-                        weightKg: double.tryParse(weightCtrl.text) ?? 0.0, birthDate: selectedBirthDate!,
-                        condition: finalCond, allergens: allergens, breed: selectedBreed!, imageUrl: permanentPath,
+                        id: pet.id,
+                        userId: pet.userId,
+                        name: nameCtrl.text.trim(),
+                        species: selectedSpecies!,
+                        gender: selectedGender!,
+                        weightKg: double.tryParse(weightCtrl.text) ?? 0.0,
+                        birthDate: selectedBirthDate!,
+                        condition: finalCond,
+                        activityLevel: pet.activityLevel,
+                        allergens: allergens,
+                        breed: selectedBreed!,
+                        isMixedBreed: pet.isMixedBreed,
+                        secondaryBreedId: pet.secondaryBreedId,
+                        isMultiMixed: pet.isMultiMixed,
+                        imageUrl: permanentPath,
+                        isHealthy: pet.isHealthy,
+                        healthCondition: pet.healthCondition,
+                        activeDisease: pet.activeDisease,
+                        bodyConditionScore: pet.bodyConditionScore,
                       );
 
                       try {

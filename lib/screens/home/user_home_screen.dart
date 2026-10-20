@@ -16,6 +16,7 @@ import '../nutrition/nutrition_engine_screen.dart';
 import '../nutrition/saved_recipes_screen.dart';
 import '../pet/pet_details_screen.dart';
 import '../health/health_screen.dart';
+import '../health/health_issues_screen.dart';
 import '../booking/booking_screen.dart';
 import '../health/vaccination_screen.dart';
 import '../widgets/fringe_header.dart';
@@ -1681,6 +1682,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PetDetailsScreen(petId: pet.id))),
                               child: _buildPetCard(
                                 scale: scale, 
+                                pet: pet,
                                 id: pet.id,
                                 name: pet.name, 
                                 species: pet.species.name.toUpperCase(), 
@@ -1897,6 +1899,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Widget _buildPetCard({
     required double scale, 
+    required PetProfile pet,
     required String id, // Added ID for deletion
     required String name, 
     required String species, 
@@ -1961,34 +1964,42 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   Positioned(
                     top: 20, 
                     right: 20, 
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), 
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(220), 
-                        borderRadius: BorderRadius.circular(20), 
-                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 5)],
-                        border: isHealthy == null ? Border.all(color: _ashGrey.withAlpha(100), width: 1.5) : null,
-                      ), 
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min, 
-                        children: [
-                          if (isHealthy != null)
-                            CircleAvatar(radius: 4, backgroundColor: isHealthy ? Colors.green : Colors.red), 
-                          if (isHealthy != null)
-                            const SizedBox(width: 6), 
-                          Text(
-                            isHealthy == null ? "Log Health Now" : (isHealthy ? "Healthy" : "Needs Attention"), 
-                            style: TextStyle(
-                              fontSize: 10, 
-                              fontWeight: FontWeight.bold, 
-                              color: isHealthy == null ? _darkCharcoal : (isHealthy ? Colors.green : Colors.red)
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => HealthIssuesScreen(pet: pet)),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), 
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(220), 
+                          borderRadius: BorderRadius.circular(20), 
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 5)],
+                          border: isHealthy == null ? Border.all(color: _ashGrey.withAlpha(100), width: 1.5) : null,
+                        ), 
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min, 
+                          children: [
+                            if (isHealthy != null)
+                              CircleAvatar(radius: 4, backgroundColor: isHealthy ? Colors.green : Colors.red), 
+                            if (isHealthy != null)
+                              const SizedBox(width: 6), 
+                            Text(
+                              isHealthy == null ? "Log Health Now" : (isHealthy ? "Healthy" : "Needs Attention"), 
+                              style: TextStyle(
+                                fontSize: 10, 
+                                fontWeight: FontWeight.bold, 
+                                color: isHealthy == null ? _darkCharcoal : (isHealthy ? Colors.green : Colors.red)
+                              ),
                             ),
-                          ),
-                          if (isHealthy == null) ...[
-                            const SizedBox(width: 4),
-                            Icon(Icons.arrow_forward_ios_rounded, size: 8, color: _darkCharcoal),
-                          ]
-                        ],
+                            if (isHealthy == null) ...[
+                              const SizedBox(width: 4),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 8, color: _darkCharcoal),
+                            ]
+                          ],
+                        ),
                       ),
                     ),
                   ),
