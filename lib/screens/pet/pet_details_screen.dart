@@ -607,26 +607,47 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
     );
   }
 
+  String _capitalizeAllergen(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return trimmed;
+    return trimmed.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
+  String? _normalizeBreed(String? breed) {
+    if (breed == null) return null;
+    if (breed.contains("Kucing Kampung")) {
+      return "Domestic Shorthair";
+    }
+    return breed;
+  }
+
   // --- EDIT DIALOG LOGIC ---
 
   void _showEditPetDialog(PetProfile pet) {
     final nameCtrl = TextEditingController(text: pet.name);
     final weightCtrl = TextEditingController(text: pet.weightKg.toString());
-    final otherAllergenCtrl = TextEditingController();
+    
+    final List<String> commonAllergens = ["Chicken", "Beef", "Fish", "Egg", "Grain", "Dairy"];
+    final customAllergens = pet.allergens.where((a) => !commonAllergens.contains(a)).toList();
+    final otherAllergenCtrl = TextEditingController(text: customAllergens.join(", "));
     
     Species? selectedSpecies = pet.species;
     Gender? selectedGender = pet.gender;
     String? selectedReproductive = pet.condition == PetCondition.neutered ? "Neutered/Spayed" : "Intact";
     bool isPregnant = pet.condition == PetCondition.pregnant;
     bool isNursing = pet.condition == PetCondition.nursing;
-    String? selectedBreed = pet.breed;
+    String? selectedBreed = _normalizeBreed(pet.breed);
     DateTime? selectedBirthDate = pet.birthDate;
     XFile? petImage;
-    List<String> selectedAllergens = List.from(pet.allergens);
+    List<String> selectedAllergens = pet.allergens.where((a) => commonAllergens.contains(a)).toList();
+    if (customAllergens.isNotEmpty) {
+      selectedAllergens.add("Other");
+    }
     bool hasNoAllergies = pet.allergens.isEmpty;
     bool isSaving = false;
-
-    final List<String> commonAllergens = ["Chicken", "Beef", "Fish", "Egg", "Grain", "Dairy"];
 
     showModalBottomSheet(
       context: context,
@@ -718,80 +739,132 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Text("Edit Passport", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                Text("Edit Passport", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                const SizedBox(height: 24),
                 
                 _buildFormLabel("PET NAME"),
                 _buildTextField(nameCtrl, "e.g. Buddy"),
                 
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 _buildFormLabel("SPECIES"),
                 Row(
                   children: [
-                    _buildSpeciesChip("Dog", Species.dog, selectedSpecies, (s) {
-                      setMState(() { selectedSpecies = s; selectedBreed = null; });
-                    }),
+                    _buildSelectionBox(
+                      label: "Dog",
+                      isSelected: selectedSpecies == Species.dog,
+                      onSelect: () {
+                        setMState(() {
+                          selectedSpecies = Species.dog;
+                          selectedBreed = null;
+                        });
+                      },
+                    ),
                     const SizedBox(width: 12),
-                    _buildSpeciesChip("Cat", Species.cat, selectedSpecies, (s) {
-                      setMState(() { selectedSpecies = s; selectedBreed = null; });
-                    }),
+                    _buildSelectionBox(
+                      label: "Cat",
+                      isSelected: selectedSpecies == Species.cat,
+                      onSelect: () {
+                        setMState(() {
+                          selectedSpecies = Species.cat;
+                          selectedBreed = null;
+                        });
+                      },
+                    ),
                   ],
                 ),
 
                 if (selectedSpecies != null) ...[
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("BREED"),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(color: Colors.white.withAlpha(180), borderRadius: BorderRadius.circular(12)),
                     child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedBreed, isExpanded: true, 
-                        hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120))),
-                        items: (_breedData[selectedSpecies!.name] as List<dynamic>?)?.map((b) => DropdownMenuItem<String>(
-                          value: b.toString(),
-                          child: Text(b.toString()),
-                        )).toList() ?? [],
-                        onChanged: (val) => setMState(() => selectedBreed = val),
+                      child: Builder(
+                        builder: (context) {
+                          final List<String> availableBreeds = (_breedData[selectedSpecies!.name] as List<dynamic>?)
+                              ?.map((b) => _normalizeBreed(b.toString())!)
+                              .toList() ?? [];
+                          
+                          String? validBreedValue = _normalizeBreed(selectedBreed);
+                          if (validBreedValue != null && !availableBreeds.contains(validBreedValue)) {
+                            validBreedValue = null;
+                          }
+
+                          return DropdownButton<String>(
+                            value: validBreedValue,
+                            isExpanded: true, 
+                            hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13)),
+                            items: availableBreeds.map((b) => DropdownMenuItem<String>(
+                              value: b,
+                              child: Text(b, style: const TextStyle(fontSize: 13)),
+                            )).toList(),
+                            onChanged: (val) => setMState(() => selectedBreed = val),
+                          );
+                        },
                       ),
                     ),
                   ),
                 ],
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 _buildFormLabel("GENDER"),
                 Row(
                   children: [
-                    _buildChoiceChip("Male", selectedGender == Gender.male, () => setMState(() { selectedGender = Gender.male; isPregnant = false; isNursing = false; })),
+                    _buildSelectionBox(
+                      label: "Male",
+                      isSelected: selectedGender == Gender.male,
+                      icon: Icons.male,
+                      onSelect: () => setMState(() {
+                        selectedGender = Gender.male;
+                        isPregnant = false;
+                        isNursing = false;
+                      }),
+                    ),
                     const SizedBox(width: 12),
-                    _buildChoiceChip("Female", selectedGender == Gender.female, () => setMState(() => selectedGender = Gender.female)),
+                    _buildSelectionBox(
+                      label: "Female",
+                      isSelected: selectedGender == Gender.female,
+                      icon: Icons.female,
+                      onSelect: () => setMState(() => selectedGender = Gender.female),
+                    ),
                   ],
                 ),
 
                 if (selectedGender != null) ...[
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("STATUS"),
                   Row(
                     children: [
-                      _buildChoiceChip(selectedGender == Gender.male ? "Neutered" : "Spayed", selectedReproductive == "Neutered/Spayed", () => setMState(() {
-                        selectedReproductive = "Neutered/Spayed";
-                        isPregnant = false;
-                        isNursing = false;
-                      })),
+                      _buildSelectionBox(
+                        label: selectedGender == Gender.male ? "Neutered" : "Spayed",
+                        isSelected: selectedReproductive == "Neutered/Spayed",
+                        icon: Icons.verified,
+                        onSelect: () => setMState(() {
+                          selectedReproductive = "Neutered/Spayed";
+                          isPregnant = false;
+                          isNursing = false;
+                        }),
+                      ),
                       const SizedBox(width: 12),
-                      _buildChoiceChip("Intact", selectedReproductive == "Intact", () => setMState(() => selectedReproductive = "Intact")),
+                      _buildSelectionBox(
+                        label: "Intact",
+                        isSelected: selectedReproductive == "Intact",
+                        icon: Icons.favorite_border,
+                        onSelect: () => setMState(() => selectedReproductive = "Intact"),
+                      ),
                     ],
                   ),
                   
                   if (selectedGender == Gender.female && selectedReproductive == "Intact") ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _buildCheckbox("Is Pregnant?", isPregnant, (v) => setMState(() => isPregnant = v!)),
                     _buildCheckbox("Is Nursing?", isNursing, (v) => setMState(() => isNursing = v!)),
                   ],
                 ],
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 _buildFormLabel("WEIGHT (KG)"),
                 Row(
                   children: [
@@ -805,8 +878,13 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                         controller: weightCtrl,
                         textAlign: TextAlign.center,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(fillColor: Colors.white.withAlpha(180), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
-                        style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 18),
+                        decoration: InputDecoration(
+                          fillColor: Colors.white.withAlpha(180), 
+                          filled: true, 
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 15),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -817,32 +895,34 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 _buildFormLabel("BIRTHDATE"),
                 SizedBox(
-                  width: double.infinity, height: 55,
+                  width: double.infinity, 
+                  height: 48,
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       final DateTime? picked = await showDatePicker(context: context, initialDate: selectedBirthDate ?? DateTime.now(), firstDate: DateTime(2000), lastDate: DateTime.now());
                       if (picked != null) setMState(() => selectedBirthDate = picked);
                     },
-                    icon: Icon(Icons.calendar_month, color: _dustyOlive),
-                    label: Text(selectedBirthDate == null ? "Choose Date" : DateFormat('dd MMM yyyy').format(selectedBirthDate!), style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16)),
-                    style: OutlinedButton.styleFrom(side: BorderSide(color: _darkCharcoal, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    icon: Icon(Icons.calendar_month, color: _dustyOlive, size: 20),
+                    label: Text(selectedBirthDate == null ? "Choose Date" : DateFormat('dd MMM yyyy').format(selectedBirthDate!), style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14)),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: _darkCharcoal, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 _buildFormLabel("ALLERGIES"),
                 Wrap(
                   children: commonAllergens.map((allergen) => SizedBox(
                     width: MediaQuery.of(context).size.width * 0.4,
                     child: CheckboxListTile(
-                      title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 16, fontWeight: FontWeight.w600)),
+                      title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 13, fontWeight: FontWeight.w600)),
                       value: selectedAllergens.contains(allergen) && !hasNoAllergies,
-                      onChanged: hasNoAllergies ? null : (val) {
+                      onChanged: (val) {
                         setMState(() { 
-                          if (val!) {
+                          if (val == true) {
+                            hasNoAllergies = false;
                             selectedAllergens.add(allergen); 
                           } else {
                             selectedAllergens.remove(allergen);
@@ -854,11 +934,12 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                   )).toList(),
                 ),
                 CheckboxListTile(
-                  title: Row(children: [const Text("Others: ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), Expanded(child: TextField(controller: otherAllergenCtrl, enabled: !hasNoAllergies, decoration: InputDecoration(hintText: "Specify...", hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)), isDense: true, border: InputBorder.none), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)))]),
+                  title: Row(children: [const Text("Others: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)), Expanded(child: TextField(controller: otherAllergenCtrl, enabled: !hasNoAllergies, decoration: InputDecoration(hintText: "Specify...", hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13), isDense: true, border: InputBorder.none), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)))]),
                   value: selectedAllergens.contains("Other") && !hasNoAllergies,
-                  onChanged: hasNoAllergies ? null : (val) {
+                  onChanged: (val) {
                     setMState(() { 
-                      if (val!) {
+                      if (val == true) {
+                        hasNoAllergies = false;
                         selectedAllergens.add("Other"); 
                       } else {
                         selectedAllergens.remove("Other");
@@ -867,15 +948,26 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                   },
                   activeColor: _dustyOlive, checkColor: Colors.white, controlAffinity: ListTileControlAffinity.leading, dense: true, contentPadding: EdgeInsets.zero,
                 ),
-                const SizedBox(height: 12),
-                _buildNoAllergyOption(hasNoAllergies, (v) => setMState(() { hasNoAllergies = v!; if (hasNoAllergies) selectedAllergens.clear(); })),
+                const SizedBox(height: 10),
+                _buildNoAllergyOption(hasNoAllergies, () => setMState(() { 
+                  hasNoAllergies = !hasNoAllergies; 
+                  if (hasNoAllergies) {
+                    selectedAllergens.clear();
+                    otherAllergenCtrl.clear();
+                  }
+                })),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 28),
                 SizedBox(
-                  width: double.infinity, height: 60,
+                  width: double.infinity, height: 50,
                   child: ElevatedButton(
                     onPressed: isSaving ? null : () async {
-                      if (nameCtrl.text.isEmpty || selectedSpecies == null || selectedBreed == null || selectedGender == null || selectedReproductive == null || selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty && otherAllergenCtrl.text.isEmpty)) {
+                      if (!hasNoAllergies && selectedAllergens.contains("Other") && otherAllergenCtrl.text.trim().isEmpty) {
+                        _showErrorDialog("Missing Information", "Please specify the allergy under 'Others' or deselect it.");
+                        return;
+                      }
+
+                      if (nameCtrl.text.trim().isEmpty || selectedSpecies == null || selectedBreed == null || selectedGender == null || selectedReproductive == null || selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty)) {
                         _showErrorDialog("Missing Information", "Please fill in all sections.");
                         return;
                       }
@@ -891,9 +983,11 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       }
 
                       List<String> allergens = List.from(selectedAllergens);
-                      if (allergens.contains("Other") && otherAllergenCtrl.text.isNotEmpty) {
+                      if (allergens.contains("Other")) {
                         allergens.remove("Other");
-                        allergens.add(otherAllergenCtrl.text.trim());
+                        if (otherAllergenCtrl.text.trim().isNotEmpty) {
+                          allergens.add(_capitalizeAllergen(otherAllergenCtrl.text));
+                        }
                       }
 
                       // Save image to Base64 so it syncs across devices
@@ -921,8 +1015,8 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                     child: isSaving 
-                        ? const CircularProgressIndicator(color: Colors.white) 
-                        : const Text("Save Changes", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                        : const Text("Save Changes", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                 ),
                 const SizedBox(height: 50),
@@ -985,57 +1079,164 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
     child: Text.rich(
       TextSpan(
         text: label,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
         children: isRequired
             ? [
                 const TextSpan(
                   text: " *",
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ]
             : [],
       ),
     ),
   );
-  Widget _buildTextField(TextEditingController ctrl, String hint) => TextField(controller: ctrl, style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold), decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)), fillColor: Colors.white.withAlpha(180), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
-  Widget _buildChoiceChip(String label, bool isSelected, VoidCallback onSelect) {
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(color: isSelected ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 15)),
-      selected: isSelected,
-      selectedColor: _dustyOlive,
-      backgroundColor: Colors.white.withAlpha(150),
-      showCheckmark: false,
-      avatar: isSelected ? const Icon(Icons.check_circle, color: Colors.white, size: 22) : null,
-      onSelected: (v) => onSelect(),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide.none),
+
+  Widget _buildTextField(TextEditingController ctrl, String hint) => TextField(
+    controller: ctrl,
+    style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.w600, fontSize: 14),
+    decoration: InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 14),
+      fillColor: Colors.white.withAlpha(180),
+      filled: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+    ),
+  );
+
+  Widget _buildSelectionBox({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onSelect,
+    IconData? icon,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onSelect,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? _dustyOlive : Colors.white.withAlpha(220),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? _dustyOlive : Colors.white.withAlpha(150),
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected ? _dustyOlive.withAlpha(60) : Colors.black.withAlpha(8),
+                blurRadius: isSelected ? 6 : 3,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isSelected ? Colors.white : _darkCharcoal.withAlpha(180),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : _darkCharcoal,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildSpeciesChip(String label, Species species, Species? selected, Function(Species) onSelect) {
-    bool isSelected = selected == species;
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(color: isSelected ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 15)),
-      selected: isSelected,
-      selectedColor: _dustyOlive,
-      backgroundColor: Colors.white.withAlpha(150),
-      showCheckmark: false,
-      avatar: isSelected ? const Icon(Icons.check_circle, color: Colors.white, size: 22) : null,
-      onSelected: (v) => onSelect(species),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide.none),
-    );
-  }
-  Widget _buildCheckbox(String l, bool v, Function(bool?) o) => CheckboxListTile(title: Text(l, style: const TextStyle(fontSize: 14)), value: v, onChanged: o, controlAffinity: ListTileControlAffinity.leading, dense: true, contentPadding: EdgeInsets.zero);
-  Widget _buildStepperButton(IconData i, VoidCallback t) => Container(width: 50, height: 50, decoration: BoxDecoration(color: _dustyOlive, borderRadius: BorderRadius.circular(12)), child: IconButton(icon: Icon(i, color: Colors.white, size: 20), onPressed: t));
-  Widget _buildNoAllergyOption(bool v, Function(bool?) o) => Container(decoration: BoxDecoration(color: Colors.white.withAlpha(100), borderRadius: BorderRadius.circular(12)), child: ListTile(title: const Text("No Allergies", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)), leading: Radio<bool>(value: true, groupValue: v, activeColor: _dustyOlive, onChanged: o), contentPadding: const EdgeInsets.symmetric(horizontal: 8)));
+  Widget _buildCheckbox(String l, bool v, Function(bool?) o) => CheckboxListTile(title: Text(l, style: const TextStyle(fontSize: 13)), value: v, onChanged: o, controlAffinity: ListTileControlAffinity.leading, dense: true, contentPadding: EdgeInsets.zero);
+  Widget _buildStepperButton(IconData i, VoidCallback t) => Container(width: 44, height: 44, decoration: BoxDecoration(color: _dustyOlive, borderRadius: BorderRadius.circular(12)), child: IconButton(icon: Icon(i, color: Colors.white, size: 18), onPressed: t));
+  Widget _buildNoAllergyOption(bool v, VoidCallback onToggle) => Container(decoration: BoxDecoration(color: Colors.white.withAlpha(100), borderRadius: BorderRadius.circular(12)), child: ListTile(title: const Text("No Allergies", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black)), leading: Radio<bool>(value: true, groupValue: v, activeColor: _dustyOlive, onChanged: (_) => onToggle()), onTap: onToggle, contentPadding: const EdgeInsets.symmetric(horizontal: 8), dense: true));
 
   void _showErrorDialog(String t, String m) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(t, style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
-        content: Text(m),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("Okay", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold)))],
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: _errorCoral.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline_rounded,
+                  color: _errorCoral,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                t,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                m,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal.withAlpha(200),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _errorCoral,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Okay",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

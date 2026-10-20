@@ -22,7 +22,7 @@
   {"breedId": "cat_munchkin", "species": "Cat", "name": "Munchkin", "sizeCategory": "Small", "avgAdultWeightKg": 3.0},
   {"breedId": "cat_singapura", "species": "Cat", "name": "Singapura", "sizeCategory": "Small", "avgAdultWeightKg": 2.5},
   {"breedId": "cat_siamese", "species": "Cat", "name": "Siamese", "sizeCategory": "Small", "avgAdultWeightKg": 4.0},
-  {"breedId": "cat_dsh", "species": "Cat", "name": "Domestic Shorthair (Kucing Kampung)", "sizeCategory": "Medium", "avgAdultWeightKg": 4.5},
+  {"breedId": "cat_dsh", "species": "Cat", "name": "Domestic Shorthair", "sizeCategory": "Medium", "avgAdultWeightKg": 4.5},
   {"breedId": "cat_dlh", "species": "Cat", "name": "Domestic Longhair", "sizeCategory": "Medium", "avgAdultWeightKg": 4.5},
   {"breedId": "cat_bsh", "species": "Cat", "name": "British Shorthair", "sizeCategory": "Medium", "avgAdultWeightKg": 5.5},
   {"breedId": "cat_persian", "species": "Cat", "name": "Persian", "sizeCategory": "Medium", "avgAdultWeightKg": 4.5},

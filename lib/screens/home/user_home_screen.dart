@@ -120,14 +120,113 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    if (context.mounted) {
-      Provider.of<UserProvider>(context, listen: false).clearUser();
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false,
-      );
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: _errorCoral.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  color: _errorCoral,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Confirm Logout",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Are you sure you want to log out of your account?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal.withAlpha(200),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: _ashGrey, width: 1.2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text(
+                          "Cancel",
+                          style: TextStyle(
+                            color: _darkCharcoal,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _errorCoral,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text(
+                          "Log Out",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) {
+        Provider.of<UserProvider>(context, listen: false).clearUser();
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
     }
   }
 
@@ -144,20 +243,50 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   void _showPetSelectionSheet(List<PetProfile> pets) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.48,
+        ),
         decoration: BoxDecoration(
           color: _powderPetal,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("Select Pet for Nutrition", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-            const SizedBox(height: 20),
-            ...pets.map((pet) => _buildSelectionItem(pet)),
-            _buildSelectionItem(null), // "Other" option
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: _darkCharcoal.withAlpha(50),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              "Select Pet for Nutrition",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _darkCharcoal,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...pets.map((pet) => _buildSelectionItem(pet)),
+                    _buildSelectionItem(null), // "Other" option
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -165,12 +294,53 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   Widget _buildSelectionItem(PetProfile? pet) {
+    ImageProvider? petImage;
+    if (pet?.imageUrl != null && pet!.imageUrl!.isNotEmpty) {
+      petImage = ImageHelper.getImageProvider(pet.imageUrl);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListTile(
-        leading: Icon(pet == null ? Icons.pets : Icons.circle, color: _dustyOlive),
-        title: Text(pet?.name ?? "Other (External Pet)", style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal)),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: _powderPetal,
+            shape: BoxShape.circle,
+            image: petImage != null
+                ? DecorationImage(image: petImage, fit: BoxFit.cover)
+                : null,
+          ),
+          child: petImage == null
+              ? Icon(pet == null ? Icons.add_circle_outline_rounded : Icons.pets_rounded, color: _dustyOlive, size: 22)
+              : null,
+        ),
+        title: Text(
+          pet?.name ?? "Other (External Pet)",
+          style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 15),
+        ),
+        subtitle: pet != null
+            ? Text(
+                "${pet.breed} • ${(pet.species.name)[0].toUpperCase()}${pet.species.name.substring(1)}",
+                style: TextStyle(color: _darkCharcoal.withAlpha(160), fontSize: 12),
+              )
+            : Text(
+                "Temporary calculation without passport",
+                style: TextStyle(color: _darkCharcoal.withAlpha(140), fontSize: 12),
+              ),
+        trailing: Icon(Icons.arrow_forward_ios_rounded, color: _darkCharcoal.withAlpha(100), size: 14),
         onTap: () {
           Navigator.pop(context);
           if (pet != null) {
@@ -262,14 +432,28 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedBreed, isExpanded: true, 
-                          hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13)),
-                          items: (_breedData[selectedSpecies!.name] as List<dynamic>?)?.map((b) => DropdownMenuItem<String>(
-                            value: b.toString(),
-                            child: Text(b.toString(), style: const TextStyle(fontSize: 13)),
-                          )).toList() ?? [],
-                          onChanged: (val) => setMState(() => selectedBreed = val),
+                        child: Builder(
+                          builder: (context) {
+                            final List<String> availableBreeds = (_breedData[selectedSpecies!.name] as List<dynamic>?)
+                                ?.map((b) => _normalizeBreed(b.toString())!)
+                                .toList() ?? [];
+                            
+                            String? validBreedValue = _normalizeBreed(selectedBreed);
+                            if (validBreedValue != null && !availableBreeds.contains(validBreedValue)) {
+                              validBreedValue = null;
+                            }
+
+                            return DropdownButton<String>(
+                              value: validBreedValue,
+                              isExpanded: true, 
+                              hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13)),
+                              items: availableBreeds.map((b) => DropdownMenuItem<String>(
+                                value: b,
+                                child: Text(b, style: const TextStyle(fontSize: 13)),
+                              )).toList(),
+                              onChanged: (val) => setMState(() => selectedBreed = val),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -411,9 +595,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       child: CheckboxListTile(
                         title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 13, fontWeight: FontWeight.w600)),
                         value: selectedAllergens.contains(allergen) && !hasNoAllergies,
-                        onChanged: hasNoAllergies ? null : (val) {
+                        onChanged: (val) {
                           setMState(() {
-                            if (val!) {
+                            if (val == true) {
+                              hasNoAllergies = false;
                               selectedAllergens.add(allergen);
                             } else {
                               selectedAllergens.remove(allergen);
@@ -448,9 +633,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       ],
                     ),
                     value: selectedAllergens.contains("Other") && !hasNoAllergies,
-                    onChanged: hasNoAllergies ? null : (val) {
+                    onChanged: (val) {
                       setMState(() {
-                        if (val!) {
+                        if (val == true) {
+                          hasNoAllergies = false;
                           selectedAllergens.add("Other");
                         } else {
                           selectedAllergens.remove("Other");
@@ -475,17 +661,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         value: true,
                         groupValue: hasNoAllergies,
                         activeColor: _dustyOlive,
-                        onChanged: (val) {
+                        onChanged: (_) {
                           setMState(() {
-                            hasNoAllergies = val!;
-                            if (hasNoAllergies) selectedAllergens.clear();
+                            hasNoAllergies = !hasNoAllergies;
+                            if (hasNoAllergies) {
+                              selectedAllergens.clear();
+                              otherAllergenCtrl.clear();
+                            }
                           });
                         },
                       ),
                       onTap: () {
                         setMState(() {
                           hasNoAllergies = !hasNoAllergies;
-                          if (hasNoAllergies) selectedAllergens.clear();
+                          if (hasNoAllergies) {
+                            selectedAllergens.clear();
+                            otherAllergenCtrl.clear();
+                          }
                         });
                       },
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
@@ -499,10 +691,16 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: () {
+                        // Check if "Other" is selected but the input field is empty
+                        if (!hasNoAllergies && selectedAllergens.contains("Other") && otherAllergenCtrl.text.trim().isEmpty) {
+                          _showPawDialog("Missing Information", "Please specify the allergy under 'Others' or deselect it.", isError: true);
+                          return;
+                        }
+
                         // Validation
                         if (selectedSpecies == null || selectedBreed == null || 
                             selectedGender == null || selectedReproductive == null ||
-                            selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty && otherAllergenCtrl.text.isEmpty)) {
+                            selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty)) {
                           _showPawDialog("Missing Information", "Please fill in all sections to start calculation.", isError: true);
                           return;
                         }
@@ -515,9 +713,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         }
 
                         List<String> allergens = List.from(selectedAllergens);
-                        if (allergens.contains("Other") && otherAllergenCtrl.text.isNotEmpty) {
+                        if (allergens.contains("Other")) {
                           allergens.remove("Other");
-                          allergens.add(otherAllergenCtrl.text.trim());
+                          if (otherAllergenCtrl.text.trim().isNotEmpty) {
+                            allergens.add(_capitalizeAllergen(otherAllergenCtrl.text));
+                          }
                         }
 
                         final tempPet = PetProfile(
@@ -660,14 +860,28 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedBreed, isExpanded: true, 
-                          hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13)),
-                          items: (_breedData[selectedSpecies!.name] as List<dynamic>?)?.map((b) => DropdownMenuItem<String>(
-                            value: b.toString(),
-                            child: Text(b.toString(), style: const TextStyle(fontSize: 13)),
-                          )).toList() ?? [],
-                          onChanged: (val) => setMState(() => selectedBreed = val),
+                        child: Builder(
+                          builder: (context) {
+                            final List<String> availableBreeds = (_breedData[selectedSpecies!.name] as List<dynamic>?)
+                                ?.map((b) => _normalizeBreed(b.toString())!)
+                                .toList() ?? [];
+                            
+                            String? validBreedValue = _normalizeBreed(selectedBreed);
+                            if (validBreedValue != null && !availableBreeds.contains(validBreedValue)) {
+                              validBreedValue = null;
+                            }
+
+                            return DropdownButton<String>(
+                              value: validBreedValue,
+                              isExpanded: true, 
+                              hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13)),
+                              items: availableBreeds.map((b) => DropdownMenuItem<String>(
+                                value: b,
+                                child: Text(b, style: const TextStyle(fontSize: 13)),
+                              )).toList(),
+                              onChanged: (val) => setMState(() => selectedBreed = val),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -810,9 +1024,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       child: CheckboxListTile(
                         title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 13, fontWeight: FontWeight.w600)),
                         value: selectedAllergens.contains(allergen) && !hasNoAllergies,
-                        onChanged: hasNoAllergies ? null : (val) {
+                        onChanged: (val) {
                           setMState(() {
-                            if (val!) {
+                            if (val == true) {
+                              hasNoAllergies = false;
                               selectedAllergens.add(allergen);
                             } else {
                               selectedAllergens.remove(allergen);
@@ -847,9 +1062,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       ],
                     ),
                     value: selectedAllergens.contains("Other") && !hasNoAllergies,
-                    onChanged: hasNoAllergies ? null : (val) {
+                    onChanged: (val) {
                       setMState(() {
-                        if (val!) {
+                        if (val == true) {
+                          hasNoAllergies = false;
                           selectedAllergens.add("Other");
                         } else {
                           selectedAllergens.remove("Other");
@@ -875,17 +1091,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         value: true,
                         groupValue: hasNoAllergies,
                         activeColor: _dustyOlive,
-                        onChanged: (val) {
+                        onChanged: (_) {
                           setMState(() {
-                            hasNoAllergies = val!;
-                            if (hasNoAllergies) selectedAllergens.clear();
+                            hasNoAllergies = !hasNoAllergies;
+                            if (hasNoAllergies) {
+                              selectedAllergens.clear();
+                              otherAllergenCtrl.clear();
+                            }
                           });
                         },
                       ),
                       onTap: () {
                         setMState(() {
                           hasNoAllergies = !hasNoAllergies;
-                          if (hasNoAllergies) selectedAllergens.clear();
+                          if (hasNoAllergies) {
+                            selectedAllergens.clear();
+                            otherAllergenCtrl.clear();
+                          }
                         });
                       },
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
@@ -899,10 +1121,16 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: isSaving ? null : () async {
+                        // Check if "Other" is selected but the input field is empty
+                        if (!hasNoAllergies && selectedAllergens.contains("Other") && otherAllergenCtrl.text.trim().isEmpty) {
+                          _showPawDialog("Missing Information", "Please specify the allergy under 'Others' or deselect it.", isError: true);
+                          return;
+                        }
+
                         // Validation: All sections required
-                        if (nameCtrl.text.isEmpty || selectedSpecies == null || selectedBreed == null || 
+                        if (nameCtrl.text.trim().isEmpty || selectedSpecies == null || selectedBreed == null || 
                             selectedGender == null || selectedReproductive == null ||
-                            selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty && otherAllergenCtrl.text.isEmpty)) {
+                            selectedBirthDate == null || (!hasNoAllergies && selectedAllergens.isEmpty)) {
                           _showPawDialog("Missing Information", "Please fill in all sections to create a passport.", isError: true);
                           return;
                         }
@@ -922,8 +1150,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         List<String> allergens = List.from(selectedAllergens);
                         if (allergens.contains("Other")) {
                           allergens.remove("Other");
-                          if (otherAllergenCtrl.text.isNotEmpty) {
-                            allergens.add(otherAllergenCtrl.text.trim());
+                          if (otherAllergenCtrl.text.trim().isNotEmpty) {
+                            allergens.add(_capitalizeAllergen(otherAllergenCtrl.text));
                           }
                         }
 
@@ -1069,6 +1297,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         onTap: onTap,
       ),
     );
+  }
+
+  String? _normalizeBreed(String? breed) {
+    if (breed == null) return null;
+    if (breed.contains("Kucing Kampung")) {
+      return "Domestic Shorthair";
+    }
+    return breed;
+  }
+
+  String _capitalizeAllergen(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return trimmed;
+    return trimmed.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   void _showPawDialog(String title, String message, {required bool isError, VoidCallback? onConfirm}) {
