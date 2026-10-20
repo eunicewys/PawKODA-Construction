@@ -219,33 +219,41 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
-                  Text("Quick Calculator", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                  const SizedBox(height: 8),
-                  Text("Enter details for a temporary calculation.", style: TextStyle(color: _darkCharcoal.withAlpha(200), fontSize: 14)),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 12),
+                  Text("Quick Calculator", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                  const SizedBox(height: 6),
+                  Text("Enter details for a temporary calculation.", style: TextStyle(color: _darkCharcoal.withAlpha(200), fontSize: 13)),
+                  const SizedBox(height: 24),
                   
                   _buildFormLabel("SPECIES"),
                   Row(
                     children: [
-                      _buildSelectionChip("Dog", selectedSpecies == Species.dog, () {
-                        setMState(() {
-                          selectedSpecies = Species.dog;
-                          selectedBreed = null;
-                        });
-                      }),
+                      _buildSelectionBox(
+                        label: "Dog",
+                        isSelected: selectedSpecies == Species.dog,
+                        onSelect: () {
+                          setMState(() {
+                            selectedSpecies = Species.dog;
+                            selectedBreed = null;
+                          });
+                        },
+                      ),
                       const SizedBox(width: 12),
-                      _buildSelectionChip("Cat", selectedSpecies == Species.cat, () {
-                        setMState(() {
-                          selectedSpecies = Species.cat;
-                          selectedBreed = null;
-                        });
-                      }),
+                      _buildSelectionBox(
+                        label: "Cat",
+                        isSelected: selectedSpecies == Species.cat,
+                        onSelect: () {
+                          setMState(() {
+                            selectedSpecies = Species.cat;
+                            selectedBreed = null;
+                          });
+                        },
+                      ),
                     ],
                   ),
 
                   if (selectedSpecies != null) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
                     _buildFormLabel("BREED"),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -256,10 +264,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: selectedBreed, isExpanded: true, 
-                          hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120))),
+                          hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13)),
                           items: (_breedData[selectedSpecies!.name] as List<dynamic>?)?.map((b) => DropdownMenuItem<String>(
                             value: b.toString(),
-                            child: Text(b.toString()),
+                            child: Text(b.toString(), style: const TextStyle(fontSize: 13)),
                           )).toList() ?? [],
                           onChanged: (val) => setMState(() => selectedBreed = val),
                         ),
@@ -267,39 +275,59 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ),
                   ],
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("GENDER"),
                   Row(
                     children: [
-                      _buildSelectionChip("Male", selectedGender == Gender.male, () => setMState(() {
-                        selectedGender = Gender.male;
-                        isPregnant = false;
-                        isNursing = false;
-                      })),
+                      _buildSelectionBox(
+                        label: "Male",
+                        isSelected: selectedGender == Gender.male,
+                        icon: Icons.male,
+                        onSelect: () => setMState(() {
+                          selectedGender = Gender.male;
+                          isPregnant = false;
+                          isNursing = false;
+                        }),
+                      ),
                       const SizedBox(width: 12),
-                      _buildSelectionChip("Female", selectedGender == Gender.female, () => setMState(() => selectedGender = Gender.female)),
+                      _buildSelectionBox(
+                        label: "Female",
+                        isSelected: selectedGender == Gender.female,
+                        icon: Icons.female,
+                        onSelect: () => setMState(() => selectedGender = Gender.female),
+                      ),
                     ],
                   ),
 
                   if (selectedGender != null) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
                     _buildFormLabel("STATUS"),
                     Row(
                       children: [
-                        _buildSelectionChip(selectedGender == Gender.male ? "Neutered" : "Spayed", selectedReproductive == "Neutered/Spayed", () => setMState(() {
-                          selectedReproductive = "Neutered/Spayed";
-                          isPregnant = false;
-                          isNursing = false;
-                        })),
+                        _buildSelectionBox(
+                          label: selectedGender == Gender.male ? "Neutered" : "Spayed",
+                          isSelected: selectedReproductive == "Neutered/Spayed",
+                          icon: Icons.verified,
+                          onSelect: () => setMState(() {
+                            selectedReproductive = "Neutered/Spayed";
+                            isPregnant = false;
+                            isNursing = false;
+                          }),
+                        ),
                         const SizedBox(width: 12),
-                        _buildSelectionChip("Intact", selectedReproductive == "Intact", () => setMState(() => selectedReproductive = "Intact")),
+                        _buildSelectionBox(
+                          label: "Intact",
+                          isSelected: selectedReproductive == "Intact",
+                          icon: Icons.favorite_border,
+                          onSelect: () => setMState(() => selectedReproductive = "Intact"),
+                        ),
                       ],
                     ),
                     
                     if (selectedGender == Gender.female && selectedReproductive == "Intact") ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       CheckboxListTile(
-                        title: const Text("Is Pregnant?", style: TextStyle(fontSize: 14)),
+                        title: const Text("Is Pregnant?", style: TextStyle(fontSize: 13)),
                         value: isPregnant,
                         onChanged: (val) => setMState(() => isPregnant = val!),
                         controlAffinity: ListTileControlAffinity.leading,
@@ -307,7 +335,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         contentPadding: EdgeInsets.zero,
                       ),
                       CheckboxListTile(
-                        title: const Text("Is Nursing?", style: TextStyle(fontSize: 14)),
+                        title: const Text("Is Nursing?", style: TextStyle(fontSize: 13)),
                         value: isNursing,
                         onChanged: (val) => setMState(() => isNursing = val!),
                         controlAffinity: ListTileControlAffinity.leading,
@@ -317,7 +345,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ],
                   ],
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("WEIGHT (KG)"),
                   Row(
                     children: [
@@ -334,9 +362,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           decoration: InputDecoration(
                             fillColor: Colors.white.withAlpha(180),
                             filled: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           ),
-                          style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 18),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 15),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -347,11 +376,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("BIRTHDATE"),
                   SizedBox(
                     width: double.infinity,
-                    height: 55,
+                    height: 48,
                     child: OutlinedButton.icon(
                       onPressed: () async {
                         final DateTime? picked = await showDatePicker(
@@ -362,25 +391,25 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         );
                         if (picked != null) setMState(() => selectedBirthDate = picked);
                       },
-                      icon: Icon(Icons.calendar_month, color: _dustyOlive),
+                      icon: Icon(Icons.calendar_month, color: _dustyOlive, size: 20),
                       label: Text(
                         selectedBirthDate == null ? "Choose Date" : DateFormat('dd MMM yyyy').format(selectedBirthDate!), 
-                        style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16)
+                        style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14)
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: _darkCharcoal, width: 1.5),
+                        side: BorderSide(color: _darkCharcoal, width: 1.2),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   _buildFormLabel("ALLERGIES"),
                   Wrap(
                     children: commonAllergens.map((allergen) => SizedBox(
                       width: MediaQuery.of(context).size.width * 0.4, // Approx half width
                       child: CheckboxListTile(
-                        title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 16, fontWeight: FontWeight.w600)),
+                        title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 13, fontWeight: FontWeight.w600)),
                         value: selectedAllergens.contains(allergen) && !hasNoAllergies,
                         onChanged: hasNoAllergies ? null : (val) {
                           setMState(() {
@@ -402,18 +431,18 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   CheckboxListTile(
                     title: Row(
                       children: [
-                        const Text("Others: ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const Text("Others: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                         Expanded(
                           child: TextField(
                             controller: otherAllergenCtrl,
                             enabled: !hasNoAllergies,
                             decoration: InputDecoration(
                               hintText: "Specify...", 
-                              hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)),
+                              hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13),
                               isDense: true, 
                               border: InputBorder.none
                             ),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -434,14 +463,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(100),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ListTile(
-                      title: const Text("No Allergies", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                      title: const Text("No Allergies", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black)),
                       leading: Radio<bool>(
                         value: true,
                         groupValue: hasNoAllergies,
@@ -460,13 +489,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         });
                       },
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      dense: true,
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
-                    height: 60,
+                    height: 50,
                     child: ElevatedButton(
                       onPressed: () {
                         // Validation
@@ -511,7 +541,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         backgroundColor: _dustyOlive,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: const Text("Calculate Now", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                      child: const Text("Calculate Now", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ),
                   const SizedBox(height: 50),
@@ -583,37 +613,45 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text("Add New Pet", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _darkCharcoal)),
-                  const SizedBox(height: 8),
-                  Text("Create a digital health passport.", style: TextStyle(color: _darkCharcoal.withAlpha(200), fontSize: 14)),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
+                  Text("Add New Pet", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)),
+                  const SizedBox(height: 6),
+                  Text("Create a digital health passport.", style: TextStyle(color: _darkCharcoal.withAlpha(200), fontSize: 13)),
+                  const SizedBox(height: 24),
                   
                   _buildFormLabel("PET NAME"),
                   _buildTextField(nameCtrl, "e.g. Buddy"),
                   
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("SPECIES"),
                   Row(
                     children: [
-                      _buildSelectionChip("Dog", selectedSpecies == Species.dog, () {
-                        setMState(() {
-                          selectedSpecies = Species.dog;
-                          selectedBreed = null;
-                        });
-                      }),
+                      _buildSelectionBox(
+                        label: "Dog",
+                        isSelected: selectedSpecies == Species.dog,
+                        onSelect: () {
+                          setMState(() {
+                            selectedSpecies = Species.dog;
+                            selectedBreed = null;
+                          });
+                        },
+                      ),
                       const SizedBox(width: 12),
-                      _buildSelectionChip("Cat", selectedSpecies == Species.cat, () {
-                        setMState(() {
-                          selectedSpecies = Species.cat;
-                          selectedBreed = null;
-                        });
-                      }),
+                      _buildSelectionBox(
+                        label: "Cat",
+                        isSelected: selectedSpecies == Species.cat,
+                        onSelect: () {
+                          setMState(() {
+                            selectedSpecies = Species.cat;
+                            selectedBreed = null;
+                          });
+                        },
+                      ),
                     ],
                   ),
 
                   if (selectedSpecies != null) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
                     _buildFormLabel("BREED"),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -624,10 +662,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: selectedBreed, isExpanded: true, 
-                          hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120))),
+                          hint: Text("Select Breed", style: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13)),
                           items: (_breedData[selectedSpecies!.name] as List<dynamic>?)?.map((b) => DropdownMenuItem<String>(
                             value: b.toString(),
-                            child: Text(b.toString()),
+                            child: Text(b.toString(), style: const TextStyle(fontSize: 13)),
                           )).toList() ?? [],
                           onChanged: (val) => setMState(() => selectedBreed = val),
                         ),
@@ -635,39 +673,59 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ),
                   ],
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("GENDER"),
                   Row(
                     children: [
-                      _buildSelectionChip("Male", selectedGender == Gender.male, () => setMState(() {
-                        selectedGender = Gender.male;
-                        isPregnant = false;
-                        isNursing = false;
-                      })),
+                      _buildSelectionBox(
+                        label: "Male",
+                        isSelected: selectedGender == Gender.male,
+                        icon: Icons.male,
+                        onSelect: () => setMState(() {
+                          selectedGender = Gender.male;
+                          isPregnant = false;
+                          isNursing = false;
+                        }),
+                      ),
                       const SizedBox(width: 12),
-                      _buildSelectionChip("Female", selectedGender == Gender.female, () => setMState(() => selectedGender = Gender.female)),
+                      _buildSelectionBox(
+                        label: "Female",
+                        isSelected: selectedGender == Gender.female,
+                        icon: Icons.female,
+                        onSelect: () => setMState(() => selectedGender = Gender.female),
+                      ),
                     ],
                   ),
 
                   if (selectedGender != null) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
                     _buildFormLabel("STATUS"),
                     Row(
                       children: [
-                        _buildSelectionChip(selectedGender == Gender.male ? "Neutered" : "Spayed", selectedReproductive == "Neutered/Spayed", () => setMState(() {
-                          selectedReproductive = "Neutered/Spayed";
-                          isPregnant = false;
-                          isNursing = false;
-                        })),
+                        _buildSelectionBox(
+                          label: selectedGender == Gender.male ? "Neutered" : "Spayed",
+                          isSelected: selectedReproductive == "Neutered/Spayed",
+                          icon: Icons.verified,
+                          onSelect: () => setMState(() {
+                            selectedReproductive = "Neutered/Spayed";
+                            isPregnant = false;
+                            isNursing = false;
+                          }),
+                        ),
                         const SizedBox(width: 12),
-                        _buildSelectionChip("Intact", selectedReproductive == "Intact", () => setMState(() => selectedReproductive = "Intact")),
+                        _buildSelectionBox(
+                          label: "Intact",
+                          isSelected: selectedReproductive == "Intact",
+                          icon: Icons.favorite_border,
+                          onSelect: () => setMState(() => selectedReproductive = "Intact"),
+                        ),
                       ],
                     ),
                     
                     if (selectedGender == Gender.female && selectedReproductive == "Intact") ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       CheckboxListTile(
-                        title: const Text("Is Pregnant?", style: TextStyle(fontSize: 14)),
+                        title: const Text("Is Pregnant?", style: TextStyle(fontSize: 13)),
                         value: isPregnant,
                         onChanged: (val) => setMState(() => isPregnant = val!),
                         controlAffinity: ListTileControlAffinity.leading,
@@ -675,7 +733,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         contentPadding: EdgeInsets.zero,
                       ),
                       CheckboxListTile(
-                        title: const Text("Is Nursing?", style: TextStyle(fontSize: 14)),
+                        title: const Text("Is Nursing?", style: TextStyle(fontSize: 13)),
                         value: isNursing,
                         onChanged: (val) => setMState(() => isNursing = val!),
                         controlAffinity: ListTileControlAffinity.leading,
@@ -685,7 +743,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ],
                   ],
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("WEIGHT (KG)"),
                   Row(
                     children: [
@@ -702,9 +760,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           decoration: InputDecoration(
                             fillColor: Colors.white.withAlpha(180),
                             filled: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           ),
-                          style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 18),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 15),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -715,11 +774,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _buildFormLabel("BIRTHDATE"),
                   SizedBox(
                     width: double.infinity,
-                    height: 55,
+                    height: 48,
                     child: OutlinedButton.icon(
                       onPressed: () async {
                         final DateTime? picked = await showDatePicker(
@@ -730,26 +789,26 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         );
                         if (picked != null) setMState(() => selectedBirthDate = picked);
                       },
-                      icon: Icon(Icons.calendar_month, color: _dustyOlive),
+                      icon: Icon(Icons.calendar_month, color: _dustyOlive, size: 20),
                       label: Text(
                         selectedBirthDate == null ? "Choose Date" : DateFormat('dd MMM yyyy').format(selectedBirthDate!), 
-                        style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 16)
+                        style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14)
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: _darkCharcoal, width: 1.5),
+                        side: BorderSide(color: _darkCharcoal, width: 1.2),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   _buildFormLabel("ALLERGIES"),
                   // Two-Column Allergen Layout
                   Wrap(
                     children: commonAllergens.map((allergen) => SizedBox(
                       width: MediaQuery.of(context).size.width * 0.4, // Approx half width
                       child: CheckboxListTile(
-                        title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 16, fontWeight: FontWeight.w600)),
+                        title: Text(allergen, style: TextStyle(color: _darkCharcoal, fontSize: 13, fontWeight: FontWeight.w600)),
                         value: selectedAllergens.contains(allergen) && !hasNoAllergies,
                         onChanged: hasNoAllergies ? null : (val) {
                           setMState(() {
@@ -771,18 +830,18 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   CheckboxListTile(
                     title: Row(
                       children: [
-                        const Text("Others: ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const Text("Others: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                         Expanded(
                           child: TextField(
                             controller: otherAllergenCtrl,
                             enabled: !hasNoAllergies,
                             decoration: InputDecoration(
                               hintText: "Specify...", 
-                              hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)),
+                              hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13),
                               isDense: true, 
                               border: InputBorder.none
                             ),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -803,7 +862,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   // "No Allergies" Radio Button
                   Container(
                     decoration: BoxDecoration(
@@ -811,7 +870,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ListTile(
-                      title: const Text("No Allergies", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                      title: const Text("No Allergies", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black)),
                       leading: Radio<bool>(
                         value: true,
                         groupValue: hasNoAllergies,
@@ -830,13 +889,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         });
                       },
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      dense: true,
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
-                    height: 60,
+                    height: 50,
                     child: ElevatedButton(
                       onPressed: isSaving ? null : () async {
                         // Validation: All sections required
@@ -1012,34 +1072,80 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   void _showPawDialog(String title, String message, {required bool isError, VoidCallback? onConfirm}) {
-    final Color successColor = const Color(0xFFD4C2AD);
-    final Color errorColor = const Color(0xFFB56576); 
-    final Color darkText = const Color(0xFF2D3142);
+    final Color mainColor = isError ? _errorCoral : _dustyOlive;
+    final Color bgAlphaColor = isError ? _errorCoral.withAlpha(25) : _dustyOlive.withAlpha(25);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
-        title: Column(
-          children: [
-            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: isError ? errorColor : successColor, size: 50),
-            const SizedBox(height: 15),
-            Text(title, style: TextStyle(color: darkText, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(message, textAlign: TextAlign.center, style: TextStyle(color: darkText)),
-        actions: [
-          Center(
-            child: SizedBox(
-              width: 120,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: isError ? errorColor : successColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
-                onPressed: () { Navigator.pop(context); if (onConfirm != null) onConfirm(); },
-                child: Text("Okay", style: TextStyle(color: isError ? Colors.white : darkText, fontWeight: FontWeight.bold)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: bgAlphaColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+                  color: mainColor,
+                  size: 32,
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal.withAlpha(200),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: mainColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (onConfirm != null) onConfirm();
+                  },
+                  child: const Text(
+                    "Okay",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1080,34 +1186,92 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     child: Text.rich(
       TextSpan(
         text: label,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _darkCharcoal),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.5),
         children: isRequired
             ? [
                 const TextSpan(
                   text: " *",
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ]
             : [],
       ),
     ),
   );
-  Widget _buildTextField(TextEditingController ctrl, String hint) => TextField(controller: ctrl, style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold), decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120)), fillColor: Colors.white.withAlpha(180), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
+
+  Widget _buildTextField(TextEditingController ctrl, String hint) => TextField(
+    controller: ctrl,
+    style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.w600, fontSize: 14),
+    decoration: InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 14),
+      fillColor: Colors.white.withAlpha(180),
+      filled: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+    ),
+  );
   
-  Widget _buildSelectionChip(String label, bool isSelected, VoidCallback onSelect) {
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(color: isSelected ? Colors.white : _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 15)),
-      selected: isSelected,
-      selectedColor: _dustyOlive,
-      backgroundColor: Colors.white.withAlpha(150),
-      showCheckmark: false,
-      avatar: isSelected ? const Icon(Icons.check_circle, color: Colors.white, size: 22) : null,
-      onSelected: (v) => onSelect(),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide.none),
+  Widget _buildSelectionBox({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onSelect,
+    IconData? icon,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onSelect,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? _dustyOlive : Colors.white.withAlpha(220),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? _dustyOlive : Colors.white.withAlpha(150),
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected ? _dustyOlive.withAlpha(60) : Colors.black.withAlpha(8),
+                blurRadius: isSelected ? 6 : 3,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isSelected ? Colors.white : _darkCharcoal.withAlpha(180),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : _darkCharcoal,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
   
-  Widget _buildStepperButton(IconData icon, VoidCallback onTap) => Container(width: 50, height: 50, decoration: BoxDecoration(color: _dustyOlive, borderRadius: BorderRadius.circular(12)), child: IconButton(icon: Icon(icon, color: Colors.white, size: 20), onPressed: onTap));
+  Widget _buildStepperButton(IconData icon, VoidCallback onTap) => Container(width: 44, height: 44, decoration: BoxDecoration(color: _dustyOlive, borderRadius: BorderRadius.circular(12)), child: IconButton(icon: Icon(icon, color: Colors.white, size: 18), onPressed: onTap));
 
   // --- MAIN BUILD ---
 

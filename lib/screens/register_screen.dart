@@ -117,51 +117,80 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _showPawDialog(String title, String message, {required bool isError, VoidCallback? onConfirm}) {
+    final Color mainColor = isError ? _errorCoral : _lightBronze;
+    final Color bgAlphaColor = isError ? _errorCoral.withAlpha(25) : _lightBronze.withAlpha(25);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
-        title: Column(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: isError ? _errorCoral : _lightBronze,
-              size: 50,
-            ),
-            const SizedBox(height: 15),
-            Text(title, style: TextStyle(color: _darkText, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: _darkText),
-        ),
-        actions: [
-          Center(
-            child: SizedBox(
-              width: 120,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isError ? _errorCoral : _lightBronze,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: bgAlphaColor,
+                  shape: BoxShape.circle,
                 ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  if (onConfirm != null) onConfirm();
-                },
-                child: Text(
-                  "Okay",
-                  style: TextStyle(
-                    color: isError ? Colors.white : _darkText,
-                    fontWeight: FontWeight.bold,
+                child: Icon(
+                  isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+                  color: mainColor,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkText.withAlpha(200),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: mainColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (onConfirm != null) onConfirm();
+                  },
+                  child: const Text(
+                    "Okay",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
