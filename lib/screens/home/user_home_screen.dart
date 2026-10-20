@@ -54,22 +54,26 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   late int _selectedIndex;
   int _bookingInitialTab = 0;
   late PageController _pageController;
-  double _currentPage = 0;
   Map<String, dynamic> _breedData = {};
+
+  Stream<List<ReminderItem>>? _cachedReminderStream;
+  String? _lastReminderStreamKey;
+
+  Stream<List<ReminderItem>> _getReminderStream(String uid, List<PetProfile> pets) {
+    final key = "$uid-${pets.map((p) => p.id).join(',')}";
+    if (_cachedReminderStream == null || _lastReminderStreamKey != key) {
+      _lastReminderStreamKey = key;
+      _cachedReminderStream = _reminderService.streamUpcomingReminders(uid, pets);
+    }
+    return _cachedReminderStream!;
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _loadBreedData();
-    _pageController = PageController(viewportFraction: 0.8)
-      ..addListener(() {
-        if (_pageController.hasClients) {
-          setState(() {
-            _currentPage = _pageController.page ?? 0;
-          });
-        }
-      });
+    _pageController = PageController(viewportFraction: 0.8);
   }
 
   Future<void> _loadBreedData() async {
@@ -1657,26 +1661,42 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 if (pets.isEmpty)
                   Padding(padding: const EdgeInsets.symmetric(vertical: 40), child: Center(child: Text("No pets registered yet.\nTap + Add Pet to start!", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 16))))
                 else
-                  SizedBox(height: 350, child: PageView.builder(controller: _pageController, itemCount: pets.length, itemBuilder: (context, index) {
-                    double scale = (1 - ((_currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
-                    final pet = pets[index];
-                    int y = (pet.ageInMonths / 12).floor(); int m = pet.ageInMonths % 12;
-                    return GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PetDetailsScreen(petId: pet.id))),
-                      child: _buildPetCard(
-                        scale: scale, 
-                        id: pet.id,
-                        name: pet.name, 
-                        species: pet.species.name.toUpperCase(), 
-                        breed: pet.breed, 
-                        age: "${y}y, ${m}m", 
-                        weight: "${pet.weightKg} kg", 
-                        isHealthy: pet.isHealthy,  
-                        imageUrl: pet.imageUrl,
-                        context: context,
-                      ),
-                    );
-                  })),
+                  SizedBox(
+                    height: 350, 
+                    child: AnimatedBuilder(
+                      animation: _pageController,
+                      builder: (context, child) {
+                        double currentPage = (_pageController.hasClients && _pageController.position.hasContentDimensions) 
+                            ? (_pageController.page ?? 0) 
+                            : 0;
+                        return PageView.builder(
+                          controller: _pageController, 
+                          itemCount: pets.length, 
+                          itemBuilder: (context, index) {
+                            double scale = (1 - ((currentPage - index).abs() * 0.1)).clamp(0.8, 1.0);
+                            final pet = pets[index];
+                            int y = (pet.ageInMonths / 12).floor(); 
+                            int m = pet.ageInMonths % 12;
+                            return GestureDetector(
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PetDetailsScreen(petId: pet.id))),
+                              child: _buildPetCard(
+                                scale: scale, 
+                                id: pet.id,
+                                name: pet.name, 
+                                species: pet.species.name.toUpperCase(), 
+                                breed: pet.breed, 
+                                age: "${y}y, ${m}m", 
+                                weight: "${pet.weightKg} kg", 
+                                isHealthy: pet.isHealthy,  
+                                imageUrl: pet.imageUrl,
+                                context: context,
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5))),
                 const SizedBox(height: 12),
@@ -2029,7 +2049,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     if (uid.isEmpty) return const SizedBox.shrink();
 
     return StreamBuilder<List<ReminderItem>>(
-      stream: _reminderService.streamUpcomingReminders(uid, pets),
+      stream: _getReminderStream(uid, pets),
       builder: (context, snapshot) {
         final reminders = snapshot.data ?? [];
         final isLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;
