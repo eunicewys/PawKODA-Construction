@@ -723,6 +723,17 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: _darkCharcoal.withAlpha(80),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Center(
                   child: InkWell(
                     onTap: () async {
                       _showImageSourceSheet(setMState, (image) => petImage = image);
@@ -1052,10 +1063,21 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-        padding: const EdgeInsets.all(30),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D3142).withAlpha(80),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             const Text("Choose Photo Source", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D3142))),
             const SizedBox(height: 30),
             _sourceTile(Icons.camera_alt_rounded, "Take a Photo", () async {

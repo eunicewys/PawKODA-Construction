@@ -272,6 +272,17 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: _darkCharcoal.withAlpha(80),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                     Text(
                       existingIssue == null ? "Log Health Issue" : "Edit Health Issue",
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal),
