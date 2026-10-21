@@ -322,13 +322,54 @@ class BookingService {
             .toList());
   }
 
-  /// Cancel a booking in Firestore
-  Future<void> cancelBooking(String userId, String bookingId) async {
+  /// Stream all bookings across all users for Vet clinic review
+  Stream<List<BookingModel>> streamAllBookings() {
+    return _db
+        .collectionGroup('BOOKINGS')
+        .snapshots()
+        .map((snapshot) {
+          final list = snapshot.docs
+              .map((doc) => BookingModel.fromMap(doc.data(), doc.id))
+              .toList();
+          list.sort((a, b) => b.bookingDate.compareTo(a.bookingDate));
+          return list;
+        });
+  }
+
+  /// Updates booking status (e.g. 'PENDING' -> 'CONFIRMED', 'CANCELLED', 'COMPLETED')
+  Future<void> updateBookingStatus(String userId, String bookingId, String newStatus) async {
     await _db
         .collection('USERS')
         .doc(userId)
         .collection('BOOKINGS')
         .doc(bookingId)
-        .update({'status': 'CANCELLED'});
+        .update({'status': newStatus.toUpperCase()});
+  }
+
+  /// Cancel a booking in Firestore
+  Future<void> cancelBooking(String userId, String bookingId) async {
+    await updateBookingStatus(userId, bookingId, 'CANCELLED');
+  }
+
+  /// Stream active (PENDING or CONFIRMED) bookings for a specific clinic to lock time slots
+  Stream<List<BookingModel>> streamClinicActiveBookings(String clinicId) {
+    return _db
+        .collectionGroup('BOOKINGS')
+        .where('clinicId', isEqualTo: clinicId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => BookingModel.fromMap(doc.data(), doc.id))
+            .where((b) => b.status.toUpperCase() == 'PENDING' || b.status.toUpperCase() == 'CONFIRMED')
+            .toList());
+  }
+
+  /// Permanently delete a booking record from Firestore
+  Future<void> deleteBooking(String userId, String bookingId) async {
+    await _db
+        .collection('USERS')
+        .doc(userId)
+        .collection('BOOKINGS')
+        .doc(bookingId)
+        .delete();
   }
 }

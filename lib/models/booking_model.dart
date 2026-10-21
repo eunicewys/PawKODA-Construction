@@ -15,6 +15,7 @@ class BookingModel {
   final String serviceType;
   final DateTime bookingDate;
   final String timeSlot;
+  final String preferredVet; // Optional preferred vet / surgeon
   final String notes;
   final String status; // CONFIRMED, PENDING, COMPLETED, CANCELLED
   final DateTime createdAt;
@@ -33,8 +34,9 @@ class BookingModel {
     required this.serviceType,
     required this.bookingDate,
     required this.timeSlot,
+    this.preferredVet = 'Any Available Vet',
     required this.notes,
-    this.status = 'CONFIRMED',
+    this.status = 'PENDING',
     required this.createdAt,
   });
 
@@ -52,6 +54,7 @@ class BookingModel {
       'serviceType': serviceType,
       'bookingDate': Timestamp.fromDate(bookingDate),
       'timeSlot': timeSlot,
+      'preferredVet': preferredVet,
       'notes': notes,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -79,8 +82,9 @@ class BookingModel {
       serviceType: map['serviceType'] ?? 'General Checkup',
       bookingDate: parseDate(map['bookingDate']),
       timeSlot: map['timeSlot'] ?? '10:00 AM',
+      preferredVet: map['preferredVet'] ?? 'Any Available Vet',
       notes: map['notes'] ?? '',
-      status: map['status'] ?? 'CONFIRMED',
+      status: map['status'] ?? 'PENDING',
       createdAt: parseDate(map['createdAt']),
     );
   }

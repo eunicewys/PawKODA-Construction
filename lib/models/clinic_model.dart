@@ -15,6 +15,7 @@ class ClinicModel {
   final double longitude;
   final String? imageUrl;
   final List<String> services;
+  final List<String> veterinarians;
   final bool isEmergency24h;
   final bool isRecommended;
   final String description;
@@ -34,6 +35,7 @@ class ClinicModel {
     required this.longitude,
     this.imageUrl,
     required this.services,
+    this.veterinarians = const ["Dr. Kenique Lim (Senior Surgeon)", "Dr. Amanda Tan (Feline Specialist)", "Dr. Marcus Wong (General Practitioner)"],
     this.isEmergency24h = false,
     this.isRecommended = true,
     this.description = '',

@@ -38,6 +38,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   final Color _drySage = const Color(0xFFA5A58D);
   final Color _ashGrey = const Color(0xFFB7B7A4);
   final Color _darkCharcoal = const Color(0xFF2D3142);
+  final Color _errorCoral = const Color(0xFFB56576);
 
   final BookingService _bookingService = BookingService();
   final PetService _petService = PetService();
@@ -1047,8 +1048,32 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   }
 
   Widget _buildBookingItemCard(BookingModel booking, String userId) {
-    final bool isCancelled = booking.status == 'CANCELLED';
+    final String statusUpper = booking.status.toUpperCase();
     final DateFormat formatter = DateFormat('EEE, dd MMM yyyy');
+
+    final Color badgeBgColor = statusUpper == 'PENDING'
+        ? Colors.orange.withValues(alpha: 0.15)
+        : (statusUpper == 'CONFIRMED'
+            ? Colors.green.withValues(alpha: 0.15)
+            : (statusUpper == 'CANCELLED'
+                ? Colors.red.withValues(alpha: 0.12)
+                : Colors.blue.withValues(alpha: 0.12)));
+
+    final Color badgeTextColor = statusUpper == 'PENDING'
+        ? Colors.orange.shade900
+        : (statusUpper == 'CONFIRMED'
+            ? Colors.green.shade800
+            : (statusUpper == 'CANCELLED'
+                ? Colors.red.shade800
+                : Colors.blue.shade800));
+
+    final String statusLabel = statusUpper == 'PENDING'
+        ? "Pending"
+        : (statusUpper == 'CONFIRMED'
+            ? "Confirmed"
+            : (statusUpper == 'CANCELLED'
+                ? "Cancelled"
+                : "Completed"));
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1079,22 +1104,42 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isCancelled
-                      ? Colors.red.withValues(alpha: 0.12)
-                      : Colors.green.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  booking.status,
-                  style: TextStyle(
-                    color: isCancelled ? Colors.red : Colors.green.shade800,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 9,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: badgeBgColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: badgeTextColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
                   ),
-                ),
+                  if (statusUpper == 'CANCELLED') ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => _confirmDeleteBooking(context, booking.id, userId, booking.clinicName),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.red,
+                          size: 15,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -1138,6 +1183,20 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
               ),
             ],
           ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.person_outline_rounded, size: 13, color: _dustyOlive),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  "Vet: ${booking.preferredVet}",
+                  style: TextStyle(fontSize: 11, color: _darkCharcoal, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
           if (booking.notes.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -1150,7 +1209,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (!isCancelled)
+              if (statusUpper != 'CANCELLED' && statusUpper != 'COMPLETED')
                 TextButton(
                   onPressed: () => _confirmCancelBooking(context, booking.id, userId),
                   style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
@@ -1208,13 +1267,239 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     );
   }
 
+  void _confirmDeleteBooking(BuildContext context, String bookingId, String userId, String clinicName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.red.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.delete_forever_rounded,
+                  color: Colors.red,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Remove Booking?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Are you sure you want to remove this cancelled booking record with $clinicName? This cannot be undone.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal.withAlpha(200),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: _ashGrey, width: 1.2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          "Cancel",
+                          style: TextStyle(
+                            color: _darkCharcoal,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await _bookingService.deleteBooking(userId, bookingId);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text("Booking record removed."),
+                                backgroundColor: _dustyOlive,
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text(
+                          "Remove",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBookingErrorDialog(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: _errorCoral.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.priority_high_rounded,
+                  color: _errorCoral,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal.withAlpha(200),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _dustyOlive,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  DateTime _parseTimeSlot(DateTime date, String slotStr) {
+    try {
+      final parts = slotStr.trim().split(' ');
+      final timeParts = parts[0].split(':');
+      int hour = int.parse(timeParts[0]);
+      final int minute = int.parse(timeParts[1]);
+      final String period = parts[1].toUpperCase();
+
+      if (period == 'PM' && hour < 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+
+      return DateTime(date.year, date.month, date.day, hour, minute);
+    } catch (_) {
+      return date;
+    }
+  }
+
+  List<String> _getAvailableTimeSlots(DateTime date, List<String> allSlots) {
+    final now = DateTime.now();
+    final bool isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+
+    if (!isToday) {
+      return allSlots;
+    }
+
+    // If current time is after 5:00 PM (17:00), same-day bookings are closed
+    if (now.hour >= 17) {
+      return [];
+    }
+
+    // Slots must be at least 3 hours later than current time
+    final minAllowedTime = now.add(const Duration(hours: 3));
+
+    return allSlots.where((slot) {
+      final slotDateTime = _parseTimeSlot(date, slot);
+      return !slotDateTime.isBefore(minAllowedTime);
+    }).toList();
+  }
+
   // ===========================================================================
   // BOOKING MODAL SHEET (Scaled down compactness)
   // ===========================================================================
   void _showBookingModal(BuildContext context, ClinicModel clinic, String userId) {
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
-    String selectedTime = '10:30 AM';
+    DateTime? selectedDate;
+    String selectedTime = '';
     String selectedService = clinic.services.isNotEmpty ? clinic.services.first : 'General Checkup';
+    String selectedVet = '-- Select if any --';
     PetProfile? selectedPet;
     final notesCtrl = TextEditingController();
 
@@ -1297,32 +1582,57 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                       builder: (context, snapshot) {
                         final pets = snapshot.data ?? [];
                         if (pets.isEmpty) {
-                          return const Text("No pets registered yet. Please add a pet first.", style: TextStyle(color: Colors.grey, fontSize: 12));
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              "No pets registered yet. Please add a pet first.",
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontStyle: FontStyle.italic),
+                            ),
+                          );
                         }
-                        return SizedBox(
-                          height: 48,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: pets.length,
-                            separatorBuilder: (_, _) => const SizedBox(width: 6),
-                            itemBuilder: (context, idx) {
-                              final p = pets[idx];
-                              final isSel = selectedPet?.id == p.id;
-                              return ChoiceChip(
-                                label: Text("${p.name} (${p.species.name})"),
-                                selected: isSel,
-                                selectedColor: _dustyOlive,
-                                visualDensity: VisualDensity.compact,
-                                labelStyle: TextStyle(
-                                  color: isSel ? Colors.white : _darkCharcoal,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _ashGrey.withAlpha(100)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: selectedPet?.id,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                hintText: "-- Select a pet --",
+                                hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
+                                fillColor: Colors.transparent,
+                                filled: true,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                border: InputBorder.none,
+                              ),
+                              dropdownColor: Colors.white,
+                              style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
+                              items: pets.map((p) => DropdownMenuItem<String>(
+                                value: p.id,
+                                child: Text(
+                                  "${p.name} (${p.breed})",
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 13),
                                 ),
-                                onSelected: (sel) {
-                                  if (sel) setMState(() => selectedPet = p);
-                                },
-                              );
-                            },
+                              )).toList(),
+                              onChanged: (petId) {
+                                if (petId != null) {
+                                  setMState(() {
+                                    selectedPet = pets.firstWhere((p) => p.id == petId);
+                                  });
+                                }
+                              },
+                            ),
                           ),
                         );
                       },
@@ -1352,65 +1662,229 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     ),
                     const SizedBox(height: 12),
 
-                    _buildStepLabel("3. APPOINTMENT DATE", isRequired: true),
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 90)),
+                    _buildStepLabel("3. APPOINTMENT DATE AND TIME", isRequired: true),
+                    Builder(
+                      builder: (context) {
+                        final nowTime = DateTime.now();
+                        final bool isAfter5PM = nowTime.hour >= 17;
+                        final DateTime startDate = isAfter5PM 
+                            ? DateTime(nowTime.year, nowTime.month, nowTime.day + 1) 
+                            : DateTime(nowTime.year, nowTime.month, nowTime.day);
+
+                        final List<DateTime> weekDays = List.generate(
+                          7, 
+                          (i) => DateTime(startDate.year, startDate.month, startDate.day + i),
                         );
-                        if (picked != null) {
-                          setMState(() => selectedDate = picked);
-                        }
+
+                        return SizedBox(
+                          height: 68,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: weekDays.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 8),
+                            itemBuilder: (context, idx) {
+                              final date = weekDays[idx];
+                              final bool isSelected = selectedDate != null &&
+                                  date.year == selectedDate!.year &&
+                                  date.month == selectedDate!.month &&
+                                  date.day == selectedDate!.day;
+
+                              final String dayName = DateFormat('EEE').format(date);
+                              final String monthDay = DateFormat('dd MMM').format(date);
+
+                              return GestureDetector(
+                                onTap: () {
+                                  setMState(() {
+                                    selectedDate = date;
+                                    selectedTime = ''; // Reset time slot when date changes
+                                  });
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 68,
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? _dustyOlive : Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isSelected ? _dustyOlive : _ashGrey.withAlpha(100),
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isSelected ? _dustyOlive.withAlpha(50) : Colors.black.withAlpha(8),
+                                        blurRadius: isSelected ? 6 : 3,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        dayName.toUpperCase(),
+                                        style: TextStyle(
+                                          color: isSelected ? Colors.white70 : _ashGrey,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        monthDay,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: isSelected ? Colors.white : _darkCharcoal,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
                       },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _powderPetal.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _desertSand),
+                    ),
+                    const SizedBox(height: 8),
+
+                    if (selectedDate == null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          "Please select a date above to view available time slots.",
+                          style: TextStyle(color: _ashGrey, fontSize: 12, fontStyle: FontStyle.italic),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              DateFormat('EEEE, dd MMMM yyyy').format(selectedDate),
-                              style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal, fontSize: 13),
+                      ),
+                      const SizedBox(height: 12),
+                    ] else ...[
+                      StreamBuilder<List<BookingModel>>(
+                        stream: _bookingService.streamClinicActiveBookings(clinic.id),
+                        builder: (context, bookingSnapshot) {
+                          final activeClinicBookings = bookingSnapshot.data ?? [];
+
+                          // Filter out time slots that are PENDING or CONFIRMED for this clinic on this date
+                          final bookedSlots = activeClinicBookings
+                              .where((b) =>
+                                  b.bookingDate.year == selectedDate!.year &&
+                                  b.bookingDate.month == selectedDate!.month &&
+                                  b.bookingDate.day == selectedDate!.day)
+                              .map((b) => b.timeSlot)
+                              .toSet();
+
+                          // Get available same-day (3h buffer) slots and remove booked slots
+                          final slotsForDay = _getAvailableTimeSlots(selectedDate!, timeSlots);
+                          final availableSlots = slotsForDay.where((slot) => !bookedSlots.contains(slot)).toList();
+
+                          if (selectedTime.isNotEmpty && !availableSlots.contains(selectedTime)) {
+                            selectedTime = '';
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Available time slots for ${DateFormat('EEE, dd MMM').format(selectedDate!)}:",
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _darkCharcoal),
+                              ),
+                              const SizedBox(height: 6),
+                              if (availableSlots.isEmpty) ...[
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.amber.shade300),
+                                  ),
+                                  child: Text(
+                                    DateTime.now().hour >= 17 && selectedDate!.day == DateTime.now().day
+                                        ? "Same-day bookings are closed after 5:00 PM. Please select a date from tomorrow onwards."
+                                        : "All time slots for this date are fully booked or unavailable. Please select another day.",
+                                    style: TextStyle(color: Colors.amber.shade900, fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ] else ...[
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: availableSlots.map((slot) {
+                                    final isSel = selectedTime == slot;
+                                    return ChoiceChip(
+                                      label: Text(slot),
+                                      selected: isSel,
+                                      selectedColor: _dustyOlive,
+                                      visualDensity: VisualDensity.compact,
+                                      labelStyle: TextStyle(
+                                        color: isSel ? Colors.white : _darkCharcoal,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                      onSelected: (sel) {
+                                        if (sel) setMState(() => selectedTime = slot);
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+
+                    _buildStepLabel("4. PREFERRED VET / SURGEON (OPTIONAL)"),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _ashGrey.withAlpha(100)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedVet,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            fillColor: Colors.transparent,
+                            filled: true,
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 10),
+                            border: InputBorder.none,
+                          ),
+                          dropdownColor: Colors.white,
+                          style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
+                          items: [
+                            "-- Select if any --",
+                            ...clinic.veterinarians,
+                          ].map((v) => DropdownMenuItem<String>(
+                            value: v,
+                            child: Text(
+                              v,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: v.startsWith("--") ? FontWeight.normal : FontWeight.bold,
+                                color: v.startsWith("--") ? Colors.grey.shade600 : _darkCharcoal,
+                                fontStyle: v.startsWith("--") ? FontStyle.italic : FontStyle.normal,
+                                fontSize: 13,
+                              ),
                             ),
-                            Icon(Icons.calendar_month, color: _dustyOlive, size: 18),
-                          ],
+                          )).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setMState(() => selectedVet = val);
+                            }
+                          },
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
 
-                    _buildStepLabel("4. TIME SLOT", isRequired: true),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: timeSlots.map((slot) {
-                        final isSel = selectedTime == slot;
-                        return ChoiceChip(
-                          label: Text(slot),
-                          selected: isSel,
-                          selectedColor: _dustyOlive,
-                          visualDensity: VisualDensity.compact,
-                          labelStyle: TextStyle(
-                            color: isSel ? Colors.white : _darkCharcoal,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                          onSelected: (sel) {
-                            if (sel) setMState(() => selectedTime = slot);
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildStepLabel("5. NOTES & SYMPTOMS (OPTIONAL)"),
+                    _buildStepLabel("6. NOTES & SYMPTOMS (OPTIONAL)"),
                     TextField(
                       controller: notesCtrl,
                       maxLines: 2,
@@ -1439,11 +1913,43 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                         ),
                         onPressed: () async {
                           if (selectedPet == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please select a pet first.")),
+                            _showBookingErrorDialog(
+                              context,
+                              "Pet Selection Required",
+                              "Please select a pet before confirming your appointment.",
                             );
                             return;
                           }
+
+                          if (selectedService.isEmpty) {
+                            _showBookingErrorDialog(
+                              context,
+                              "Service Required",
+                              "Please select a service type for your appointment.",
+                            );
+                            return;
+                          }
+
+                          if (selectedDate == null) {
+                            _showBookingErrorDialog(
+                              context,
+                              "Date Required",
+                              "Please select an appointment date from the schedule grid.",
+                            );
+                            return;
+                          }
+
+                          if (selectedTime.isEmpty) {
+                            _showBookingErrorDialog(
+                              context,
+                              "Time Slot Required",
+                              "Please select an available time slot for your appointment.",
+                            );
+                            return;
+                          }
+
+                          final userProvider = Provider.of<UserProvider>(context, listen: false);
+                          final String userName = userProvider.displayName?.isNotEmpty == true ? userProvider.displayName! : "Pet Owner";
 
                           final booking = BookingModel(
                             id: '',
@@ -1457,10 +1963,11 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                             clinicPhone: clinic.phone,
                             city: clinic.city,
                             serviceType: selectedService,
-                            bookingDate: selectedDate,
+                            bookingDate: selectedDate!,
                             timeSlot: selectedTime,
+                            preferredVet: (selectedVet.startsWith("--") || selectedVet.isEmpty) ? "Any Available Vet" : selectedVet,
                             notes: notesCtrl.text.trim(),
-                            status: 'CONFIRMED',
+                            status: 'PENDING',
                             createdAt: DateTime.now(),
                           );
 
@@ -1468,14 +1975,23 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
                           await NotificationService().showNotification(
                             id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                            title: "Vet Appointment Booked!",
-                            body: "Confirmed with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate)} at $selectedTime.",
+                            title: "Booking Submitted (Pending)",
+                            body: "Your booking request with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime is PENDING vet confirmation.",
                           );
 
+                          // 1. Log notification for Pet Owner
                           await UserNotificationService().logNotification(
                             userId: userId,
-                            title: "Vet Appointment Booked!",
-                            body: "Confirmed with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate)} at $selectedTime.",
+                            title: "Booking Submitted (Pending)",
+                            body: "Your booking request with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime is PENDING vet confirmation.",
+                            type: 'booking',
+                          );
+
+                          // 2. Log notification for Vet / Clinic
+                          await UserNotificationService().logNotification(
+                            userId: clinic.id,
+                            title: "New Appointment Request 🐾",
+                            body: "New booking request from $userName for ${selectedPet!.name} (${selectedPet!.species.name}) on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime.",
                             type: 'booking',
                           );
 
