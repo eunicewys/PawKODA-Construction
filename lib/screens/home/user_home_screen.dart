@@ -1907,25 +1907,29 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             ),
           ],
         ),
-        child: ListTile(
-          onTap: onTap,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDDB892).withAlpha(70),
-              shape: BoxShape.circle,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          child: ListTile(
+            onTap: onTap,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDDB892).withAlpha(70),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(i, color: _dustyOlive, size: 20),
             ),
-            child: Icon(i, color: _dustyOlive, size: 20),
-          ),
-          title: Text(
-            t,
-            style: TextStyle(
-              color: _darkCharcoal,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+            title: Text(
+              t,
+              style: TextStyle(
+                color: _darkCharcoal,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
+            trailing: Icon(Icons.chevron_right_rounded, color: _dustyOlive),
           ),
-          trailing: Icon(Icons.chevron_right_rounded, color: _dustyOlive),
         ),
       );
 

@@ -351,10 +351,12 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
     Widget? trailing,
     VoidCallback? onTap,
   }) {
-    return ListTile(
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       leading: Container(
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
@@ -380,6 +382,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       ),
       trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: _ashGrey, size: 18),
       onTap: onTap,
+    ),
     );
   }
 

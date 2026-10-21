@@ -133,17 +133,17 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                left: 20,
+                right: 20,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -152,7 +152,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   children: [
                     Center(
                       child: Container(
-                        width: 40,
+                        width: 36,
                         height: 4,
                         decoration: BoxDecoration(
                           color: Colors.grey.shade300,
@@ -160,79 +160,94 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        Icon(Icons.support_agent_rounded, color: _dustyOlive, size: 28),
-                        const SizedBox(width: 10),
+                        Icon(Icons.support_agent_rounded, color: _dustyOlive, size: 22),
+                        const SizedBox(width: 8),
                         Text(
                           "Report Problem / Contact Support",
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: _darkCharcoal,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       "Submit an inquiry to our support desk. We will respond within 24 hours.",
-                      style: TextStyle(fontSize: 12, color: _ashGrey),
+                      style: TextStyle(fontSize: 11, color: _ashGrey),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 14),
 
                     // Category Dropdown
                     DropdownButtonFormField<String>(
                       initialValue: selectedCategory,
+                      isExpanded: true,
+                      style: TextStyle(fontSize: 13, color: _darkCharcoal, fontWeight: FontWeight.w600),
                       decoration: InputDecoration(
                         labelText: "Issue Category *",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelStyle: const TextStyle(fontSize: 12),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'General Issue', child: Text("General Issue")),
-                        DropdownMenuItem(value: 'Vaccine / Health Reminders', child: Text("Vaccine / Health Reminders")),
-                        DropdownMenuItem(value: 'Vet Clinic Bookings', child: Text("Vet Clinic Bookings")),
-                        DropdownMenuItem(value: 'Nutrition Engine & Recipes', child: Text("Nutrition Engine & Recipes")),
-                        DropdownMenuItem(value: 'Account & Password', child: Text("Account & Password")),
+                        DropdownMenuItem(value: 'General Issue', child: Text("General Issue", style: TextStyle(fontSize: 13))),
+                        DropdownMenuItem(value: 'Vaccine / Health Reminders', child: Text("Vaccine / Health Reminders", style: TextStyle(fontSize: 13))),
+                        DropdownMenuItem(value: 'Vet Clinic Bookings', child: Text("Vet Clinic Bookings", style: TextStyle(fontSize: 13))),
+                        DropdownMenuItem(value: 'Nutrition Engine & Recipes', child: Text("Nutrition Engine & Recipes", style: TextStyle(fontSize: 13))),
+                        DropdownMenuItem(value: 'Account & Password', child: Text("Account & Password", style: TextStyle(fontSize: 13))),
                       ],
                       onChanged: (val) {
                         if (val != null) setSheetState(() => selectedCategory = val);
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
 
                     // Subject Field
                     TextField(
                       controller: subjectCtrl,
+                      style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
                         labelText: "Subject / Brief Summary *",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelStyle: const TextStyle(fontSize: 12),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         hintText: "e.g., Reminder notification delayed",
+                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
 
                     // Description Field
                     TextField(
                       controller: messageCtrl,
-                      maxLines: 4,
+                      maxLines: 3,
+                      style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
                         labelText: "Detailed Description *",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelStyle: const TextStyle(fontSize: 12),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         hintText: "Please describe the problem you encountered...",
+                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
                     // Submit Button
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
+                      height: 42,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _dustyOlive,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: isSubmitting
                             ? null
@@ -251,6 +266,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
 
                                 final uid = Provider.of<UserProvider>(context, listen: false).uid ?? '';
                                 final email = Provider.of<UserProvider>(context, listen: false).email ?? '';
+
+                                final messenger = ScaffoldMessenger.of(context);
 
                                 try {
                                   await FirebaseFirestore.instance.collection('SUPPORT_TICKETS').add({
@@ -272,9 +289,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                                   }
                                 } catch (e) {
                                   setSheetState(() => isSubmitting = false);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text("Error submitting ticket: $e")),
-                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error submitting ticket: $e")),
+                                    );
+                                  }
                                 }
                               },
                         child: isSubmitting
@@ -346,254 +365,274 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              // Support Desk Highlight Banner
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [_dustyOlive, const Color(0xFF585D4B)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _dustyOlive.withAlpha(80),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(40),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.headset_mic_rounded, color: Colors.white, size: 26),
+                  // Support Desk Highlight Banner
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [_dustyOlive, const Color(0xFF585D4B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _dustyOlive.withAlpha(60),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "PawKODA Support Desk",
-                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(40),
+                                shape: BoxShape.circle,
                               ),
-                              Text(
-                                "Mon - Fri • 9:00 AM – 6:00 PM (MYT)",
-                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                              child: const Icon(Icons.headset_mic_rounded, color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "PawKODA Support Desk",
+                                    style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    "Mon - Fri • 9:00 AM – 6:00 PM (MYT)",
+                                    style: TextStyle(color: Colors.white70, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(25),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.email_outlined, color: Colors.white, size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  supportEmail,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: _copyEmailToClipboard,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    "Copy",
+                                    style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 11),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(25),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.email_outlined, color: Colors.white, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              supportEmail,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: _copyEmailToClipboard,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                "Copy",
-                                style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: _dustyOlive,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            onPressed: _launchSupportEmail,
-                            icon: const Icon(Icons.send_rounded, size: 18),
-                            label: const Text("Send Email", style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white, width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            onPressed: _showReportProblemSheet,
-                            icon: const Icon(Icons.report_problem_outlined, size: 18),
-                            label: const Text("Report Issue", style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // FAQ Section Title & Search Bar
-              Text(
-                "FREQUENTLY ASKED QUESTIONS",
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: _ashGrey,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Search TextField
-              TextField(
-                controller: _searchController,
-                onChanged: (val) => setState(() => _searchQuery = val),
-                decoration: InputDecoration(
-                  hintText: "Search questions or keywords...",
-                  prefixIcon: Icon(Icons.search_rounded, color: _ashGrey),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  fillColor: Colors.white,
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // FAQs List
-              if (filteredFaqs.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.help_outline_rounded, size: 48, color: _ashGrey),
-                        const SizedBox(height: 10),
-                        Text("No matching FAQ questions found.", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text("Try searching for terms like 'vaccine', 'booking', or 'calories'.", style: TextStyle(color: _ashGrey, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredFaqs.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final faq = filteredFaqs[index];
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(6),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Theme(
-                        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                          childrenPadding: const EdgeInsets.only(left: 18, right: 18, bottom: 16),
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: _powderPetal, shape: BoxShape.circle),
-                            child: Icon(Icons.question_answer_rounded, color: _dustyOlive, size: 20),
-                          ),
-                          title: Text(
-                            faq['question']!,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: _darkCharcoal,
-                            ),
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              faq['category']!,
-                              style: TextStyle(fontSize: 11, color: _lightBronze, fontWeight: FontWeight.w600),
-                            ),
-                          ),
+                        const SizedBox(height: 12),
+                        Row(
                           children: [
-                            Text(
-                              faq['answer']!,
-                              style: TextStyle(fontSize: 14, color: _darkCharcoal.withAlpha(220), height: 1.4),
+                            Expanded(
+                              child: SizedBox(
+                                height: 38,
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: _dustyOlive,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: _launchSupportEmail,
+                                  icon: const Icon(Icons.send_rounded, size: 15),
+                                  label: const Text("Send Email", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: SizedBox(
+                                height: 38,
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(color: Colors.white, width: 1.2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: _showReportProblemSheet,
+                                  icon: const Icon(Icons.report_problem_outlined, size: 15),
+                                  label: const Text("Report Issue", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      ],
+                    ),
+                  ),
 
-              const SizedBox(height: 40),
-            ],
+                  const SizedBox(height: 16),
+
+                  // FAQ Section Title & Search Bar
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Text(
+                      "FREQUENTLY ASKED QUESTIONS",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: _ashGrey,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Search TextField
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: TextStyle(fontSize: 13, color: _darkCharcoal),
+                    decoration: InputDecoration(
+                      hintText: "Search questions or keywords...",
+                      hintStyle: TextStyle(fontSize: 12, color: _ashGrey),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      prefixIcon: Icon(Icons.search_rounded, color: _ashGrey, size: 18),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // FAQs List
+                  if (filteredFaqs.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.help_outline_rounded, size: 36, color: _ashGrey),
+                            const SizedBox(height: 8),
+                            Text("No matching FAQ questions found.", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(height: 4),
+                            Text("Try searching for terms like 'vaccine', 'booking', or 'calories'.", style: TextStyle(color: _ashGrey, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: filteredFaqs.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final faq = filteredFaqs[index];
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(5),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Theme(
+                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: ExpansionTile(
+                                dense: true,
+                                visualDensity: VisualDensity.compact,
+                                tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                childrenPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+                                leading: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(color: _powderPetal, borderRadius: BorderRadius.circular(8)),
+                                  child: Icon(Icons.question_answer_rounded, color: _dustyOlive, size: 18),
+                                ),
+                                title: Text(
+                                  faq['question']!,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: _darkCharcoal,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    faq['category']!,
+                                    style: TextStyle(fontSize: 10, color: _lightBronze, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                children: [
+                                  Text(
+                                    faq['answer']!,
+                                    style: TextStyle(fontSize: 12, color: _darkCharcoal.withAlpha(220), height: 1.35),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
-    ],
-  ),
-);
-}
+    );
+  }
 }

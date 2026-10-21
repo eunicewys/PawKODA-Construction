@@ -7,6 +7,7 @@ import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/user_notification_service.dart';
 import '../../services/notification_service.dart';
+import '../profile/edit_profile_screen.dart';
 import '../login_screen.dart';
 
 /// VetHomeScreen: Dashboard for Veterinarians.
@@ -273,10 +274,18 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                         icon: Icon(Icons.logout_rounded, color: _coffeeBean),
                         tooltip: "Logout",
                       ),
-                      CircleAvatar(
-                        radius: 26, 
-                        backgroundColor: _coffeeBean, 
-                        child: const Icon(Icons.local_hospital, color: Colors.white, size: 24)
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                          );
+                        },
+                        child: CircleAvatar(
+                          radius: 26, 
+                          backgroundColor: _coffeeBean, 
+                          child: const Icon(Icons.local_hospital, color: Colors.white, size: 24)
+                        ),
                       ),
                     ],
                   ),

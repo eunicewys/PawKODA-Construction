@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/image_helper.dart';
+import '../profile/edit_profile_screen.dart';
 
 class FringeHeader extends StatelessWidget {
   final String title;
@@ -198,26 +199,34 @@ class DashboardFringeHeader extends StatelessWidget {
                             icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 22),
                             tooltip: "Logout",
                           ),
-                          Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                            child: CircleAvatar(
-                              radius: 18,
-                              backgroundColor: powderPetal,
-                              backgroundImage: avatarImgProvider,
-                              child: avatarImgProvider == null
-                                  ? Text(
-                                      userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
-                                      style: const TextStyle(
-                                        color: dustyOlive,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                    )
-                                  : null,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                              ),
+                              child: CircleAvatar(
+                                radius: 18,
+                                backgroundColor: powderPetal,
+                                backgroundImage: avatarImgProvider,
+                                child: avatarImgProvider == null
+                                    ? Text(
+                                        userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
+                                        style: const TextStyle(
+                                          color: dustyOlive,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      )
+                                    : null,
+                              ),
                             ),
                           ),
                         ],
