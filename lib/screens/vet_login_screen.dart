@@ -176,6 +176,8 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
       backgroundColor: _coffeeBean,
       body: SafeArea(
@@ -221,106 +223,118 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
                 ),
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Veterinary Sign In",
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkText),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Sign in to manage your clinic appointments & operations",
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                      ),
-                      const SizedBox(height: 20),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Veterinary Sign In",
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkText),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Sign in to manage your clinic appointments & operations",
+                              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                            ),
+                            const SizedBox(height: 20),
 
-                      _buildField("ORGANIZATION EMAIL", _emailController, "clinic@vet.com", icon: Icons.email_outlined),
-                      const SizedBox(height: 14),
-                      _buildField("PASSWORD", _passwordController, "••••••••", isPass: true, icon: Icons.lock_outline),
-                      const SizedBox(height: 24),
+                            _buildField("ORGANIZATION EMAIL", _emailController, "clinic@vet.com", icon: Icons.email_outlined),
+                            const SizedBox(height: 14),
+                            _buildField("PASSWORD", _passwordController, "••••••••", isPass: true, icon: Icons.lock_outline),
+                            const SizedBox(height: 24),
 
-                      // Sign In Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleVetLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _coffeeBean,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                )
-                              : const Text("Sign In as Vet Clinic", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
+                            // Sign In Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _handleVetLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _coffeeBean,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Text("Sign In as Vet Clinic", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
 
-                      const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                      // Register Link
-                      Center(
-                        child: TextButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const VetRegisterScreen()),
-                          ),
-                          child: Text.rich(
-                            TextSpan(
-                              text: "New Veterinary Organization? ",
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                              children: [
-                                TextSpan(
-                                  text: "Register Here",
-                                  style: TextStyle(
-                                    color: _toffeeBrown,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    decoration: TextDecoration.underline,
+                            // Register Link
+                            Center(
+                              child: TextButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const VetRegisterScreen()),
+                                ),
+                                child: Text.rich(
+                                  TextSpan(
+                                    text: "New Veterinary Organization? ",
+                                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                    children: [
+                                      TextSpan(
+                                        text: "Register Here",
+                                        style: TextStyle(
+                                          color: _toffeeBrown,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (!isKeyboardOpen)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16, top: 8),
+                        child: Center(
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () => Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const LoginScreen()),
+                            ),
+                            child: Text.rich(
+                              TextSpan(
+                                text: "Not a Veterinary Organization? ",
+                                style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                children: [
+                                  TextSpan(
+                                    text: "Go to Pet Owner Login",
+                                    style: TextStyle(
+                                      color: _coffeeBean,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 8),
-
-                      // Switch back to Pet Owner Login
-                      Center(
-                        child: TextButton(
-                          onPressed: () => Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                          ),
-                          child: Text.rich(
-                            TextSpan(
-                              text: "Not a Veterinary Organization? ",
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                              children: [
-                                TextSpan(
-                                  text: "Go to Pet Owner Login",
-                                  style: TextStyle(
-                                    color: _coffeeBean,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
             ),
