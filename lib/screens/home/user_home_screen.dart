@@ -2109,15 +2109,19 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Upcoming Reminders",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5),
+                  const Expanded(
+                    child: Text(
+                      "Upcoming Reminders",
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5),
+                    ),
                   ),
-                  if (reminders.length > 3)
+                  if (reminders.length > 3) ...[
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => _showAllRemindersBottomSheet(context, reminders, pets),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withAlpha(40),
                           borderRadius: BorderRadius.circular(10),
@@ -2126,12 +2130,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           "View All (${reminders.length})",
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -2333,9 +2338,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -2353,18 +2357,22 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                             ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: isUrgent ? _errorCoral.withAlpha(25) : _dustyOlive.withAlpha(20),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item.dateStatusText,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: isUrgent ? _errorCoral : _dustyOlive,
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isUrgent ? _errorCoral.withAlpha(25) : _dustyOlive.withAlpha(20),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              item.dateStatusText,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: isUrgent ? _errorCoral : _dustyOlive,
+                              ),
                             ),
                           ),
                         ),
@@ -2468,12 +2476,15 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    "All Upcoming Reminders (${reminders.length})",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: _darkCharcoal,
+                  Expanded(
+                    child: Text(
+                      "All Upcoming Reminders (${reminders.length})",
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _darkCharcoal,
+                      ),
                     ),
                   ),
                   IconButton(

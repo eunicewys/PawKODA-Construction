@@ -45,6 +45,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   final MapController _mapController = MapController();
 
   late TabController _tabController;
+  int _bookingSubTab = 0; // 0 = Active Bookings, 1 = Past Bookings
   String _selectedCity = 'All Cities (Penang)';
   String _searchQuery = '';
   ClinicModel? _selectedMapClinic;
@@ -53,6 +54,41 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
   double? _userLat;
   double? _userLng;
+
+  bool _isBookingPast(BookingModel booking) {
+    final statusUpper = booking.status.toUpperCase();
+    if (statusUpper == 'COMPLETED' || statusUpper == 'CANCELLED') {
+      return true;
+    }
+
+    DateTime apptDateTime = booking.bookingDate;
+    try {
+      if (booking.timeSlot.isNotEmpty) {
+        final parts = booking.timeSlot.trim().split(' ');
+        final timeParts = parts[0].split(':');
+        int hour = int.parse(timeParts[0]);
+        final int minute = int.parse(timeParts[1]);
+        final String period = parts[1].toUpperCase();
+
+        if (period == 'PM' && hour < 12) {
+          hour += 12;
+        } else if (period == 'AM' && hour == 12) {
+          hour = 0;
+        }
+
+        apptDateTime = DateTime(
+          booking.bookingDate.year,
+          booking.bookingDate.month,
+          booking.bookingDate.day,
+          hour,
+          minute,
+        );
+      }
+    } catch (_) {}
+
+    final cutoffTime = apptDateTime.add(const Duration(hours: 2));
+    return DateTime.now().isAfter(cutoffTime);
+  }
 
   @override
   void initState() {
@@ -1002,46 +1038,108 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         }
 
         final bookings = snapshot.data ?? [];
+        final activeList = bookings.where((b) => !_isBookingPast(b)).toList();
+        final pastList = bookings.where((b) => _isBookingPast(b)).toList();
 
-        if (bookings.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.calendar_month, size: 52, color: _ashGrey),
-                const SizedBox(height: 10),
-                Text(
-                  "No Appointments Yet",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkCharcoal),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Your booked appointments in Penang will appear here.",
-                  style: TextStyle(color: _ashGrey, fontSize: 12),
-                ),
-                const SizedBox(height: 14),
-                ElevatedButton.icon(
-                  onPressed: () => _tabController.animateTo(0),
-                  icon: const Icon(Icons.search, size: 16),
-                  label: const Text("Find a Clinic", style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _dustyOlive,
-                    visualDensity: VisualDensity.compact,
+        final currentList = _bookingSubTab == 0 ? activeList : pastList;
+
+        return Column(
+          children: [
+            // Sub-Tab Switcher
+            Container(
+              padding: const EdgeInsets.all(4),
+              margin: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _drySage.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _bookingSubTab = 0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _bookingSubTab == 0 ? _dustyOlive : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          "Active Bookings (${activeList.length})",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _bookingSubTab == 0 ? Colors.white : _darkCharcoal,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _bookingSubTab = 1),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _bookingSubTab == 1 ? _dustyOlive : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          "Past Bookings (${pastList.length})",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _bookingSubTab == 1 ? Colors.white : _darkCharcoal,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        }
 
-        return ListView.separated(
-          padding: const EdgeInsets.all(12),
-          itemCount: bookings.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final booking = bookings[index];
-            return _buildBookingItemCard(booking, userId);
-          },
+            Expanded(
+              child: currentList.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _bookingSubTab == 0 ? Icons.calendar_today_rounded : Icons.history_rounded,
+                            size: 48,
+                            color: _ashGrey,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            _bookingSubTab == 0 ? "No Active Appointments" : "No Past Appointments",
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _bookingSubTab == 0
+                                ? "Your upcoming Penang vet appointments will appear here."
+                                : "Your past and completed vet appointment records will be stored here.",
+                            style: TextStyle(color: _ashGrey, fontSize: 12),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      itemCount: currentList.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final booking = currentList[index];
+                        return _buildBookingItemCard(booking, userId);
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );
@@ -1049,31 +1147,37 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
   Widget _buildBookingItemCard(BookingModel booking, String userId) {
     final String statusUpper = booking.status.toUpperCase();
+    final bool isPast = _isBookingPast(booking);
     final DateFormat formatter = DateFormat('EEE, dd MMM yyyy');
 
-    final Color badgeBgColor = statusUpper == 'PENDING'
-        ? Colors.orange.withValues(alpha: 0.15)
-        : (statusUpper == 'CONFIRMED'
-            ? Colors.green.withValues(alpha: 0.15)
-            : (statusUpper == 'CANCELLED'
-                ? Colors.red.withValues(alpha: 0.12)
-                : Colors.blue.withValues(alpha: 0.12)));
+    Color badgeBgColor;
+    Color badgeTextColor;
+    String statusLabel;
 
-    final Color badgeTextColor = statusUpper == 'PENDING'
-        ? Colors.orange.shade900
-        : (statusUpper == 'CONFIRMED'
-            ? Colors.green.shade800
-            : (statusUpper == 'CANCELLED'
-                ? Colors.red.shade800
-                : Colors.blue.shade800));
-
-    final String statusLabel = statusUpper == 'PENDING'
-        ? "Pending"
-        : (statusUpper == 'CONFIRMED'
-            ? "Confirmed"
-            : (statusUpper == 'CANCELLED'
-                ? "Cancelled"
-                : "Completed"));
+    if (statusUpper == 'COMPLETED') {
+      badgeBgColor = Colors.green.withValues(alpha: 0.15);
+      badgeTextColor = Colors.green.shade800;
+      statusLabel = "Completed";
+    } else if (statusUpper == 'CANCELLED') {
+      badgeBgColor = Colors.red.withValues(alpha: 0.12);
+      badgeTextColor = Colors.red.shade800;
+      statusLabel = "Cancelled";
+    } else if (statusUpper == 'PENDING') {
+      badgeBgColor = Colors.orange.withValues(alpha: 0.15);
+      badgeTextColor = Colors.orange.shade900;
+      statusLabel = "Pending";
+    } else {
+      // CONFIRMED
+      if (isPast) {
+        badgeBgColor = Colors.grey.withValues(alpha: 0.18);
+        badgeTextColor = Colors.grey.shade800;
+        statusLabel = "Expired";
+      } else {
+        badgeBgColor = Colors.green.withValues(alpha: 0.15);
+        badgeTextColor = Colors.green.shade800;
+        statusLabel = "Confirmed";
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1121,7 +1225,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
-                  if (statusUpper == 'CANCELLED') ...[
+                  if (isPast || statusUpper == 'CANCELLED' || statusUpper == 'COMPLETED') ...[
                     const SizedBox(width: 6),
                     GestureDetector(
                       onTap: () => _confirmDeleteBooking(context, booking.id, userId, booking.clinicName),
@@ -1209,7 +1313,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (statusUpper != 'CANCELLED' && statusUpper != 'COMPLETED')
+              if (!isPast && statusUpper != 'CANCELLED' && statusUpper != 'COMPLETED')
                 TextButton(
                   onPressed: () => _confirmCancelBooking(context, booking.id, userId),
                   style: TextButton.styleFrom(visualDensity: VisualDensity.compact),

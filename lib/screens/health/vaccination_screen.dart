@@ -471,27 +471,25 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                             }
 
                             // Trigger On-Phone Notification Logic
-                            final int notificationTagHash = recordId.hashCode;
-
                             if (isUpcoming) {
                               await NotificationService().scheduleHealthReminder(
-                                baseId: notificationTagHash,
-                                id: notificationTagHash,
+                                rawId: recordId,
                                 petName: widget.pet.name,
+                                recordType: selectedType! == 'Vaccine' ? 'Vaccination' : 'Deworm',
                                 treatmentName: formattedName,
-                                type: selectedType!,
                                 nextDueDate: selectedDate,
+                                reminderTime: const TimeOfDay(hour: 9, minute: 0),
                               );
 
                               await UserNotificationService().logNotification(
                                 userId: uid,
                                 title: "Health Reminder Set: ${widget.pet.name}",
-                                body: "$selectedType ($formattedName) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
+                                body: "${selectedType! == 'Vaccine' ? 'Vaccination' : 'Deworm'} ($formattedName) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
                                 type: selectedType!.toLowerCase() == 'deworming' ? 'deworming' : 'vaccine',
                               );
                             } else if (existingRecord != null) {
                               // If converting an upcoming item to completed/past, cancel old notifications
-                              await NotificationService().cancelReminder(notificationTagHash);
+                              await NotificationService().cancelReminder(recordId);
                             }
 
                             if (context.mounted) {
@@ -509,7 +507,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            "Reminder set! Daily 9:00 AM alerts enabled starting 3 days before due date.",
+                                            "Saved. Reminder scheduled.",
                                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                                           ),
                                         ),
@@ -960,7 +958,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                                 ? "Overdue ${diffDays.abs()} day${diffDays.abs() == 1 ? '' : 's'}"
                                                 : (isDueToday
                                                     ? "Due Today! (${DateFormat('dd MMM yyyy').format(dueDate)})"
-                                                    : "Upcoming Reminder: Next Due ${DateFormat('dd MMM yyyy').format(dueDate)} (Daily 9:00 AM Alert)"),
+                                                    : "Upcoming Reminder: ${DateFormat('dd MMM yyyy').format(dueDate)}"),
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,

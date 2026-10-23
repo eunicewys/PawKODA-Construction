@@ -30,20 +30,24 @@ class ReminderItem {
     required this.statusTag,
   });
 
-  /// Helper to calculate human readable date status: "Today", "Tomorrow", "In 3 days", "Overdue", etc.
+  /// Helper to calculate human readable date status: "Today 02:00 PM", "Tomorrow 10:30 AM", "In 3 days", etc.
   String get dateStatusText {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final targetDate = DateTime(date.year, date.month, date.day);
     final diffDays = targetDate.difference(today).inDays;
 
+    final String slotText = (timeSlot != null && timeSlot!.trim().isNotEmpty)
+        ? timeSlot!.trim().replaceAll("at ", "")
+        : "";
+
     if (diffDays < 0) {
       final abs = diffDays.abs();
       return "Overdue by $abs day${abs == 1 ? '' : 's'}";
     } else if (diffDays == 0) {
-      return timeSlot != null && timeSlot!.isNotEmpty ? "Today at $timeSlot" : "Today";
+      return "Due";
     } else if (diffDays == 1) {
-      return timeSlot != null && timeSlot!.isNotEmpty ? "Tomorrow at $timeSlot" : "Tomorrow";
+      return slotText.isNotEmpty ? "Tomorrow $slotText" : "Tomorrow";
     } else if (diffDays <= 7) {
       return "In $diffDays days";
     } else {
