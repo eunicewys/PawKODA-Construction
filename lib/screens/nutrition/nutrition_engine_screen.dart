@@ -835,7 +835,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                       color: Colors.white,
                       size: 18,
                     ),
-                    label: const Text("Save Recipe", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    label: const Text("Save Meal", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: canSave ? _dustyOlive : _ashGrey,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -975,31 +975,40 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: Text("Save Custom Recipe", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Give your balanced meal recipe a name to save it to your collection:", style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-            const SizedBox(height: 14),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: "Recipe Name *",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        title: Text("Save Custom Meal", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Give your balanced meal a name to save it to your collection:", style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              const SizedBox(height: 14),
+              TextField(
+                controller: nameController,
+                style: TextStyle(fontSize: 13, color: _darkCharcoal, fontWeight: FontWeight.w600),
+                decoration: InputDecoration(
+                  labelText: "Meal Name *",
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel", style: TextStyle(color: _ashGrey, fontWeight: FontWeight.bold)),
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text("Cancel", style: TextStyle(color: _ashGrey, fontWeight: FontWeight.bold, fontSize: 13)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _dustyOlive),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _dustyOlive,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () async {
               final uid = Provider.of<UserProvider>(context, listen: false).uid 
                   ?? FirebaseAuth.instance.currentUser?.uid;
@@ -1012,6 +1021,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                 petId: pet.id,
                 petName: pet.name,
                 recipeName: recipeName,
+                mealsPerDay: provider.mealsPerDay,
                 createdAt: DateTime.now(),
                 totalKcal: provider.totalKcal,
                 ingredients: List.from(provider.bowl),
@@ -1021,16 +1031,16 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
               await recipeService.saveRecipe(uid, recipe);
 
               if (context.mounted) {
-                Navigator.pop(context);
+                Navigator.pop(dialogCtx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: _dustyOlive,
-                    content: Text("Recipe '$recipeName' saved successfully! View it in Quick Actions -> Recipes."),
+                    content: Text("Meal '$recipeName' saved successfully!"),
                   ),
                 );
               }
             },
-            child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import '../models/clinic_model.dart';
 import '../models/booking_model.dart';
 
@@ -299,14 +300,85 @@ class BookingService {
     }
   }
 
-  /// Save booking to Firestore under `USERS/{userId}/BOOKINGS`
-  Future<String> createBooking(BookingModel booking) async {
-    final ref = await _db
+  /// Sanitize string for Firestore document ID key
+  String _slugify(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .trim();
+  }
+
+  /// Create booking atomically using a Firestore Transaction to guarantee
+  /// that even if two users click "Confirm" within 0.001 seconds, only the
+  /// faster user gets the slot, while the slower user receives an error.
+  Future<String> createBookingWithAtomicLock(BookingModel booking) async {
+    final String dateKey = DateFormat('yyyy-MM-dd').format(booking.bookingDate);
+    final String slotKey = _slugify(booking.timeSlot);
+    final String vetKey = _slugify(booking.preferredVet);
+
+    final bool isAnyVet = vetKey.contains('any') || vetKey.startsWith('--') || vetKey.isEmpty;
+
+    final String specificLockDocId = '${booking.clinicId}_${dateKey}_${vetKey}_$slotKey';
+    final String anyVetLockDocId = '${booking.clinicId}_${dateKey}_any_vet_$slotKey';
+
+    final DocumentReference specificLockRef = _db.collection('CLINIC_SLOT_LOCKS').doc(specificLockDocId);
+    final DocumentReference anyVetLockRef = _db.collection('CLINIC_SLOT_LOCKS').doc(anyVetLockDocId);
+
+    final DocumentReference userBookingRef = _db
         .collection('USERS')
         .doc(booking.userId)
         .collection('BOOKINGS')
-        .add(booking.toMap());
-    return ref.id;
+        .doc(); // Auto-generate ID
+
+    await _db.runTransaction((transaction) async {
+      // 1. Read existing lock documents atomically
+      final DocumentSnapshot specificLockSnap = await transaction.get(specificLockRef);
+      final DocumentSnapshot anyVetLockSnap = await transaction.get(anyVetLockRef);
+
+      // 2. Check for conflicts
+      if (specificLockSnap.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'already-exists',
+          message: 'Sorry! This time slot for ${booking.preferredVet} was just booked by another user. Please select another time slot or day.',
+        );
+      }
+
+      if (anyVetLockSnap.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'already-exists',
+          message: 'Sorry! This time slot at ${booking.clinicName} was just booked by another user. Please select another time slot or day.',
+        );
+      }
+
+      // 3. Write atomic locks
+      final Map<String, dynamic> lockData = {
+        'clinicId': booking.clinicId,
+        'bookingDate': dateKey,
+        'timeSlot': booking.timeSlot,
+        'preferredVet': booking.preferredVet,
+        'userId': booking.userId,
+        'bookingId': userBookingRef.id,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      transaction.set(specificLockRef, lockData);
+      if (!isAnyVet) {
+        transaction.set(anyVetLockRef, lockData);
+      }
+
+      // 4. Create the booking document
+      transaction.set(userBookingRef, booking.toMap());
+    });
+
+    return userBookingRef.id;
+  }
+
+  /// Save booking to Firestore under `USERS/{userId}/BOOKINGS`
+  Future<String> createBooking(BookingModel booking) async {
+    return createBookingWithAtomicLock(booking);
   }
 
   /// Stream active and past bookings for a user
@@ -344,6 +416,10 @@ class BookingService {
         .collection('BOOKINGS')
         .doc(bookingId)
         .update({'status': newStatus.toUpperCase()});
+
+    if (newStatus.toUpperCase() == 'CANCELLED') {
+      await _releaseBookingLock(userId, bookingId);
+    }
   }
 
   /// Cancel a booking in Firestore
@@ -355,21 +431,38 @@ class BookingService {
   Stream<List<BookingModel>> streamClinicActiveBookings(String clinicId) {
     return _db
         .collectionGroup('BOOKINGS')
-        .where('clinicId', isEqualTo: clinicId)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => BookingModel.fromMap(doc.data(), doc.id))
-            .where((b) => b.status.toUpperCase() == 'PENDING' || b.status.toUpperCase() == 'CONFIRMED')
+            .where((b) =>
+                b.clinicId == clinicId &&
+                (b.status.toUpperCase() == 'PENDING' || b.status.toUpperCase() == 'CONFIRMED'))
             .toList());
   }
 
   /// Permanently delete a booking record from Firestore
   Future<void> deleteBooking(String userId, String bookingId) async {
+    await _releaseBookingLock(userId, bookingId);
     await _db
         .collection('USERS')
         .doc(userId)
         .collection('BOOKINGS')
         .doc(bookingId)
         .delete();
+  }
+
+  Future<void> _releaseBookingLock(String userId, String bookingId) async {
+    try {
+      final locks = await _db
+          .collection('CLINIC_SLOT_LOCKS')
+          .where('bookingId', isEqualTo: bookingId)
+          .get();
+
+      for (final doc in locks.docs) {
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      debugPrint("Error releasing lock for booking $bookingId: $e");
+    }
   }
 }

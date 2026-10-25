@@ -75,4 +75,36 @@ class PetService {
           return PetProfile.fromMap(snapshot.data()!, snapshot.id);
         });
   }
+
+  /// Fetches a single pet by ID once.
+  Future<PetProfile?> getPet(String userId, String petId) async {
+    try {
+      final doc = await _db
+          .collection('USERS')
+          .doc(userId)
+          .collection('PETS')
+          .doc(petId)
+          .get();
+      if (!doc.exists || doc.data() == null) return null;
+      return PetProfile.fromMap(doc.data()!, doc.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetches all user pets once.
+  Future<List<PetProfile>> getUserPets(String userId) async {
+    try {
+      final snapshot = await _db
+          .collection('USERS')
+          .doc(userId)
+          .collection('PETS')
+          .get();
+      return snapshot.docs
+          .map((doc) => PetProfile.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
 }

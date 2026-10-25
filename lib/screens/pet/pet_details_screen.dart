@@ -714,9 +714,11 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                 Navigator.of(context).pop();
               }
             },
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.9,
-          decoration: BoxDecoration(color: _desertSand, borderRadius: const BorderRadius.vertical(top: Radius.circular(40))),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                decoration: BoxDecoration(color: _desertSand, borderRadius: const BorderRadius.vertical(top: Radius.circular(40))),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
           child: SingleChildScrollView(
             child: Column(
@@ -945,7 +947,33 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                   )).toList(),
                 ),
                 CheckboxListTile(
-                  title: Row(children: [const Text("Others: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)), Expanded(child: TextField(controller: otherAllergenCtrl, enabled: !hasNoAllergies, decoration: InputDecoration(hintText: "Specify...", hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13), isDense: true, border: InputBorder.none), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)))]),
+                  title: Row(
+                    children: [
+                      const Text("Others: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)), 
+                      Expanded(
+                        child: TextField(
+                          controller: otherAllergenCtrl, 
+                          enabled: !hasNoAllergies, 
+                          scrollPadding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 160),
+                          decoration: InputDecoration(
+                            hintText: "Specify...", 
+                            hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13), 
+                            isDense: true, 
+                            border: InputBorder.none,
+                          ), 
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          onTap: () {
+                            setMState(() {
+                              hasNoAllergies = false;
+                              if (!selectedAllergens.contains("Other")) {
+                                selectedAllergens.add("Other");
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                   value: selectedAllergens.contains("Other") && !hasNoAllergies,
                   onChanged: (val) {
                     setMState(() { 
@@ -1051,6 +1079,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             ),
           ),
         ),
+      ),
       ); // PopScope
       }, // StatefulBuilder builder
       ), // StatefulBuilder

@@ -115,13 +115,16 @@ class NotificationService {
     return false;
   }
 
-  /// Ensures notification ID is a safe 32-bit positive integer (0 to 99,999)
+  /// Ensures notification ID is a unique, safe 32-bit positive integer (0 to 2,147,483,000)
+  /// Using 2+ Billion ID range ensures different reminders on the same day stack without overlapping or replacing each other.
   int _toSafeNotificationId(dynamic input) {
-    if (input == null) return 0;
-    if (input is int) {
-      return (input.abs() % 100000);
+    if (input == null) {
+      return (DateTime.now().millisecondsSinceEpoch.abs() % 2147483000);
     }
-    return (input.hashCode.abs() % 100000);
+    if (input is int) {
+      return (input.abs() % 2147483000);
+    }
+    return (input.hashCode.abs() % 2147483000);
   }
 
   /// Normalize recordType string to 'Vaccination' or 'Deworm'
@@ -138,6 +141,7 @@ class NotificationService {
   /// Schedule Health Reminder
   ///
   /// Triggers exactly 3 days before `nextDueDate` at 09:00 AM (or user-selected time) in Malaysia time.
+  /// Uses AndroidScheduleMode.alarmClock for maximum reliability on Huawei/OEM battery saver devices.
   /// If 3 days prior has passed but the due date is still in the future, schedules for the next available 9:00 AM.
   /// If the due date has already passed, fires an immediate overdue alert.
   /// Title: Reminder: [Pet Name]'s [Vaccination/Deworm] ([Vaccine Name/Deworm Name]) Due Soon!
@@ -209,7 +213,7 @@ class NotificationService {
       return;
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
       healthChannelName,
       channelDescription: healthChannelDesc,
@@ -219,15 +223,19 @@ class NotificationService {
       playSound: true,
       enableVibration: true,
       visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.reminder,
-      audioAttributesUsage: AudioAttributesUsage.notification,
+      category: AndroidNotificationCategory.alarm,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
       ticker: 'Pet Health Reminder',
       autoCancel: true,
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: title,
+      ),
     );
 
-    const NotificationDetails platformDetails = NotificationDetails(
+    final NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+      iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
     );
 
     // Request permissions on Android 13+ / exact alarms
@@ -236,32 +244,49 @@ class NotificationService {
     }
 
     try {
+      // AndroidScheduleMode.alarmClock bypasses Huawei/OEM Doze restrictions like a real alarm clock
       await _notificationsPlugin.zonedSchedule(
         safeId,
         title,
         body,
         scheduledDate,
         platformDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'health_reminder_$safeId',
       );
-      debugPrint("Health reminder scheduled successfully with exactAllowWhileIdle for $scheduledDate (ID:$safeId)");
+      debugPrint("Health reminder scheduled with alarmClock mode for $scheduledDate (ID:$safeId)");
     } catch (e) {
-      debugPrint("Failed to schedule with exact mode ($e). Falling back to inexactAllowWhileIdle...");
-      await _notificationsPlugin.zonedSchedule(
-        safeId,
-        title,
-        body,
-        scheduledDate,
-        platformDetails,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: 'health_reminder_$safeId',
-      );
-      debugPrint("Health reminder fallback scheduled successfully for $scheduledDate (ID:$safeId)");
+      debugPrint("alarmClock mode failed ($e). Retrying with exactAllowWhileIdle...");
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          safeId,
+          title,
+          body,
+          scheduledDate,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: 'health_reminder_$safeId',
+        );
+        debugPrint("Health reminder scheduled with exactAllowWhileIdle for $scheduledDate (ID:$safeId)");
+      } catch (e2) {
+        debugPrint("exactAllowWhileIdle failed ($e2). Falling back to inexactAllowWhileIdle...");
+        await _notificationsPlugin.zonedSchedule(
+          safeId,
+          title,
+          body,
+          scheduledDate,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: 'health_reminder_$safeId',
+        );
+        debugPrint("Health reminder fallback scheduled for $scheduledDate (ID:$safeId)");
+      }
     }
   }
 
@@ -282,7 +307,7 @@ class NotificationService {
     final String title = "Reminder: $petName's $formattedRecordType ($treatmentName) Due Soon!";
     const String body = "Arrange Vet appointment today.";
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
       healthChannelName,
       channelDescription: healthChannelDesc,
@@ -292,13 +317,17 @@ class NotificationService {
       playSound: true,
       enableVibration: true,
       visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.reminder,
-      audioAttributesUsage: AudioAttributesUsage.notification,
+      category: AndroidNotificationCategory.alarm,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: title,
+      ),
     );
 
-    const NotificationDetails platformDetails = NotificationDetails(
+    final NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+      iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
     );
 
     await _notificationsPlugin.show(
@@ -323,7 +352,7 @@ class NotificationService {
   }) async {
     final int safeId = _toSafeNotificationId(rawId ?? baseId ?? id ?? title);
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
       healthChannelName,
       channelDescription: healthChannelDesc,
@@ -335,11 +364,15 @@ class NotificationService {
       visibility: NotificationVisibility.public,
       category: AndroidNotificationCategory.reminder,
       audioAttributesUsage: AudioAttributesUsage.notification,
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: title,
+      ),
     );
 
-    const NotificationDetails platformDetails = NotificationDetails(
+    final NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+      iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
     );
 
     await _notificationsPlugin.show(

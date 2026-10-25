@@ -57,6 +57,7 @@ class ClinicModel {
       longitude: longitude,
       imageUrl: imageUrl,
       services: services,
+      veterinarians: veterinarians,
       isEmergency24h: isEmergency24h,
       isRecommended: isRecommended,
       description: description,

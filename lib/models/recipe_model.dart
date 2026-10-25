@@ -6,6 +6,7 @@ class SavedRecipe {
   final String petId;
   final String petName;
   final String recipeName;
+  final int mealsPerDay;
   final DateTime createdAt;
   final double totalKcal;
   final List<BowlIngredient> ingredients;
@@ -15,6 +16,7 @@ class SavedRecipe {
     required this.petId,
     required this.petName,
     required this.recipeName,
+    this.mealsPerDay = 1,
     required this.createdAt,
     required this.totalKcal,
     required this.ingredients,
@@ -25,6 +27,7 @@ class SavedRecipe {
       'petId': petId,
       'petName': petName,
       'recipeName': recipeName,
+      'mealsPerDay': mealsPerDay,
       'createdAt': Timestamp.fromDate(createdAt),
       'totalKcal': totalKcal,
       'ingredients': ingredients.map((item) => {
@@ -61,7 +64,8 @@ class SavedRecipe {
       id: docId,
       petId: map['petId'] ?? '',
       petName: map['petName'] ?? 'Pet',
-      recipeName: map['recipeName'] ?? 'Custom Recipe',
+      recipeName: map['recipeName'] ?? 'Custom Meal',
+      mealsPerDay: (map['mealsPerDay'] as num?)?.toInt() ?? 1,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       totalKcal: (map['totalKcal'] as num?)?.toDouble() ?? 0.0,
       ingredients: bowlList,

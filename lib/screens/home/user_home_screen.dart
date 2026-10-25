@@ -383,12 +383,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setMState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.9,
-            decoration: BoxDecoration(
-              color: _desertSand,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-            ),
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: _desertSand,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+              ),
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
             child: SingleChildScrollView(
               child: Column(
@@ -636,6 +638,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           child: TextField(
                             controller: otherAllergenCtrl,
                             enabled: !hasNoAllergies,
+                            scrollPadding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 160),
                             decoration: InputDecoration(
                               hintText: "Specify...", 
                               hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13),
@@ -643,6 +646,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                               border: InputBorder.none
                             ),
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            onTap: () {
+                              setMState(() {
+                                hasNoAllergies = false;
+                                if (!selectedAllergens.contains("Other")) {
+                                  selectedAllergens.add("Other");
+                                }
+                              });
+                            },
                           ),
                         ),
                       ],
@@ -763,11 +774,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 
 
 
@@ -796,12 +808,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setMState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.9,
-            decoration: BoxDecoration(
-              color: _desertSand, // Changed to Desert Sand as requested
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-            ),
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: _desertSand, // Changed to Desert Sand as requested
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+              ),
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
             child: SingleChildScrollView(
               child: Column(
@@ -1076,6 +1090,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           child: TextField(
                             controller: otherAllergenCtrl,
                             enabled: !hasNoAllergies,
+                            scrollPadding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 160),
                             decoration: InputDecoration(
                               hintText: "Specify...", 
                               hintStyle: TextStyle(color: _darkCharcoal.withAlpha(120), fontSize: 13),
@@ -1083,6 +1098,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                               border: InputBorder.none
                             ),
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            onTap: () {
+                              setMState(() {
+                                hasNoAllergies = false;
+                                if (!selectedAllergens.contains("Other")) {
+                                  selectedAllergens.add("Other");
+                                }
+                              });
+                            },
                           ),
                         ),
                       ],
@@ -1233,11 +1256,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 
   void _showImageSourceSheet(StateSetter setMState, Function(XFile?) onImagePicked) {
     showModalBottomSheet(

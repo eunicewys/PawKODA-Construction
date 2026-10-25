@@ -3,9 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/recipe_model.dart';
+import '../../models/pet_model.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/nutritional_provider.dart';
 import '../../services/recipe_service.dart';
+import '../../services/pet_service.dart';
 import '../widgets/fringe_header.dart';
 import 'nutrition_engine_screen.dart';
 
@@ -198,6 +200,18 @@ class SavedRecipesScreen extends StatelessWidget {
                                         "${recipe.totalKcal.toInt()} kcal total",
                                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _darkCharcoal),
                                       ),
+                                      const SizedBox(width: 10),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: _dustyOlive.withAlpha(25),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          "${recipe.mealsPerDay} meal${recipe.mealsPerDay == 1 ? '' : 's'}/day",
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: _dustyOlive),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -225,19 +239,49 @@ class SavedRecipesScreen extends StatelessWidget {
                                   width: double.infinity,
                                   height: 42,
                                   child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      final provider = Provider.of<NutritionalProvider>(context, listen: false);
-                                      provider.clearBowl();
-                                      for (var ing in recipe.ingredients) {
-                                        provider.addIngredient(ing.ingredient, ing.massGrams);
+                                    onPressed: () async {
+                                      final PetService petService = PetService();
+
+                                      PetProfile? targetPet = await petService.getPet(uid, recipe.petId);
+
+                                      if (targetPet == null) {
+                                        final userPets = await petService.getUserPets(uid);
+                                        if (userPets.isNotEmpty) {
+                                          targetPet = userPets.firstWhere(
+                                            (p) => p.name.toLowerCase() == recipe.petName.toLowerCase(),
+                                            orElse: () => userPets.first,
+                                          );
+                                        } else {
+                                          targetPet = PetProfile(
+                                            id: recipe.petId.isNotEmpty ? recipe.petId : 'temp_pet',
+                                            name: recipe.petName.isNotEmpty ? recipe.petName : 'Pet',
+                                            species: Species.dog,
+                                            breed: 'Domestic',
+                                            weightKg: 10.0,
+                                            birthDate: DateTime.now().subtract(const Duration(days: 365)),
+                                            gender: Gender.male,
+                                            condition: PetCondition.intact,
+                                            allergens: [],
+                                          );
+                                        }
                                       }
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const NutritionEngineScreen()),
-                                      );
+
+                                      if (context.mounted) {
+                                        final provider = Provider.of<NutritionalProvider>(context, listen: false);
+                                        provider.setPet(targetPet!);
+                                        provider.setMealsPerDay(recipe.mealsPerDay);
+                                        for (var ing in recipe.ingredients) {
+                                          provider.addIngredient(ing.ingredient, ing.massGrams);
+                                        }
+
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const NutritionEngineScreen()),
+                                        );
+                                      }
                                     },
                                     icon: const Icon(Icons.soup_kitchen_rounded, size: 18, color: Colors.white),
-                                    label: const Text("Load into Engine Bowl", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    label: const Text("Load Meal into Bowl", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _dustyOlive,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
