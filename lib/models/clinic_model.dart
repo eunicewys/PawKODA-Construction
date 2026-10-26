@@ -94,7 +94,9 @@ class ClinicModel {
       rating: (map['rating'] as num?)?.toDouble() ?? 4.7,
       reviewCount: (map['reviewCount'] as num?)?.toInt() ?? 100,
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 1.0,
-      operatingHours: map['operatingHours'] ?? '8am – 8pm',
+      operatingHours: (map['operatingHours'] != null && map['operatingHours'].toString().trim().isNotEmpty)
+          ? map['operatingHours'].toString().trim()
+          : '09:00 AM - 07:00 PM',
       city: map['city'] ?? 'George Town',
       address: map['address'] ?? '',
       phone: map['phone'] ?? '',

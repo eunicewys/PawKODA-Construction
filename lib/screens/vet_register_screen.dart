@@ -22,7 +22,8 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _operatingHoursController = TextEditingController(text: "09:00 AM - 07:00 PM");
+  final TextEditingController _websiteController = TextEditingController();
+  final TextEditingController _googleMapsController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
@@ -38,6 +39,25 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
   final Color _almondCream = const Color(0xFFEDE0D4);
   final Color _darkText = const Color(0xFF2D3142);
   final Color _errorCoral = const Color(0xFFB56576);
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _clinicNameController.dispose();
+    _ssmNumberController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _websiteController.dispose();
+    _googleMapsController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickProofImage() async {
     try {
@@ -63,13 +83,14 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
     final String email = _emailController.text.trim();
     final String phone = _phoneController.text.trim();
     final String address = _addressController.text.trim();
-    final String operatingHours = _operatingHoursController.text.trim();
+    final String websiteUrl = _websiteController.text.trim();
+    final String googleMapsUrl = _googleMapsController.text.trim();
     final String password = _passwordController.text.trim();
     final String confirmPassword = _confirmPasswordController.text.trim();
 
     // 1. Validation
     if (clinicName.isEmpty || ssmNumber.isEmpty || email.isEmpty || 
-        phone.isEmpty || address.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+        phone.isEmpty || address.isEmpty || googleMapsUrl.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       _showPawDialog("Incomplete Application", "Please fill in all required fields marked with *.", isError: true);
       return;
     }
@@ -124,7 +145,9 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'email': email,
         'phone': phone,
         'address': address,
-        'operatingHours': operatingHours.isEmpty ? "09:00 AM - 07:00 PM" : operatingHours,
+        'operatingHours': "09:00 AM - 07:00 PM", // Default schedule initially until updated in Vet Module
+        'websiteUrl': websiteUrl,
+        'googleMapsUrl': googleMapsUrl,
         'proofDocumentUrl': base64ProofImage ?? '',
         'role': 'vet',
         'status': 'pending', // PENDING ADMIN APPROVAL
@@ -141,7 +164,9 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'address': address,
         'phone': phone,
         'email': email,
-        'operatingHours': operatingHours.isEmpty ? "09:00 AM - 07:00 PM" : operatingHours,
+        'operatingHours': "09:00 AM - 07:00 PM",
+        'websiteUrl': websiteUrl,
+        'googleMapsUrl': googleMapsUrl,
         'proofDocumentUrl': base64ProofImage ?? '',
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
@@ -292,7 +317,9 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                       const SizedBox(height: 12),
                       _buildField("CLINIC ADDRESS", _addressController, "e.g. 123 Jalan Vet, Penang", maxLines: 2),
                       const SizedBox(height: 12),
-                      _buildField("OPERATING HOURS", _operatingHoursController, "e.g. 09:00 AM - 07:00 PM"),
+                      _buildField("WEBSITE / SOCIAL MEDIA LINK", _websiteController, "e.g. https://facebook.com/yourclinic", keyboardType: TextInputType.url, isRequired: false),
+                      const SizedBox(height: 12),
+                      _buildField("GOOGLE MAPS LOCATION LINK", _googleMapsController, "e.g. https://maps.google.com/?q=yourclinic", keyboardType: TextInputType.url, isRequired: true),
                       const SizedBox(height: 16),
 
                       // SSM / License Proof Photo Picker
@@ -350,11 +377,18 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                               : Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add_a_photo_outlined, color: _toffeeBrown, size: 36),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "Tap to upload SSM Certificate or License Photo",
-                                      style: TextStyle(color: _toffeeBrown, fontSize: 13, fontWeight: FontWeight.w600),
+                                    Icon(Icons.add_a_photo_outlined, color: _toffeeBrown, size: 32),
+                                    const SizedBox(height: 6),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          "Tap to upload SSM Certificate or License Photo",
+                                          maxLines: 1,
+                                          style: TextStyle(color: _toffeeBrown, fontSize: 11, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -403,7 +437,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                                   width: 22,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                 )
-                              : const Text("Submit Application for Admin Review", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                              : const Text("Submit Application", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
 
@@ -445,6 +479,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
     VoidCallback? onToggle,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    bool isRequired = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,9 +488,13 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
           TextSpan(
             text: label,
             style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _fadedCopper),
-            children: const [
-              TextSpan(text: " *", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
-            ],
+            children: isRequired
+                ? const [
+                    TextSpan(text: " *", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
+                  ]
+                : const [
+                    TextSpan(text: " (Optional)", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.normal, fontSize: 10)),
+                  ],
           ),
         ),
         const SizedBox(height: 6),

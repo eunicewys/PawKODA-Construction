@@ -7,6 +7,8 @@ class FringeHeader extends StatelessWidget {
   final String? subtitle;
   final VoidCallback? onBack;
   final Widget? trailing;
+  final Color? backgroundColor;
+  final Color? accentColor;
 
   const FringeHeader({
     super.key,
@@ -14,11 +16,14 @@ class FringeHeader extends StatelessWidget {
     this.subtitle,
     this.onBack,
     this.trailing,
+    this.backgroundColor,
+    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    const Color dustyOlive = Color(0xFF6B705C);
+    final Color mainColor = backgroundColor ?? const Color(0xFF6B705C);
+    final Color subAccent = accentColor ?? mainColor.withAlpha(90);
     const Color powderPetal = Color(0xFFFFE8D6);
 
     return SizedBox(
@@ -32,7 +37,7 @@ class FringeHeader extends StatelessWidget {
             child: Container(
               height: 112,
               width: double.infinity,
-              color: dustyOlive.withAlpha(90),
+              color: subAccent,
             ),
           ),
 
@@ -42,7 +47,7 @@ class FringeHeader extends StatelessWidget {
             child: Container(
               height: 106,
               width: double.infinity,
-              color: dustyOlive,
+              color: mainColor,
               child: SafeArea(
                 bottom: false,
                 child: Padding(

@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../models/booking_model.dart';
@@ -235,6 +237,389 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
+  /// Scroll-type Time Picker (with AM/PM scrolling)
+  Future<String?> _showScrollTimePicker(BuildContext context, String initialTimeStr) async {
+    int initialHour = 9;
+    int initialMinute = 0;
+    int initialPeriodIndex = 0; // 0 for AM, 1 for PM
+
+    try {
+      if (initialTimeStr.isNotEmpty) {
+        final parts = initialTimeStr.trim().split(' ');
+        if (parts.length >= 2) {
+          final timeParts = parts[0].split(':');
+          initialHour = int.parse(timeParts[0]);
+          initialMinute = int.parse(timeParts[1]);
+          initialPeriodIndex = parts[1].toUpperCase() == 'PM' ? 1 : 0;
+        }
+      }
+    } catch (_) {}
+
+    int selectedHour = initialHour;
+    int selectedMinute = initialMinute;
+    int selectedPeriod = initialPeriodIndex;
+
+    final hoursList = List.generate(12, (index) => index + 1); // 1 to 12
+    final minutesList = List.generate(12, (index) => index * 5); // 00, 05, 10... 55
+    final periodsList = ['AM', 'PM'];
+
+    int initialHourIdx = hoursList.indexOf(selectedHour);
+    if (initialHourIdx < 0) initialHourIdx = 8; // Default 9
+    int initialMinIdx = minutesList.indexOf(selectedMinute);
+    if (initialMinIdx < 0) initialMinIdx = 0;
+
+    return await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return Container(
+          height: 300,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+                  ),
+                  const Text("Scroll Time Picker", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  TextButton(
+                    onPressed: () {
+                      final hStr = selectedHour.toString().padLeft(2, '0');
+                      final mStr = selectedMinute.toString().padLeft(2, '0');
+                      final pStr = periodsList[selectedPeriod];
+                      Navigator.pop(ctx, "$hStr:$mStr $pStr");
+                    },
+                    child: Text("Done", style: TextStyle(fontWeight: FontWeight.bold, color: _coffeeBean)),
+                  ),
+                ],
+              ),
+              const Divider(),
+              Expanded(
+                child: Row(
+                  children: [
+                    // Hour Scroll Wheel
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: initialHourIdx),
+                        itemExtent: 40,
+                        onSelectedItemChanged: (idx) => selectedHour = hoursList[idx],
+                        children: hoursList.map((h) => Center(child: Text(h.toString().padLeft(2, '0'), style: TextStyle(fontSize: 18, color: _darkText, fontWeight: FontWeight.bold)))).toList(),
+                      ),
+                    ),
+                    Text(":", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _darkText)),
+                    // Minute Scroll Wheel
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: initialMinIdx),
+                        itemExtent: 40,
+                        onSelectedItemChanged: (idx) => selectedMinute = minutesList[idx],
+                        children: minutesList.map((m) => Center(child: Text(m.toString().padLeft(2, '0'), style: TextStyle(fontSize: 18, color: _darkText, fontWeight: FontWeight.bold)))).toList(),
+                      ),
+                    ),
+                    // AM/PM Scroll Wheel
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: initialPeriodIndex),
+                        itemExtent: 40,
+                        onSelectedItemChanged: (idx) => selectedPeriod = idx,
+                        children: periodsList.map((p) => Center(child: Text(p, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean)))).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Operating Hours Modal with Weekly Saturday Update Restriction & Multiple Session Slots
+  void _showManageOperatingHoursModal(
+    BuildContext context, {
+    required String currentHoursStr,
+    DateTime? lastUpdatedAt,
+  }) {
+    final bool isSaturday = DateTime.now().weekday == DateTime.saturday;
+    final bool isFirstTime = lastUpdatedAt == null;
+    final bool canEdit = isSaturday || isFirstTime;
+
+    // Parse existing slots or set default morning & afternoon sessions
+    List<Map<String, String>> slots = [];
+    if (currentHoursStr.isNotEmpty) {
+      final parts = currentHoursStr.split(',');
+      for (var p in parts) {
+        final times = p.trim().split('-');
+        if (times.length == 2) {
+          slots.add({'start': times[0].trim(), 'end': times[1].trim()});
+        }
+      }
+    }
+    if (slots.isEmpty) {
+      slots = [
+        {'start': '09:00 AM', 'end': '01:00 PM'},
+        {'start': '02:30 PM', 'end': '06:00 PM'},
+      ];
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              height: MediaQuery.of(ctx).size.height * 0.78,
+              decoration: BoxDecoration(
+                color: _almondCream,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: _coffeeBean.withAlpha(80),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Weekly Operating Hours",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: Icon(Icons.close_rounded, color: _coffeeBean),
+                      ),
+                    ],
+                  ),
+
+                  // Weekly Rule Banner
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: canEdit ? Colors.amber.shade50 : Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: canEdit ? Colors.amber.shade300 : Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          canEdit ? Icons.edit_calendar_rounded : Icons.lock_clock_rounded,
+                          color: canEdit ? Colors.amber.shade800 : Colors.blue.shade800,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            isFirstTime
+                                ? "Initial Setup: Set your clinic's operating hours & break sessions."
+                                : (isSaturday
+                                    ? "Saturday Update Window Open! Configure operating hours for Sunday through next Saturday."
+                                    : "Operating hours can only be updated every Saturday for the coming week. System is using active hours."),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: canEdit ? Colors.amber.shade900 : Colors.blue.shade900,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Text(
+                    "Daily Operational Sessions & Breaks",
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: slots.length,
+                      itemBuilder: (context, index) {
+                        final slot = slots[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _paleOak),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 14,
+                                backgroundColor: _coffeeBean.withAlpha(25),
+                                child: Text("${index + 1}", style: TextStyle(color: _coffeeBean, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    // Start Time Scroll Picker
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: canEdit
+                                            ? () async {
+                                                final picked = await _showScrollTimePicker(context, slot['start']!);
+                                                if (picked != null) {
+                                                  setMState(() => slot['start'] = picked);
+                                                }
+                                              }
+                                            : null,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: _almondCream.withAlpha(80),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: _paleOak),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.access_time_rounded, size: 14, color: _coffeeBean),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(slot['start']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _darkText)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 6),
+                                      child: Text("to", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                    ),
+                                    // End Time Scroll Picker
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: canEdit
+                                            ? () async {
+                                                final picked = await _showScrollTimePicker(context, slot['end']!);
+                                                if (picked != null) {
+                                                  setMState(() => slot['end'] = picked);
+                                                }
+                                              }
+                                            : null,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: _almondCream.withAlpha(80),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: _paleOak),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.access_time_rounded, size: 14, color: _coffeeBean),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(slot['end']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _darkText)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (canEdit && slots.length > 1)
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                  onPressed: () {
+                                    setMState(() => slots.removeAt(index));
+                                  },
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  if (canEdit) ...[
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setMState(() {
+                          slots.add({'start': '02:30 PM', 'end': '06:00 PM'});
+                        });
+                      },
+                      icon: const Icon(Icons.more_time_rounded, size: 18),
+                      label: const Text("Add Break / Additional Session"),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _coffeeBean,
+                        side: BorderSide(color: _coffeeBean),
+                        minimumSize: const Size(double.infinity, 44),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final formatted = slots.map((s) => "${s['start']} - ${s['end']}").join(', ');
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (uid != null) {
+                          await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
+                            'operatingHours': formatted,
+                            'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
+                          });
+                          await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
+                            'operatingHours': formatted,
+                            'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
+                          }, SetOptions(merge: true));
+                        }
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("✓ Operating hours updated successfully!"), backgroundColor: Colors.green),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _coffeeBean,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text("Save Operating Hours", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
@@ -327,31 +712,82 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
               // 3. Schedule Panel
               Text("Operational Schedule", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white, 
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: _paleOak, width: 1.5)
-                ),
-                child: Column(
-                  children: [
-                    _scheduleToggle("Accepting Bookings", _isAcceptingBookings, (val) => setState(() => _isAcceptingBookings = val)),
-                    const Divider(),
-                    _scheduleToggle("Emergency Service", _isEmergencyService, (val) => setState(() => _isEmergencyService = val)),
-                    const SizedBox(height: 15),
-                    ElevatedButton.icon(
-                      onPressed: () => _showManageStaffModal(context),
-                      icon: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 18),
-                      label: const Text("Manage Doctors & Staff Availability", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _coffeeBean, 
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseAuth.instance.currentUser?.uid != null
+                    ? FirebaseFirestore.instance.collection('USERS').doc(FirebaseAuth.instance.currentUser!.uid).snapshots()
+                    : null,
+                builder: (context, userSnap) {
+                  Map<String, dynamic>? userData;
+                  if (userSnap.hasData && userSnap.data!.exists) {
+                    userData = userSnap.data!.data() as Map<String, dynamic>?;
+                  }
+                  final String currentHours = userData?['operatingHours'] ?? "09:00 AM - 01:00 PM, 02:30 PM - 06:00 PM";
+                  final Timestamp? lastUpdatedTs = userData?['lastHoursUpdatedAt'] as Timestamp?;
+                  final DateTime? lastUpdatedAt = lastUpdatedTs?.toDate();
+
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white, 
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _paleOak, width: 1.5)
                     ),
-                  ],
-                ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _scheduleToggle("Accepting Bookings", _isAcceptingBookings, (val) => setState(() => _isAcceptingBookings = val)),
+                        const Divider(),
+                        _scheduleToggle("Emergency Service", _isEmergencyService, (val) => setState(() => _isEmergencyService = val)),
+                        const Divider(),
+                        
+                        // Operating Hours Active Display
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time_filled_rounded, color: _coffeeBean, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Operating Hours: $currentHours",
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Manage Operating Hours & Breaks Button
+                        OutlinedButton.icon(
+                          onPressed: () => _showManageOperatingHoursModal(
+                            context,
+                            currentHoursStr: currentHours,
+                            lastUpdatedAt: lastUpdatedAt,
+                          ),
+                          icon: const Icon(Icons.edit_calendar_rounded, size: 18),
+                          label: const Text("Manage Operating Hours & Breaks", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _coffeeBean,
+                            side: BorderSide(color: _coffeeBean),
+                            minimumSize: const Size(double.infinity, 46),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        ElevatedButton.icon(
+                          onPressed: () => _showManageStaffModal(context),
+                          icon: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 18),
+                          label: const Text("Manage Doctors & Staff Availability", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _coffeeBean, 
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 32),
 

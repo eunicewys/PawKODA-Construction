@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import 'support_contact_screen.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 import 'vet_login_screen.dart';
@@ -183,43 +184,46 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: _dustyOlive, // Primary structural color
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // Top section: Logo & App Name (Compact & Mobile Responsive)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(40),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 44),
+            // Main Body Content
+            Column(
+              children: [
+                // Top section: Logo & App Name
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(40),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.pets, color: Colors.white, size: 44),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "PawKODA",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        "Pet Health & Nutrition Platform",
+                        style: TextStyle(color: _powderPetal.withAlpha(200), fontSize: 13),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "PawKODA",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  Text(
-                    "Pet Health & Nutrition Platform",
-                    style: TextStyle(color: _powderPetal.withAlpha(200), fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Bottom section: Curved White Sheet filling remaining height
-            Expanded(
-              child: Container(
+                ),
+                
+                // Bottom section: Curved White Sheet filling remaining height
+                Expanded(
+                  child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
@@ -334,8 +338,37 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ],
         ),
-      ),
-    );
+
+        // Help Icon / Link pinned to the absolute top-right corner of the screen
+        Positioned(
+          top: 8,
+          right: 8,
+          child: InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SupportContactScreen()),
+            ),
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.help_outline_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 4),
+                  Text(
+                    "Help",
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+);
   }
 
   Widget _buildField(String label, TextEditingController controller, String hint, {bool isPass = false, bool isRequired = true}) {

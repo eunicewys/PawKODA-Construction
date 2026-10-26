@@ -267,8 +267,6 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                                 final uid = Provider.of<UserProvider>(context, listen: false).uid ?? '';
                                 final email = Provider.of<UserProvider>(context, listen: false).email ?? '';
 
-                                final messenger = ScaffoldMessenger.of(context);
-
                                 try {
                                   await FirebaseFirestore.instance.collection('SUPPORT_TICKETS').add({
                                     'userId': uid,
@@ -457,43 +455,20 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SizedBox(
-                                height: 38,
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: _dustyOlive,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  onPressed: _launchSupportEmail,
-                                  icon: const Icon(Icons.send_rounded, size: 15),
-                                  label: const Text("Send Email", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                ),
-                              ),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 38,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: _dustyOlive,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: SizedBox(
-                                height: 38,
-                                child: OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    side: const BorderSide(color: Colors.white, width: 1.2),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  onPressed: _showReportProblemSheet,
-                                  icon: const Icon(Icons.report_problem_outlined, size: 15),
-                                  label: const Text("Report Issue", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                ),
-                              ),
-                            ),
-                          ],
+                            onPressed: _showReportProblemSheet,
+                            icon: const Icon(Icons.report_problem_outlined, size: 16),
+                            label: const Text("Report Issue", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
                         ),
                       ],
                     ),

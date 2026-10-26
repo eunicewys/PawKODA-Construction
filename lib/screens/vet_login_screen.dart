@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import 'support_contact_screen.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'vet_register_screen.dart';
@@ -90,8 +91,7 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
         await FirebaseAuth.instance.signOut();
         _showPawDialog(
           "Application Rejected",
-          "Your veterinary organization account application was not approved by the administrator.\n\n"
-          "Please contact PawKODA support if you believe this is an error.",
+          "Application Rejected. Please resubmit application with accurate info, OR contact Admin through Help.",
           isError: true,
         );
         return;
@@ -181,39 +181,42 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
     return Scaffold(
       backgroundColor: _coffeeBean,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // Top Section: Vet Branding Header
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(40),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(Icons.local_hospital, color: Colors.white, size: 44),
+            // Main Content Column
+            Column(
+              children: [
+                // Top Section: Vet Branding Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(40),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.local_hospital, color: Colors.white, size: 44),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "PawKODA VET",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        "Veterinary Organization Portal",
+                        style: TextStyle(color: _almondCream.withAlpha(220), fontSize: 13),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "PawKODA VET",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  Text(
-                    "Veterinary Organization Portal",
-                    style: TextStyle(color: _almondCream.withAlpha(220), fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
+                ),
 
             // Bottom Section: Curved Card Container
             Expanded(
@@ -264,7 +267,7 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                                         width: 22,
                                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                       )
-                                    : const Text("Sign In as Vet Clinic", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                    : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                               ),
                             ),
 
@@ -273,25 +276,33 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                             // Register Link
                             Center(
                               child: TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
                                 onPressed: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(builder: (context) => const VetRegisterScreen()),
                                 ),
-                                child: Text.rich(
-                                  TextSpan(
-                                    text: "New Veterinary Organization? ",
-                                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                                    children: [
-                                      TextSpan(
-                                        text: "Register Here",
-                                        style: TextStyle(
-                                          color: _toffeeBrown,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          decoration: TextDecoration.underline,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text.rich(
+                                    TextSpan(
+                                      text: "New Veterinary Organization? ",
+                                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                      children: [
+                                        TextSpan(
+                                          text: "Register Here",
+                                          style: TextStyle(
+                                            color: _toffeeBrown,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            decoration: TextDecoration.underline,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -316,7 +327,7 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                             ),
                             child: Text.rich(
                               TextSpan(
-                                text: "Not a Veterinary Organization? ",
+                                text: "Not a Veterinary? ",
                                 style: const TextStyle(color: Colors.grey, fontSize: 11),
                                 children: [
                                   TextSpan(
@@ -340,8 +351,37 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
             ),
           ],
         ),
-      ),
-    );
+
+        // Help Icon / Link pinned to the absolute top-right corner of the screen
+        Positioned(
+          top: 8,
+          right: 8,
+          child: InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SupportContactScreen()),
+            ),
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.help_outline_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 4),
+                  Text(
+                    "Help",
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+);
   }
 
   Widget _buildField(
