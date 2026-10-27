@@ -18,16 +18,46 @@ class BreedService {
   /// In-memory getter for breeds list
   List<BreedModel> get breeds => _breeds;
 
-  /// Initializes and loads assets/data/breeds.json into memory
-  Future<void> loadBreeds() async {
-    if (_isLoaded && _breeds.isNotEmpty) return;
+  /// Initializes and loads assets/data/breeds.json and Firestore BREEDS into memory
+  Future<void> loadBreeds({bool forceRefresh = false}) async {
+    if (_isLoaded && _breeds.isNotEmpty && !forceRefresh) return;
     try {
-      final String jsonString = await rootBundle.loadString('assets/data/breeds.json');
-      final List<dynamic> jsonList = json.decode(jsonString) as List<dynamic>;
-      _breeds = jsonList.map((item) => BreedModel.fromJson(item as Map<String, dynamic>)).toList();
+      List<BreedModel> loadedList = [];
+
+      // 1. Load offline base breeds
+      try {
+        final String jsonString = await rootBundle.loadString('assets/data/breeds.json');
+        final List<dynamic> jsonList = json.decode(jsonString) as List<dynamic>;
+        loadedList = jsonList.map((item) => BreedModel.fromJson(item as Map<String, dynamic>)).toList();
+      } catch (e) {
+        debugPrint("Error loading breeds.json in BreedService: $e");
+      }
+
+      // 2. Load Firestore custom breeds
+      try {
+        final snapshot = await _firestore.collection('BREEDS').get();
+        final firebaseBreeds = snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['breedId'] = doc.id;
+          return BreedModel.fromJson(data);
+        }).toList();
+
+        for (var customBreed in firebaseBreeds) {
+          int existingIdx = loadedList.indexWhere((b) => b.breedId == customBreed.breedId || b.name.toLowerCase() == customBreed.name.toLowerCase());
+          if (existingIdx >= 0) {
+            loadedList[existingIdx] = customBreed;
+          } else {
+            loadedList.add(customBreed);
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching Firestore BREEDS in BreedService: $e");
+      }
+
+      _breeds = loadedList;
       _isLoaded = true;
     } catch (e) {
-      debugPrint("Error loading breeds.json in BreedService: $e");
+      debugPrint("Error in loadBreeds: $e");
     }
   }
 

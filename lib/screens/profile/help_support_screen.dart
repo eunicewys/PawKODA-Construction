@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../widgets/fringe_header.dart';
@@ -138,175 +139,240 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(Icons.support_agent_rounded, color: _dustyOlive, size: 22),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Report Problem / Contact Support",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: _darkCharcoal,
+            return GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 16,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Submit an inquiry to our support desk. We will respond within 24 hours.",
-                      style: TextStyle(fontSize: 11, color: _ashGrey),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Category Dropdown
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedCategory,
-                      isExpanded: true,
-                      style: TextStyle(fontSize: 13, color: _darkCharcoal, fontWeight: FontWeight.w600),
-                      decoration: InputDecoration(
-                        labelText: "Issue Category *",
-                        labelStyle: const TextStyle(fontSize: 12),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'General Issue', child: Text("General Issue", style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Vaccine / Health Reminders', child: Text("Vaccine / Health Reminders", style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Vet Clinic Bookings', child: Text("Vet Clinic Bookings", style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Nutrition Engine & Recipes', child: Text("Nutrition Engine & Recipes", style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Account & Password', child: Text("Account & Password", style: TextStyle(fontSize: 13))),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setSheetState(() => selectedCategory = val);
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Subject Field
-                    TextField(
-                      controller: subjectCtrl,
-                      style: const TextStyle(fontSize: 13),
-                      decoration: InputDecoration(
-                        labelText: "Subject / Brief Summary *",
-                        labelStyle: const TextStyle(fontSize: 12),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        hintText: "e.g., Reminder notification delayed",
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Description Field
-                    TextField(
-                      controller: messageCtrl,
-                      maxLines: 3,
-                      style: const TextStyle(fontSize: 13),
-                      decoration: InputDecoration(
-                        labelText: "Detailed Description *",
-                        labelStyle: const TextStyle(fontSize: 12),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        hintText: "Please describe the problem you encountered...",
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 42,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _dustyOlive,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                final subject = subjectCtrl.text.trim();
-                                final message = messageCtrl.text.trim();
-
-                                if (subject.isEmpty || message.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Please fill in subject and description.")),
-                                  );
-                                  return;
-                                }
-
-                                setSheetState(() => isSubmitting = true);
-
-                                final uid = Provider.of<UserProvider>(context, listen: false).uid ?? '';
-                                final email = Provider.of<UserProvider>(context, listen: false).email ?? '';
-
-                                try {
-                                  await FirebaseFirestore.instance.collection('SUPPORT_TICKETS').add({
-                                    'userId': uid,
-                                    'userEmail': email,
-                                    'category': selectedCategory,
-                                    'subject': subject,
-                                    'message': message,
-                                    'status': 'OPEN',
-                                    'createdAt': FieldValue.serverTimestamp(),
-                                  });
-
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                    _showSuccessDialog(
-                                      "Ticket Submitted!",
-                                      "Your ticket has been sent to support desk ($supportEmail). We will get back to you shortly.",
-                                    );
-                                  }
-                                } catch (e) {
-                                  setSheetState(() => isSubmitting = false);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text("Error submitting ticket: $e")),
-                                    );
-                                  }
-                                }
-                              },
-                        child: isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Text(
-                                "Submit Support Ticket",
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.support_agent_rounded, color: _dustyOlive, size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Report Problem / Contact Support",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _darkCharcoal,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 22, color: Colors.grey),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: "Close",
+                            onPressed: () {
+                              FocusScope.of(context).unfocus();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        "Submit an inquiry to our support desk. We will respond within 24 hours.",
+                        style: TextStyle(fontSize: 11, color: _ashGrey),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Category Dropdown
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedCategory,
+                        isExpanded: true,
+                        style: TextStyle(fontSize: 13, color: _darkCharcoal, fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          labelText: "Issue Category *",
+                          labelStyle: const TextStyle(fontSize: 12),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'General Issue', child: Text("General Issue", style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'Vaccine / Health Reminders', child: Text("Vaccine / Health Reminders", style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'Vet Clinic Bookings', child: Text("Vet Clinic Bookings", style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'Nutrition Engine & Recipes', child: Text("Nutrition Engine & Recipes", style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'Account & Password', child: Text("Account & Password", style: TextStyle(fontSize: 13))),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setSheetState(() => selectedCategory = val);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Subject Field
+                      TextField(
+                        controller: subjectCtrl,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          labelText: "Subject / Brief Summary *",
+                          labelStyle: const TextStyle(fontSize: 12),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          hintText: "e.g., Reminder notification delayed",
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Description Field
+                      TextField(
+                        controller: messageCtrl,
+                        maxLines: 3,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          labelText: "Detailed Description *",
+                          labelStyle: const TextStyle(fontSize: 12),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          hintText: "Please describe the problem you encountered...",
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: SizedBox(
+                              height: 42,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: Colors.grey.shade400),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () {
+                                        FocusScope.of(context).unfocus();
+                                        Navigator.pop(context);
+                                      },
+                                child: Text("Cancel", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: SizedBox(
+                              height: 42,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _dustyOlive,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () async {
+                                        FocusScope.of(context).unfocus();
+
+                                        final subject = subjectCtrl.text.trim();
+                                        final message = messageCtrl.text.trim();
+
+                                        if (subject.isEmpty || message.isEmpty) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("Please fill in subject and description.")),
+                                          );
+                                          return;
+                                        }
+
+                                        setSheetState(() => isSubmitting = true);
+
+                                        final currentUser = FirebaseAuth.instance.currentUser;
+                                        final uid = currentUser?.uid ?? Provider.of<UserProvider>(context, listen: false).uid ?? '';
+                                        final email = (currentUser?.email != null && currentUser!.email!.isNotEmpty)
+                                            ? currentUser.email!
+                                            : (Provider.of<UserProvider>(context, listen: false).email ?? '');
+
+                                        try {
+                                          await FirebaseFirestore.instance.collection('SUPPORT_TICKETS').add({
+                                            'userId': uid.isNotEmpty ? uid : 'guest',
+                                            'userEmail': email,
+                                            'contactEmail': email,
+                                            'category': selectedCategory,
+                                            'subject': subject,
+                                            'message': message,
+                                            'status': 'OPEN',
+                                            'createdAt': FieldValue.serverTimestamp(),
+                                          }).timeout(const Duration(seconds: 10));
+
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                            _showSuccessDialog(
+                                              "Enquiry Submitted!",
+                                              "Your enquiry has been submitted. We will get back to you shortly",
+                                            );
+                                          }
+                                        } on FirebaseException catch (e) {
+                                          setSheetState(() => isSubmitting = false);
+                                          if (context.mounted) {
+                                            if (e.code == 'permission-denied') {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text("Permission Denied: Please check if you are signed in or verify Firestore Security Rules for SUPPORT_TICKETS."),
+                                                ),
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text("Firebase error (${e.code}): ${e.message}")),
+                                              );
+                                            }
+                                          }
+                                        } catch (e) {
+                                          setSheetState(() => isSubmitting = false);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text("Error submitting ticket: $e")),
+                                            );
+                                          }
+                                        }
+                                      },
+                                child: isSubmitting
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Text(
+                                        "Submit Support Ticket",
+                                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

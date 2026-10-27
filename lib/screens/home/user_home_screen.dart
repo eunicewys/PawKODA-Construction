@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +21,7 @@ import '../health/vaccination_screen.dart';
 import '../widgets/fringe_header.dart';
 import '../../models/reminder_model.dart';
 import '../../services/reminder_service.dart';
+import '../../services/breed_service.dart';
 import '../profile/notification_center_screen.dart';
 import '../profile/privacy_security_screen.dart';
 import '../profile/help_support_screen.dart';
@@ -79,35 +79,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Future<void> _loadBreedData() async {
     try {
-      final String response = await rootBundle.loadString('assets/data/breeds.json');
-      final dynamic decoded = json.decode(response);
+      await BreedService().loadBreeds(forceRefresh: true);
       
       Map<String, List<String>> map = {
         'dog': [],
         'cat': [],
       };
 
-      if (decoded is List) {
-        for (var item in decoded) {
-          if (item is Map) {
-            String species = (item['species'] ?? '').toString().toLowerCase();
-            String name = (item['name'] ?? '').toString();
-            if (map.containsKey(species) && name.isNotEmpty) {
-              map[species]!.add(name);
-            }
-          }
+      for (var b in BreedService().breeds) {
+        String species = b.species.toLowerCase();
+        if (map.containsKey(species) && !map[species]!.contains(b.name)) {
+          map[species]!.add(b.name);
         }
-      } else if (decoded is Map<String, dynamic>) {
-        decoded.forEach((key, value) {
-          if (value is List) {
-            map[key.toLowerCase()] = List<String>.from(value.map((e) => e.toString()));
-          }
-        });
       }
 
       setState(() => _breedData = map);
     } catch (e) {
-      debugPrint("Error loading breeds: $e");
+      debugPrint("Error loading breed data in user_home_screen: $e");
     }
   }
 

@@ -636,7 +636,8 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
   // 4. INGREDIENT SEARCH BOX
   // -----------------------------------------------------------------
   Widget _buildAddIngredientsSection(NutritionalProvider provider) {
-    final searchResults = provider.searchResults;
+    final searchResults = List<Ingredient>.from(provider.searchResults)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1027,18 +1028,19 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                 ingredients: List.from(provider.bowl),
               );
 
+              final messenger = ScaffoldMessenger.of(context);
               final RecipeService recipeService = RecipeService();
               await recipeService.saveRecipe(uid, recipe);
 
-              if (context.mounted) {
+              if (dialogCtx.mounted) {
                 Navigator.pop(dialogCtx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: _dustyOlive,
-                    content: Text("Meal '$recipeName' saved successfully!"),
-                  ),
-                );
               }
+              messenger.showSnackBar(
+                SnackBar(
+                  backgroundColor: _dustyOlive,
+                  content: Text("Meal '$recipeName' saved successfully!"),
+                ),
+              );
             },
             child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           ),

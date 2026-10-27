@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/pet_model.dart';
 import '../models/ingredient_model.dart';
 import '../models/disease_model.dart';
@@ -38,16 +39,49 @@ class NutritionalProvider extends ChangeNotifier {
   // REACTIVE LIFECYCLE & INGREDIENT SEARCH METHODS
   // -----------------------------------------------------------------
 
-  /// Reads assets/data/ingredients.json and populates _allIngredients
+  /// Reads assets/data/ingredients.json and Firestore INGREDIENTS and populates _allIngredients
   Future<void> loadIngredients() async {
     try {
-      final String response = await rootBundle.loadString('assets/data/ingredients.json');
-      final List<dynamic> data = json.decode(response) as List<dynamic>;
-      _allIngredients = data.map((i) => Ingredient.fromJson(i as Map<String, dynamic>)).toList();
+      List<Ingredient> loadedList = [];
+
+      // 1. Load offline base ingredients
+      try {
+        final String response = await rootBundle.loadString('assets/data/ingredients.json');
+        final List<dynamic> data = json.decode(response) as List<dynamic>;
+        loadedList = data.map((i) => Ingredient.fromJson(i as Map<String, dynamic>)).toList();
+      } catch (e) {
+        debugPrint("Error loading offline ingredients.json in NutritionalProvider: $e");
+      }
+
+      // 2. Load Firestore custom ingredients
+      try {
+        final snapshot = await FirebaseFirestore.instance.collection('INGREDIENTS').get();
+        final firebaseIngredients = snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['ingredientId'] = doc.id;
+          return Ingredient.fromJson(data);
+        }).toList();
+
+        for (var customIng in firebaseIngredients) {
+          int existingIdx = loadedList.indexWhere((i) => i.ingredientId == customIng.ingredientId || i.name.toLowerCase() == customIng.name.toLowerCase());
+          if (existingIdx >= 0) {
+            loadedList[existingIdx] = customIng;
+          } else {
+            loadedList.add(customIng);
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching Firestore INGREDIENTS in NutritionalProvider: $e");
+      }
+
+      // Sort ingredients alphabetically A-Z
+      loadedList.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+      _allIngredients = loadedList;
       _searchResults = List.from(_allIngredients);
       notifyListeners();
     } catch (e) {
-      debugPrint("Error loading offline ingredients.json in NutritionalProvider: $e");
+      debugPrint("Error in loadIngredients: $e");
     }
   }
 
@@ -64,6 +98,7 @@ class NutritionalProvider extends ChangeNotifier {
       }).toList();
     }
 
+    _searchResults.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     notifyListeners();
   }
 

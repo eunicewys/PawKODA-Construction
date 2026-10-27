@@ -6,6 +6,8 @@ import '../../providers/user_provider.dart';
 import '../../utils/image_helper.dart';
 import '../widgets/fringe_header.dart';
 import '../login_screen.dart';
+import '../nutrition/nutrition_database_screen.dart';
+import '../admin/breed_management_screen.dart';
 
 /// AdminHomeScreen: Dashboard for System Administrators.
 /// Features a sticky wave FringeHeader, functional Bottom Navigation for Dashboard, Users, Data, and Security,
@@ -29,6 +31,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   int _currentNavIndex = 0;
   String _searchQuery = "";
   String _searchTicketQuery = "";
+  String _selectedUserRoleFilter = 'All';
 
   // Logout Logic with Confirmation Dialog
   Future<void> _handleLogout(BuildContext context) async {
@@ -512,9 +515,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       case 1:
         return "USER & SUPPORT";
       case 2:
-        return "Database & Formula Center";
-      case 3:
-        return "Security & Audit Desk";
+        return "Database Management";
       default:
         return "PawKODA System";
     }
@@ -526,8 +527,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         return _buildUsersAndSupportTab();
       case 2:
         return _buildDataTab();
-      case 3:
-        return _buildSecurityTab();
       default:
         return _buildDashboardTab();
     }
@@ -538,60 +537,44 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. PILLAR: SECURITY MANAGEMENT
-        _buildSectionTitle("Security Management"),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.greenAccent.withAlpha(50),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green, width: 1.2),
-          ),
-          child: Row(
-            children: [
-              const CircleAvatar(radius: 4, backgroundColor: Colors.green),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text("System Secure: Encrypted Connection Active",
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.green[800] ?? Colors.green,
-                        fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // 2. PILLAR: VETERINARY ORGANIZATION VERIFICATION
+        // 1. PILLAR: VETERINARY ORGANIZATION VERIFICATION
         _buildSectionTitle("Veterinary Applications Verification"),
         const SizedBox(height: 4),
         _buildProviderVerificationSection(),
         const SizedBox(height: 20),
 
-        // 3. PILLAR: USER ROLE
-        _buildSectionTitle("User Role"),
-        const SizedBox(height: 4),
-        _buildUserRoleSection(),
-        const SizedBox(height: 20),
-
-        // 4. PILLAR: DATABASE MANAGEMENT
-        _buildSectionTitle("Database Management"),
-        const SizedBox(height: 8),
+        // 2. PILLAR: USER ROLE WITH VIEW ALL REDIRECT
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Expanded(
-                child: _controlModule(
-                    Icons.no_food, "Nutrition DB", _pacificBlue)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _controlModule(
-                    Icons.analytics_outlined, "Formula Params", _freshSky)),
+            _buildSectionTitle("User Role"),
+            InkWell(
+              onTap: () => setState(() => _currentNavIndex = 1),
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "View All",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _pacificBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _pacificBlue),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
+        const SizedBox(height: 8),
+        _buildDashboardUserRoleSection(),
         const SizedBox(height: 40),
       ],
     );
@@ -605,7 +588,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         // Section 1: User Directory & Roles
         _buildSectionTitle("Registered Users Directory"),
         const SizedBox(height: 8),
-        _buildUserRoleSection(),
+        _buildFullUserDirectorySection(),
         const SizedBox(height: 24),
 
         // Section 2: Reported Issues & Support Desk Tickets
@@ -620,78 +603,27 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle("Database Management & Parameters"),
+        _buildSectionTitle("Database Management"),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-                child: _controlModule(
-                    Icons.no_food, "Nutrition Database", _pacificBlue)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _controlModule(
-                    Icons.analytics_outlined, "Formula Parameters", _freshSky)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-                child: _controlModule(
-                    Icons.local_hospital_outlined, "Clinics Registry", _yaleBlue)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _controlModule(
-                    Icons.pets_outlined, "Breeds & Diseases", _pacificBlue)),
-          ],
-        ),
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  // TAB 3: SECURITY TAB
-  Widget _buildSecurityTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle("System Security & Active Encrypted Status"),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.green, width: 1.5),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 6),
-            ],
+        _databaseCardModule(
+          icon: Icons.no_food_rounded,
+          title: "Nutrition Database",
+          subtitle: "Food & Nutrient Management",
+          color: _pacificBlue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NutritionDatabaseScreen()),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const CircleAvatar(radius: 6, backgroundColor: Colors.green),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "System Status: SECURE & ENCRYPTED",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[800],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                "All Firestore read/write rules, SSL handshakes, and Firebase Authentication tokens are active.",
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
+        ),
+        const SizedBox(height: 12),
+        _databaseCardModule(
+          icon: Icons.pets_rounded,
+          title: "Breeds Database",
+          subtitle: "Dog & Cat Breed Management",
+          color: _yaleBlue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BreedManagementScreen()),
           ),
         ),
         const SizedBox(height: 40),
@@ -699,21 +631,117 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  Widget _buildUserRoleSection() {
+  // Dashboard User Role Box (Max 5 users, name and role only)
+  Widget _buildDashboardUserRoleSection() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withAlpha(8), blurRadius: 6)
-          ]),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 6),
+        ],
+      ),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('USERS').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text("Error loading users: ${snapshot.error}", style: const TextStyle(color: Colors.red, fontSize: 11)),
+            );
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(12.0),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text("No registered users found.", style: TextStyle(fontSize: 11)),
+            );
+          }
+
+          final docs = snapshot.data!.docs;
+          final maxDocs = docs.length > 5 ? docs.sublist(0, 5) : docs;
+
+          return ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: maxDocs.length,
+            separatorBuilder: (context, index) => const Divider(height: 8),
+            itemBuilder: (context, index) {
+              final userData = maxDocs[index].data() as Map<String, dynamic>;
+              final name = userData['displayName'] ?? "Unknown User";
+              final role = userData['role'] ?? "owner";
+              return _dashboardUserItem(name, role);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _dashboardUserItem(String name, String role) {
+    final validRoles = ['owner', 'vet', 'admin'];
+    final currentRole = validRoles.contains(role.toLowerCase()) ? role.toLowerCase() : 'owner';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              name,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _darkText),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 68,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _frozenWater,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              currentRole.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _yaleBlue),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Users Module Full Directory (With Search & Categorical Role Chips: All, Pet Owner, Vet, Admin)
+  Widget _buildFullUserDirectorySection() {
+    final roleFilters = ['All', 'Pet Owner', 'Vet', 'Admin'];
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 6),
+        ],
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
-            onChanged: (value) =>
-                setState(() => _searchQuery = value.toLowerCase()),
+            onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
             style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
               hintText: "Search users by name or email...",
@@ -724,29 +752,61 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               isDense: true,
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Categorical Role Filter Chips
+          SizedBox(
+            height: 34,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: roleFilters.length,
+              itemBuilder: (context, index) {
+                final roleCat = roleFilters[index];
+                final isSelected = _selectedUserRoleFilter == roleCat;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(roleCat),
+                    selected: isSelected,
+                    selectedColor: _pacificBlue,
+                    backgroundColor: _paleSky,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : _darkText,
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    side: BorderSide(
+                      color: isSelected ? _pacificBlue : Colors.transparent,
+                    ),
+                    onSelected: (_) => setState(() => _selectedUserRoleFilter = roleCat),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 12),
+
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('USERS')
-                .snapshots(),
+            stream: FirebaseFirestore.instance.collection('USERS').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Padding(
                   padding: const EdgeInsets.all(12.0),
-                  child: Text("Error loading database: ${snapshot.error}",
-                      style: const TextStyle(color: Colors.red, fontSize: 11)),
+                  child: Text("Error loading database: ${snapshot.error}", style: const TextStyle(color: Colors.red, fontSize: 11)),
                 );
               }
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
-                    child: Padding(
-                  padding: EdgeInsets.all(14.0),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ));
+                  child: Padding(
+                    padding: EdgeInsets.all(14.0),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
               }
 
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -759,16 +819,29 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               final users = snapshot.data!.docs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>?;
                 if (data == null) return false;
-                
+
                 final name = (data['displayName'] ?? "").toString().toLowerCase();
                 final email = (data['email'] ?? "").toString().toLowerCase();
-                return name.contains(_searchQuery) || email.contains(_searchQuery);
+                final role = (data['role'] ?? "owner").toString().toLowerCase();
+
+                final matchesSearch = name.contains(_searchQuery) || email.contains(_searchQuery);
+
+                bool matchesRole = true;
+                if (_selectedUserRoleFilter == 'Pet Owner') {
+                  matchesRole = role == 'owner' || role == 'pet owner' || role == 'user';
+                } else if (_selectedUserRoleFilter == 'Vet') {
+                  matchesRole = role == 'vet';
+                } else if (_selectedUserRoleFilter == 'Admin') {
+                  matchesRole = role == 'admin';
+                }
+
+                return matchesSearch && matchesRole;
               }).toList();
 
               if (users.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(12.0),
-                  child: Text("No users match your search.", style: TextStyle(fontSize: 11)),
+                  child: Text("No users match your filters.", style: TextStyle(fontSize: 11)),
                 );
               }
 
@@ -1375,27 +1448,60 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  Widget _controlModule(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-      decoration: BoxDecoration(
-          color: color, borderRadius: BorderRadius.circular(14)),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white, size: 24),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12),
+  Widget _databaseCardModule({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(50),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(220),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1428,8 +1534,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               icon: Icon(Icons.people_alt_outlined), label: "Users"),
           BottomNavigationBarItem(
               icon: Icon(Icons.storage_outlined), label: "Data"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.security_outlined), label: "Security"),
         ],
       ),
     );

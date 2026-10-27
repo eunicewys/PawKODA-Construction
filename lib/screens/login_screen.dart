@@ -349,13 +349,13 @@ class _LoginScreenState extends State<LoginScreen> {
               MaterialPageRoute(builder: (_) => const SupportContactScreen()),
             ),
             borderRadius: BorderRadius.circular(8),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.help_outline_rounded, color: Colors.white, size: 18),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     "Help",
                     style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),

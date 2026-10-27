@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'widgets/fringe_header.dart';
@@ -29,9 +30,9 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
       SnackBar(
         content: const Row(
           children: [
-            Icon(Icons.content_copy_rounded, color: Colors.white, size: 18),
+            Icon(Icons.content_copy_rounded, color: Colors.white, size: 20),
             SizedBox(width: 8),
-            Text("Admin email copied to clipboard! ($adminEmail)"),
+            Text("Admin email copied to clipboard! (support@pawkoda.com)"),
           ],
         ),
         backgroundColor: _fadedCopper,
@@ -46,7 +47,8 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
     String selectedCategory = 'General Inquiry';
     bool isSubmitting = false;
 
-    final loggedInEmail = Provider.of<UserProvider>(context, listen: false).email;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final loggedInEmail = firebaseUser?.email ?? Provider.of<UserProvider>(context, listen: false).email;
     if (loggedInEmail != null && loggedInEmail.isNotEmpty) {
       emailCtrl.text = loggedInEmail;
     }
@@ -61,190 +63,250 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(Icons.support_agent_rounded, color: _fadedCopper, size: 22),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "Report Issue / Contact Admin",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _blackText,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+            return GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 16,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Submit your inquiry directly to the PawKODA Administrator.",
-                      style: TextStyle(fontSize: 11, color: _subText),
-                    ),
-                    const SizedBox(height: 14),
-
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedCategory,
-                      isExpanded: true,
-                      style: TextStyle(fontSize: 13, color: _blackText, fontWeight: FontWeight.w600),
-                      decoration: InputDecoration(
-                        labelText: "Category *",
-                        labelStyle: TextStyle(fontSize: 12, color: _subText),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: _fadedCopper),
-                        ),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'General Inquiry', child: Text("General Inquiry", style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Application / Registration Status', child: Text("Application / Registration Status", style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Account & Sign In Help', child: Text("Account & Sign In Help", style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Technical Support', child: Text("Technical Support", style: TextStyle(fontSize: 13))),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setSheetState(() => selectedCategory = val);
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    TextField(
-                      controller: emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      style: TextStyle(fontSize: 13, color: _blackText),
-                      decoration: InputDecoration(
-                        labelText: "Email Address *",
-                        labelStyle: TextStyle(fontSize: 12, color: _subText),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        hintText: "e.g., yourname@domain.com",
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    TextField(
-                      controller: messageCtrl,
-                      maxLines: 3,
-                      style: TextStyle(fontSize: 13, color: _blackText),
-                      decoration: InputDecoration(
-                        labelText: "Detailed Message *",
-                        labelStyle: TextStyle(fontSize: 12, color: _subText),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        hintText: "Describe your inquiry or issue...",
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 42,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _fadedCopper,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                final email = emailCtrl.text.trim();
-                                final message = messageCtrl.text.trim();
-
-                                if (email.isEmpty || message.isEmpty) {
-                                  _showErrorDialog(
-                                    "Incomplete Info",
-                                    "Please enter both your Email Address and Detailed Message before submitting.",
-                                  );
-                                  return;
-                                }
-
-                                if (!email.contains('@') || !email.contains('.')) {
-                                  _showErrorDialog(
-                                    "Invalid Email Address",
-                                    "Please enter a valid email address so the Administrator can reply to your inquiry.",
-                                  );
-                                  return;
-                                }
-
-                                setSheetState(() => isSubmitting = true);
-
-                                final uid = Provider.of<UserProvider>(context, listen: false).uid ?? '';
-
-                                try {
-                                  await FirebaseFirestore.instance.collection('SUPPORT_TICKETS').add({
-                                    'userId': uid,
-                                    'userEmail': email,
-                                    'contactEmail': email,
-                                    'category': selectedCategory,
-                                    'message': message,
-                                    'status': 'OPEN',
-                                    'createdAt': FieldValue.serverTimestamp(),
-                                  });
-
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                    _showSuccessDialog(
-                                      "Message Sent!",
-                                      "Your inquiry has been submitted to the Admin Desk ($adminEmail). We will get back to you shortly.",
-                                    );
-                                  }
-                                } catch (e) {
-                                  setSheetState(() => isSubmitting = false);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text("Error submitting message: $e")),
-                                    );
-                                  }
-                                }
-                              },
-                        child: isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Text(
-                                "Submit to Admin",
-                                style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.support_agent_rounded, color: _fadedCopper, size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Report Issue / Contact Admin",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _blackText,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 22, color: Colors.grey),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: "Close",
+                            onPressed: () {
+                              FocusScope.of(context).unfocus();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        "Submit your inquiry directly to the PawKODA Administrator.",
+                        style: TextStyle(fontSize: 11, color: _subText),
+                      ),
+                      const SizedBox(height: 14),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedCategory,
+                        isExpanded: true,
+                        style: TextStyle(fontSize: 13, color: _blackText, fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          labelText: "Category *",
+                          labelStyle: TextStyle(fontSize: 12, color: _subText),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: _fadedCopper),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'General Inquiry', child: Text("General Inquiry", style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'Application / Registration Status', child: Text("Application / Registration Status", style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'Account & Sign In Help', child: Text("Account & Sign In Help", style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'Technical Support', child: Text("Technical Support", style: TextStyle(fontSize: 13))),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setSheetState(() => selectedCategory = val);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      TextField(
+                        controller: emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        style: TextStyle(fontSize: 13, color: _blackText),
+                        decoration: InputDecoration(
+                          labelText: "Email Address *",
+                          labelStyle: TextStyle(fontSize: 12, color: _subText),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          hintText: "e.g., yourname@domain.com",
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      TextField(
+                        controller: messageCtrl,
+                        maxLines: 3,
+                        style: TextStyle(fontSize: 13, color: _blackText),
+                        decoration: InputDecoration(
+                          labelText: "Detailed Message *",
+                          labelStyle: TextStyle(fontSize: 12, color: _subText),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          hintText: "Describe your inquiry or issue...",
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: SizedBox(
+                              height: 42,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: Colors.grey.shade400),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () {
+                                        FocusScope.of(context).unfocus();
+                                        Navigator.pop(context);
+                                      },
+                                child: Text("Cancel", style: TextStyle(color: _blackText, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: SizedBox(
+                              height: 42,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _fadedCopper,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () async {
+                                        FocusScope.of(context).unfocus();
+
+                                        final email = emailCtrl.text.trim();
+                                        final message = messageCtrl.text.trim();
+
+                                        if (email.isEmpty || message.isEmpty) {
+                                          _showErrorDialog(
+                                            "Incomplete Info",
+                                            "Please enter both your Email Address and Detailed Message before submitting.",
+                                          );
+                                          return;
+                                        }
+
+                                        if (!email.contains('@') || !email.contains('.')) {
+                                          _showErrorDialog(
+                                            "Invalid Email Address",
+                                            "Please enter a valid email address so the Administrator can reply to your inquiry.",
+                                          );
+                                          return;
+                                        }
+
+                                        setSheetState(() => isSubmitting = true);
+
+                                        final currentUser = FirebaseAuth.instance.currentUser;
+                                        final uid = currentUser?.uid ?? Provider.of<UserProvider>(context, listen: false).uid ?? '';
+
+                                        try {
+                                          await FirebaseFirestore.instance.collection('SUPPORT_TICKETS').add({
+                                            'userId': uid.isNotEmpty ? uid : 'guest',
+                                            'userEmail': email,
+                                            'contactEmail': email,
+                                            'category': selectedCategory,
+                                            'subject': selectedCategory,
+                                            'message': message,
+                                            'status': 'OPEN',
+                                            'createdAt': FieldValue.serverTimestamp(),
+                                          }).timeout(const Duration(seconds: 10));
+
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                            _showSuccessDialog(
+                                              "Enquiry Submitted!",
+                                              "Your enquiry has been submitted. We will get back to you shortly",
+                                            );
+                                          }
+                                        } on FirebaseException catch (e) {
+                                          setSheetState(() => isSubmitting = false);
+                                          if (context.mounted) {
+                                            if (e.code == 'permission-denied') {
+                                              _showErrorDialog(
+                                                "Permission Denied",
+                                                "Unable to submit ticket due to Firebase permissions. Please make sure you are signed in or check Firestore Security Rules for SUPPORT_TICKETS.",
+                                              );
+                                            } else {
+                                              _showErrorDialog(
+                                                "Submission Error",
+                                                "Firebase error (${e.code}): ${e.message}",
+                                              );
+                                            }
+                                          }
+                                        } catch (e) {
+                                          setSheetState(() => isSubmitting = false);
+                                          if (context.mounted) {
+                                            _showErrorDialog(
+                                              "Submission Error",
+                                              "Unable to submit ticket: $e",
+                                            );
+                                          }
+                                        }
+                                      },
+                                child: isSubmitting
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Text(
+                                        "Submit to Admin",
+                                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
