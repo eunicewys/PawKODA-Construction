@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/image_helper.dart';
+import '../services/booking_service.dart';
 
 /// VetRegisterScreen: Registration page for Veterinary Organizations.
 /// Vets must fill in all details, including SSM number and proof documents/photos
@@ -20,7 +21,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
   final TextEditingController _clinicNameController = TextEditingController();
   final TextEditingController _ssmNumberController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController(text: '+60 ');
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _websiteController = TextEditingController();
   final TextEditingController _googleMapsController = TextEditingController();
@@ -135,6 +136,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
       );
 
       final String uid = userCredential.user!.uid;
+      final String formattedPhone = BookingService.formatPhoneWithHyphen(phone);
 
       // 4. Save to USERS collection with role 'vet' and status 'pending'
       final Map<String, dynamic> vetUserData = {
@@ -143,9 +145,9 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'clinicName': clinicName,
         'ssmNumber': ssmNumber,
         'email': email,
-        'phone': phone,
+        'phone': formattedPhone,
         'address': address,
-        'operatingHours': "09:00 AM - 07:00 PM", // Default schedule initially until updated in Vet Module
+        'operatingHours': "09:00 AM - 06:00 PM", // Default schedule initially until updated in Vet Module
         'websiteUrl': websiteUrl,
         'googleMapsUrl': googleMapsUrl,
         'proofDocumentUrl': base64ProofImage ?? '',
@@ -162,9 +164,9 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'name': clinicName,
         'ssmNumber': ssmNumber,
         'address': address,
-        'phone': phone,
+        'phone': formattedPhone,
         'email': email,
-        'operatingHours': "09:00 AM - 07:00 PM",
+        'operatingHours': "09:00 AM - 06:00 PM",
         'websiteUrl': websiteUrl,
         'googleMapsUrl': googleMapsUrl,
         'proofDocumentUrl': base64ProofImage ?? '',
@@ -179,7 +181,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         _showPawDialog(
           "Application Submitted",
           "Your Veterinary Organization registration (SSM: $ssmNumber) has been submitted successfully.\n\n"
-          "Your account is currently PENDING review by a PawKODA administrator. Once verified, you will be able to log in to access the Vet Dashboard.",
+          "Your account is currently under review. You will receive an Email on the verification status within 1-3 business days.",
           isError: false,
           onConfirm: () {
             Navigator.pop(context); // Return to VetLoginScreen
@@ -507,6 +509,9 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: _fadedCopper.withAlpha(150), fontSize: 13),
+            prefixIcon: keyboardType == TextInputType.phone
+                ? Icon(Icons.phone_outlined, color: _toffeeBrown, size: 20)
+                : null,
             fillColor: _almondCream.withAlpha(70),
             filled: true,
             border: OutlineInputBorder(

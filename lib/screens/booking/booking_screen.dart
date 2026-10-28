@@ -214,21 +214,32 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   // TAB 1: DISCOVER CLINICS
   // ===========================================================================
   Widget _buildDiscoverClinicsTab(String userId) {
-    final filteredClinics = _bookingService.getClinics(
-      userLat: _userLat,
-      userLng: _userLng,
-      selectedCity: _selectedCity,
-      searchQuery: _searchQuery,
-    );
+    return StreamBuilder<List<ClinicModel>>(
+      stream: _bookingService.streamLiveClinics(),
+      builder: (context, snapshot) {
+        final rawClinics = snapshot.data ?? BookingService.penangClinics;
+        final filteredClinics = _bookingService.processClinicsList(
+          rawClinics,
+          userLat: _userLat,
+          userLng: _userLng,
+          selectedCity: _selectedCity,
+          searchQuery: _searchQuery,
+        );
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(14, 2, 14, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // LOCATION SELECTION CARD (Compact scale)
-          _buildLocationCard(),
-          const SizedBox(height: 12),
+        final Set<String> dynamicCities = {'All Cities (Penang)'};
+        for (var c in rawClinics) {
+          if (c.city.isNotEmpty) dynamicCities.add(c.city);
+        }
+        final availableCities = dynamicCities.toList();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(14, 2, 14, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // LOCATION SELECTION CARD (Compact scale)
+              _buildLocationCardWithCities(availableCities),
+              const SizedBox(height: 12),
 
           // Search Bar & View Mode Toggle (Slightly shrunk height & fonts)
           Row(
@@ -355,15 +366,17 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         ],
       ),
     );
+      },
+    );
   }
 
   // ===========================================================================
   // LOCATION CARD (Scaled down compactness)
   // ===========================================================================
-  Widget _buildLocationCard() {
-    final String activeCityValue = BookingService.penangCities.contains(_selectedCity)
+  Widget _buildLocationCardWithCities(List<String> availableCities) {
+    final String activeCityValue = availableCities.contains(_selectedCity)
         ? _selectedCity
-        : BookingService.penangCities.first;
+        : availableCities.first;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -422,7 +435,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     setState(() => _selectedCity = newValue);
                   }
                 },
-                items: BookingService.penangCities.map<DropdownMenuItem<String>>((String city) {
+                items: availableCities.map<DropdownMenuItem<String>>((String city) {
                   return DropdownMenuItem<String>(
                     value: city,
                     child: Row(
@@ -448,6 +461,8 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       ),
     );
   }
+
+
 
   // ===========================================================================
   // CLINIC CARD (Scaled down compact layout)
@@ -542,47 +557,54 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     ),
                     const SizedBox(height: 6),
 
-                    // Rating, Distance & Hours
+                    // City Location & Phone Number
                     Row(
                       children: [
-                        // Rating
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
-                        const SizedBox(width: 2),
+                        Icon(Icons.location_city_rounded, color: _dustyOlive, size: 14),
+                        const SizedBox(width: 4),
                         Text(
-                          "${clinic.rating}",
+                          clinic.city,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: _darkCharcoal,
                           ),
                         ),
-                        Text(
-                          " (${clinic.reviewCount})",
-                          style: TextStyle(fontSize: 10, color: _ashGrey),
-                        ),
-                        const SizedBox(width: 8),
+                        if (clinic.phone.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Icon(Icons.phone_outlined, color: _dustyOlive, size: 13),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: SelectableText(
+                              clinic.phone,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _darkCharcoal,
+                              ),
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
 
-                        // Distance
-                        Icon(Icons.near_me_rounded, color: _ashGrey, size: 12),
-                        const SizedBox(width: 2),
-                        Text(
-                          "${clinic.distanceKm} km",
-                          style: TextStyle(fontSize: 10, color: _darkCharcoal),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Hours
-                        Icon(Icons.access_time_rounded, color: _ashGrey, size: 12),
-                        const SizedBox(width: 2),
+                    // Full Operating Hours (Handles 1 or 2 time slots completely without cut-off)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.access_time_rounded, color: clinic.isEmergency24h ? Colors.red.shade700 : _dustyOlive, size: 14),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            clinic.operatingHours,
+                            "Operating Hours:\n${clinic.operatingHours.replaceAll(', ', '\n').replaceAll(' and ', '\n')}",
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               color: clinic.isEmergency24h ? Colors.red.shade700 : _darkCharcoal,
-                              fontWeight: clinic.isEmergency24h ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: clinic.isEmergency24h ? FontWeight.bold : FontWeight.w600,
+                              height: 1.3,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -928,10 +950,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          "⭐ ${selectedClinic.rating}",
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal),
-                        ),
                         const SizedBox(width: 6),
                         GestureDetector(
                           onTap: () => setState(() => _selectedMapClinic = null),
@@ -982,6 +1000,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       address: clinic.address,
       latitude: clinic.latitude,
       longitude: clinic.longitude,
+      googleMapsUrl: clinic.googleMapsUrl,
     );
 
     if (!success && mounted) {

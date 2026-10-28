@@ -620,6 +620,134 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
+  void _showManageServicesModal(BuildContext context, {required List<String> currentServices}) {
+    final List<String> availableServices = [
+      'General Consultation',
+      'Vaccination',
+      'Soft Tissue Surgery',
+      'Dental Care',
+      'Blood Diagnostics',
+      'Feline Care',
+      'Deworming',
+      'Grooming Services',
+      'Microchipping',
+      'Emergency Care',
+    ];
+
+    final List<String> selectedServices = List<String>.from(currentServices);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(Icons.medical_services_rounded, color: _coffeeBean, size: 22),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Manage Offered Medical Services",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _coffeeBean),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Select medical services offered at your clinic. Updates sync in real time to the Admin Registry and Pet Owner Booking Screen.",
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: availableServices.map((svc) {
+                      final isSelected = selectedServices.contains(svc);
+                      return FilterChip(
+                        label: Text(svc, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : _coffeeBean, fontWeight: FontWeight.bold)),
+                        selected: isSelected,
+                        selectedColor: _coffeeBean,
+                        backgroundColor: _paleOak,
+                        onSelected: (val) {
+                          setSheetState(() {
+                            if (val) {
+                              selectedServices.add(svc);
+                            } else {
+                              selectedServices.remove(svc);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  ElevatedButton(
+                    onPressed: () async {
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                      if (uid != null) {
+                        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
+                          'services': selectedServices,
+                          'lastServicesUpdatedAt': FieldValue.serverTimestamp(),
+                        });
+                        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
+                          'services': selectedServices,
+                          'lastServicesUpdatedAt': FieldValue.serverTimestamp(),
+                        }, SetOptions(merge: true));
+                      }
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("✓ Offered services updated in real time!"), backgroundColor: Colors.green),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _coffeeBean,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text("Save Offered Services", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
@@ -682,7 +810,11 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
               Text("Appointment Queue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
               const SizedBox(height: 12),
               StreamBuilder<List<BookingModel>>(
-                stream: _bookingService.streamAllBookings(),
+                stream: _bookingService.streamVetClinicBookings(
+                  userProvider.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '',
+                  clinicName,
+                  vetEmail: userProvider.email ?? FirebaseAuth.instance.currentUser?.email ?? '',
+                ),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                     return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
@@ -721,7 +853,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   if (userSnap.hasData && userSnap.data!.exists) {
                     userData = userSnap.data!.data() as Map<String, dynamic>?;
                   }
-                  final String currentHours = userData?['operatingHours'] ?? "09:00 AM - 01:00 PM, 02:30 PM - 06:00 PM";
+                  final String currentHours = userData?['operatingHours'] ?? "09:00 AM - 06:00 PM";
                   final Timestamp? lastUpdatedTs = userData?['lastHoursUpdatedAt'] as Timestamp?;
                   final DateTime? lastUpdatedAt = lastUpdatedTs?.toDate();
 
@@ -765,6 +897,23 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                           ),
                           icon: const Icon(Icons.edit_calendar_rounded, size: 18),
                           label: const Text("Manage Operating Hours & Breaks", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _coffeeBean,
+                            side: BorderSide(color: _coffeeBean),
+                            minimumSize: const Size(double.infinity, 46),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Manage Offered Medical Services Button
+                        OutlinedButton.icon(
+                          onPressed: () => _showManageServicesModal(
+                            context,
+                            currentServices: List<String>.from(userData?['services'] ?? ['General Consultation', 'Vaccination', 'Deworming']),
+                          ),
+                          icon: const Icon(Icons.medical_services_outlined, size: 18),
+                          label: const Text("Manage Offered Medical Services", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _coffeeBean,
                             side: BorderSide(color: _coffeeBean),

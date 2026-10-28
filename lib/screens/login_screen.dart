@@ -44,27 +44,43 @@ class _LoginScreenState extends State<LoginScreen> {
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception("Network timeout during login authentication."),
       );
 
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('USERS')
           .doc(userCredential.user!.uid)
-          .get();
+          .get()
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception("Network timeout fetching account profile."),
+          );
 
       if (userDoc.exists) {
         final data = userDoc.data() as Map<String, dynamic>;
         final String role = data['role'] ?? 'owner';
+        final String normStatus = (data['status'] ?? data['approvalStatus'] ?? 'pending').toString().trim().toLowerCase();
         final String name = data['displayName'] ?? 'User';
         final String? photoUrl = data['photoUrl'];
 
         // Enforce role separation: Vet accounts cannot log in on Pet Owner page
         if (role == 'vet') {
           await FirebaseAuth.instance.signOut();
-          _showPawDialog(
-            "Role Mismatch",
-            "Veterinary Organization accounts must log in via the Vet Login page.",
-            isError: true,
-          );
+          if (normStatus == 'pending') {
+            _showPawDialog(
+              "Application Pending",
+              "Application still pending for review.",
+              isError: true,
+            );
+          } else {
+            _showPawDialog(
+              "Role Mismatch",
+              "Veterinary Organization accounts must log in via the Vet Login page.",
+              isError: true,
+            );
+          }
           return;
         }
 

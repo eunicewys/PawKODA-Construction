@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import '../../providers/user_provider.dart';
-import '../../utils/image_helper.dart';
-import '../widgets/fringe_header.dart';
-import '../login_screen.dart';
-import '../nutrition/nutrition_database_screen.dart';
-import '../admin/breed_management_screen.dart';
+import 'package:pawkoda_fyp/providers/user_provider.dart';
+import 'package:pawkoda_fyp/utils/image_helper.dart';
+import 'package:pawkoda_fyp/screens/widgets/fringe_header.dart';
+import 'package:pawkoda_fyp/screens/login_screen.dart';
+import 'package:pawkoda_fyp/screens/nutrition/nutrition_database_screen.dart';
+import 'package:pawkoda_fyp/screens/admin/breed_management_screen.dart';
+import 'package:pawkoda_fyp/screens/admin/clinics_registry_screen.dart';
 
 /// AdminHomeScreen: Dashboard for System Administrators.
 /// Features a sticky wave FringeHeader, functional Bottom Navigation for Dashboard, Users, Data, and Security,
@@ -33,47 +34,77 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   String _searchTicketQuery = "";
   String _selectedUserRoleFilter = 'All';
 
-  // Logout Logic with Confirmation Dialog
-  Future<void> _handleLogout(BuildContext context) async {
-    final bool? shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.logout_rounded, color: _yaleBlue, size: 22),
-            const SizedBox(width: 8),
-            const Text("Confirm Logout", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: const Text(
-          "Are you sure you want to log out of the Admin Panel?",
-          style: TextStyle(fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _yaleBlue,
-              elevation: 0,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _frozenWater,
+      body: Column(
+        children: [
+          FringeHeader(
+            title: _getTabHeaderTitle(),
+            subtitle: "Admin Panel",
+            backgroundColor: _yaleBlue,
+            trailing: IconButton(
+              onPressed: () => _handleLogout(),
+              icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 22),
+              tooltip: "Logout",
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Logout", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: _buildCurrentTabView(),
+            ),
           ),
         ],
       ),
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  // Logout Logic with Confirmation Dialog
+  Future<void> _handleLogout() async {
+    final bool? shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.logout_rounded, color: _yaleBlue, size: 22),
+              const SizedBox(width: 8),
+              const Text("Confirm Logout", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            "Are you sure you want to log out of the Admin Panel?",
+            style: TextStyle(fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _yaleBlue,
+                elevation: 0,
+              ),
+              child: const Text("Logout", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
 
     if (shouldLogout == true) {
       await FirebaseAuth.instance.signOut();
-      if (context.mounted) {
+      if (mounted) {
         Provider.of<UserProvider>(context, listen: false).clearUser();
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
         );
       }
@@ -81,7 +112,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   // Update Vet Approval Status in Firestore (USERS & CLINICS)
-  Future<void> _updateVetStatus(String uid, String clinicName, String newStatus) async {
+  Future<void> _updateVetStatus(String uid, String clinicName, String newStatus, {Map<String, dynamic>? fullData}) async {
     try {
       await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
         'status': newStatus,
@@ -101,6 +132,27 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             backgroundColor: newStatus == 'approved' ? Colors.green : Colors.red,
           ),
         );
+
+        if (newStatus == 'approved') {
+          // Open Clinics Registry pre-filled with clinic's details
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ClinicsRegistryScreen(
+                initialVetApplicationData: {
+                  'uid': uid,
+                  'clinicName': clinicName,
+                  'email': fullData?['email'] ?? '',
+                  'phone': fullData?['phone'] ?? '',
+                  'address': fullData?['address'] ?? '',
+                  'ssmNumber': fullData?['ssmNumber'] ?? '',
+                  'googleMapsUrl': fullData?['googleMapsUrl'] ?? '',
+                  'proofDocumentUrl': fullData?['proofDocumentUrl'] ?? '',
+                },
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -137,78 +189,81 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   void _confirmRejectVet(String uid, String clinicName) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22),
-            SizedBox(width: 8),
-            Text("Confirm Rejection", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22),
+              SizedBox(width: 8),
+              Text("Confirm Rejection", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            "Are you sure you want to reject the veterinary application for '$clinicName'?",
+            style: TextStyle(fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                _updateVetStatus(uid, clinicName, 'rejected');
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text("Yes, Reject", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
           ],
-        ),
-        content: Text(
-          "Are you sure you want to reject the veterinary application for '$clinicName'?",
-          style: const TextStyle(fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Navigator.pop(context);
-              _updateVetStatus(uid, clinicName, 'rejected');
-            },
-            child: const Text("Yes, Reject", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   void _confirmDeleteVet(String uid, String clinicName) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.delete_forever_rounded, color: Colors.red, size: 22),
-            SizedBox(width: 8),
-            Text("Delete Application", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.delete_forever_rounded, color: Colors.red, size: 22),
+              SizedBox(width: 8),
+              Text("Delete Application", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            "Are you sure you want to permanently delete the application record for '$clinicName'? This cannot be undone.",
+            style: TextStyle(fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                _deleteVetApplication(uid, clinicName);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text("Delete Record", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
           ],
-        ),
-        content: Text(
-          "Are you sure you want to permanently delete the application record for '$clinicName'? This cannot be undone.",
-          style: const TextStyle(fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteVetApplication(uid, clinicName);
-            },
-            child: const Text("Delete Record", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  void _showFullVetDetailsDialog(BuildContext context, String uid, Map<String, dynamic> data) {
+  void _showFullVetDetailsDialog(String uid, Map<String, dynamic> data) {
     final String clinicName = data['clinicName'] ?? data['displayName'] ?? 'Vet Organization';
     final String ssmNumber = data['ssmNumber'] ?? 'N/A';
     final String email = data['email'] ?? 'N/A';
     final String phone = data['phone'] ?? 'N/A';
     final String address = data['address'] ?? 'N/A';
-    final String operatingHours = data['operatingHours'] ?? '09:00 AM - 07:00 PM';
     final String websiteUrl = data['websiteUrl'] ?? '';
     final String googleMapsUrl = data['googleMapsUrl'] ?? '';
     final String proofUrl = data['proofDocumentUrl'] ?? '';
@@ -226,7 +281,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
+      builder: (dialogContext) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         child: Container(
@@ -259,7 +314,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       icon: const Icon(Icons.close, color: Colors.white, size: 18),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                     ),
                   ],
                 ),
@@ -312,7 +367,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       _buildDetailRow(Icons.email_outlined, "Organization Email", email),
                       _buildDetailRow(Icons.phone_outlined, "Contact Phone Number", phone),
                       _buildDetailRow(Icons.location_on_outlined, "Clinic Address", address),
-                      _buildDetailRow(Icons.access_time_outlined, "Operating Hours", operatingHours),
                       _buildDetailRow(
                         Icons.language_outlined,
                         "Website / Social Media Link",
@@ -336,20 +390,52 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 220, minHeight: 100),
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: proofUrl.isNotEmpty
-                              ? (ImageHelper.getImageProvider(proofUrl) != null
-                                  ? Image(image: ImageHelper.getImageProvider(proofUrl)!, fit: BoxFit.contain)
-                                  : const Center(child: Text("Invalid image format", style: TextStyle(fontSize: 11))))
-                              : const Center(child: Text("No document uploaded", style: TextStyle(fontSize: 11))),
+                      GestureDetector(
+                        onTap: proofUrl.isNotEmpty && ImageHelper.getImageProvider(proofUrl) != null
+                            ? () => _showZoomablePhotoViewer(context, proofUrl, clinicName)
+                            : null,
+                        child: Stack(
+                          children: [
+                            Container(
+                              constraints: const BoxConstraints(maxHeight: 220, minHeight: 100),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey[300]!),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: proofUrl.isNotEmpty
+                                    ? (ImageHelper.getImageProvider(proofUrl) != null
+                                        ? Image(image: ImageHelper.getImageProvider(proofUrl)!, fit: BoxFit.contain)
+                                        : const Center(child: Text("Invalid image format", style: TextStyle(fontSize: 11))))
+                                    : const Center(child: Text("No document uploaded", style: TextStyle(fontSize: 11))),
+                              ),
+                            ),
+                            if (proofUrl.isNotEmpty && ImageHelper.getImageProvider(proofUrl) != null)
+                              Positioned(
+                                right: 8,
+                                bottom: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withAlpha(180),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        "Tap to Zoom & View Full Size",
+                                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -368,14 +454,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 child: Row(
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                       child: Text("Close", style: TextStyle(color: Colors.grey[700], fontSize: 11)),
                     ),
                     const Spacer(),
                     if (status == 'rejected')
                       ElevatedButton.icon(
                         onPressed: () {
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext);
                           _confirmDeleteVet(uid, clinicName);
                         },
                         icon: const Icon(Icons.delete_outline, size: 14),
@@ -392,7 +478,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     else ...[
                       OutlinedButton(
                         onPressed: () {
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext);
                           _confirmRejectVet(uid, clinicName);
                         },
                         style: OutlinedButton.styleFrom(
@@ -409,8 +495,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       if (status != 'approved')
                         ElevatedButton(
                           onPressed: () {
-                            Navigator.pop(context);
-                            _updateVetStatus(uid, clinicName, 'approved');
+                            Navigator.pop(dialogContext);
+                            _updateVetStatus(uid, clinicName, 'approved', fullData: data);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
@@ -471,42 +557,76 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  void _showProofPhotoDialog(String clinicName, String ssmNumber, String proofUrl) {
-    _showFullVetDetailsDialog(context, "", {
-      'clinicName': clinicName,
-      'ssmNumber': ssmNumber,
-      'proofDocumentUrl': proofUrl,
-    });
-  }
+  void _showZoomablePhotoViewer(BuildContext context, String proofUrl, String clinicName) {
+    final imageProvider = ImageHelper.getImageProvider(proofUrl);
+    if (imageProvider == null) return;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _frozenWater, // Cool professional background
-      body: Column(
-        children: [
-          // 1. PINNED STICKY FRINGE HEADER AT TOP
-          FringeHeader(
-            title: _getTabHeaderTitle(),
-            subtitle: "Admin Panel",
-            backgroundColor: _yaleBlue,
-            trailing: IconButton(
-              onPressed: () => _handleLogout(context),
-              icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 22),
-              tooltip: "Logout",
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                panEnabled: true,
+                boundaryMargin: const EdgeInsets.all(20),
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Image(
+                  image: imageProvider,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
-          ),
-
-          // 2. SCROLLABLE TAB CONTENT
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              child: _buildCurrentTabView(),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                color: Colors.black.withAlpha(200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: SafeArea(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              clinicName.isNotEmpty ? clinicName : "Proof of Authenticity",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Text(
+                              "SSM / License Document • Pinch or drag to zoom in/out",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+                        onPressed: () => Navigator.pop(ctx),
+                        tooltip: "Close",
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -606,6 +726,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         _buildSectionTitle("Database Management"),
         const SizedBox(height: 12),
         _databaseCardModule(
+          icon: Icons.add_business_rounded,
+          title: "Clinics Registry",
+          subtitle: "Penang Vet Network & Operating Details",
+          color: _yaleBlue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ClinicsRegistryScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _databaseCardModule(
           icon: Icons.no_food_rounded,
           title: "Nutrition Database",
           subtitle: "Food & Nutrient Management",
@@ -620,7 +751,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           icon: Icons.pets_rounded,
           title: "Breeds Database",
           subtitle: "Dog & Cat Breed Management",
-          color: _yaleBlue,
+          color: _freshSky,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const BreedManagementScreen()),
@@ -1233,7 +1364,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     }
 
     return GestureDetector(
-      onTap: () => _showFullVetDetailsDialog(context, uid, data),
+      onTap: () => _showFullVetDetailsDialog(uid, data),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -1315,15 +1446,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             const Divider(height: 1),
             const SizedBox(height: 6),
 
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // View Full Application Details Button
                 ElevatedButton.icon(
-                  onPressed: () => _showFullVetDetailsDialog(context, uid, data),
+                  onPressed: () => _showFullVetDetailsDialog(uid, data),
                   icon: const Icon(Icons.info_outline, size: 14),
                   label: const Text("View Full Details", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
@@ -1337,48 +1465,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                 ),
 
-              // Action Controls
-              if (status == 'rejected')
-                IconButton(
-                  onPressed: () => _confirmDeleteVet(uid, clinicName),
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: "Delete Application Record",
-                )
-              else if (status == 'pending')
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => _updateVetStatus(uid, clinicName, 'approved'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text("Approve", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 6),
-                    OutlinedButton(
-                      onPressed: () => _confirmRejectVet(uid, clinicName),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text("Reject", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-            ],
-          ),
+                // Delete Action Control (Only for rejected applications)
+                if (status == 'rejected')
+                  IconButton(
+                    onPressed: () => _confirmDeleteVet(uid, clinicName),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: "Delete Application Record",
+                  ),
+              ],
+            ),
         ],
       ),
     ),

@@ -1654,6 +1654,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           userName: userName,
           photoUrl: photoUrl,
           onLogout: () => _handleLogout(context),
+          onTapAvatar: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+            );
+          },
         ),
         // Scrollable Body Content
         Expanded(

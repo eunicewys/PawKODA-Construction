@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../utils/image_helper.dart';
-import '../profile/edit_profile_screen.dart';
 
 class FringeHeader extends StatelessWidget {
   final String title;
@@ -117,6 +116,7 @@ class DashboardFringeHeader extends StatelessWidget {
   final String userName;
   final String? photoUrl;
   final VoidCallback onLogout;
+  final VoidCallback? onTapAvatar;
 
   const DashboardFringeHeader({
     super.key,
@@ -124,6 +124,7 @@ class DashboardFringeHeader extends StatelessWidget {
     required this.userName,
     this.photoUrl,
     required this.onLogout,
+    this.onTapAvatar,
   });
 
   @override
@@ -205,12 +206,7 @@ class DashboardFringeHeader extends StatelessWidget {
                             tooltip: "Logout",
                           ),
                           GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                              );
-                            },
+                            onTap: onTapAvatar,
                             child: Container(
                               padding: const EdgeInsets.all(2),
                               decoration: const BoxDecoration(

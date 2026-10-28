@@ -40,19 +40,26 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Authenticate credentials
+      // 1. Authenticate credentials with 10s timeout
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception("Network timeout during login authentication."),
       );
 
       final String uid = userCredential.user!.uid;
 
-      // 2. Fetch user profile from Firestore
+      // 2. Fetch user profile from Firestore with 10s timeout
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('USERS')
           .doc(uid)
-          .get();
+          .get()
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception("Network timeout fetching account profile."),
+          );
 
       if (!userDoc.exists) {
         await FirebaseAuth.instance.signOut();
@@ -62,7 +69,7 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
 
       final data = userDoc.data() as Map<String, dynamic>;
       final String role = data['role'] ?? 'owner';
-      final String status = data['status'] ?? data['approvalStatus'] ?? 'pending';
+      final String normStatus = (data['status'] ?? data['approvalStatus'] ?? 'pending').toString().trim().toLowerCase();
       final String name = data['displayName'] ?? data['clinicName'] ?? 'Veterinary Clinic';
       final String? photoUrl = data['photoUrl'];
 
@@ -78,16 +85,15 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
       }
 
       // 4. ENFORCE ADMIN APPROVAL: Must be approved by admin
-      if (status == 'pending') {
+      if (normStatus == 'pending') {
         await FirebaseAuth.instance.signOut();
         _showPawDialog(
-          "Account Pending Approval",
-          "Your veterinary organization account is currently pending admin review and approval.\n\n"
-          "You will be able to log in once an administrator verifies your SSM and credentials.",
+          "Application Pending",
+          "Application still pending for review.",
           isError: true,
         );
         return;
-      } else if (status == 'rejected') {
+      } else if (normStatus == 'rejected') {
         await FirebaseAuth.instance.signOut();
         _showPawDialog(
           "Application Rejected",
@@ -95,9 +101,13 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
           isError: true,
         );
         return;
-      } else if (status != 'approved') {
+      } else if (normStatus != 'approved') {
         await FirebaseAuth.instance.signOut();
-        _showPawDialog("Access Restricted", "Account status ($status) does not allow login.", isError: true);
+        _showPawDialog(
+          "Application Pending",
+          "Application still pending for review.",
+          isError: true,
+        );
         return;
       }
 
@@ -121,12 +131,18 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
       String errorMsg = "Login failed.";
       if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
         errorMsg = "Invalid email or password. Please try again.";
+      } else if (e.code == 'network-request-failed') {
+        errorMsg = "Network error. Please check your internet connection and try again.";
       } else {
         errorMsg = e.message ?? "An authentication error occurred.";
       }
       _showPawDialog("Login Error", errorMsg, isError: true);
     } catch (e) {
-      _showPawDialog("Login Error", "Technical detail: $e", isError: true);
+      if (e.toString().contains("SocketException") || e.toString().contains("I/O error") || e.toString().contains("timeout")) {
+        _showPawDialog("Network Error", "Connection timed out. Please check your internet connection and try again.", isError: true);
+      } else {
+        _showPawDialog("Login Error", "Technical detail: $e", isError: true);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
