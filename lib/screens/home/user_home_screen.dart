@@ -2232,40 +2232,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => setState(() {
-                                _bookingInitialTab = 0;
-                                _selectedIndex = 2;
-                              }),
-                              icon: Icon(Icons.calendar_month_rounded, size: 16, color: _dustyOlive),
-                              label: Text("Book Vet", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold, fontSize: 13)),
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: _dustyOlive.withAlpha(100)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => setState(() => _selectedIndex = 1),
-                              icon: const Icon(Icons.vaccines_rounded, size: 16, color: Colors.white),
-                              label: const Text("Vax & Deworm", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _dustyOlive,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                elevation: 0,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),

@@ -1355,14 +1355,14 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                             _bookingSubTab == 0 ? "No Active Appointments" : "No Past Appointments",
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _darkCharcoal),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _bookingSubTab == 0
-                                ? "Your upcoming Penang vet appointments will appear here."
-                                : "Your past and completed vet appointment records will be stored here.",
-                            style: TextStyle(color: _ashGrey, fontSize: 12),
-                            textAlign: TextAlign.center,
-                          ),
+                          if (_bookingSubTab == 1) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              "Your past and completed vet appointment records will be stored here.",
+                              style: TextStyle(color: _ashGrey, fontSize: 12),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ],
                       ),
                     )
@@ -2057,16 +2057,18 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     PetProfile? selectedPet;
     final notesCtrl = TextEditingController();
 
-    final timeSlots = [
-      '08:00 AM',
-      '09:00 AM',
-      '10:30 AM',
-      '11:45 AM',
-      '02:00 PM',
-      '03:30 PM',
-      '05:00 PM',
-      '07:30 PM',
-    ];
+    final timeSlots = clinic.operatingTimeSlots.isNotEmpty
+        ? clinic.operatingTimeSlots
+        : [
+            '08:00 AM',
+            '09:00 AM',
+            '10:30 AM',
+            '11:45 AM',
+            '02:00 PM',
+            '03:30 PM',
+            '05:00 PM',
+            '07:30 PM',
+          ];
 
     showModalBottomSheet(
       context: context,

@@ -24,6 +24,7 @@ class ClinicModel {
   final List<String> services;
   final List<String> veterinarians;
   final List<String> operatingDays;
+  final List<String> operatingTimeSlots;
   final bool isEmergency24h;
   final bool isRecommended;
   final bool isAcceptingBookings;
@@ -45,8 +46,9 @@ class ClinicModel {
     this.imageUrl,
     this.googleMapsUrl,
     required this.services,
-    this.veterinarians = const ["Dr. Kenique Lim (Senior Surgeon)", "Dr. Amanda Tan (Feline Specialist)", "Dr. Marcus Wong (General Practitioner)"],
-    this.operatingDays = const ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    this.veterinarians = const [],
+    this.operatingDays = const [],
+    this.operatingTimeSlots = const [],
     this.isEmergency24h = false,
     this.isRecommended = true,
     this.isAcceptingBookings = true,
@@ -99,6 +101,7 @@ class ClinicModel {
       services: services,
       veterinarians: veterinarians,
       operatingDays: operatingDays,
+      operatingTimeSlots: operatingTimeSlots,
       isEmergency24h: isEmergency24h,
       isRecommended: isRecommended,
       isAcceptingBookings: isAcceptingBookings,
@@ -125,6 +128,7 @@ class ClinicModel {
       'services': services,
       'veterinarians': veterinarians,
       'operatingDays': operatingDays,
+      'operatingTimeSlots': operatingTimeSlots,
       'isEmergency24h': isEmergency24h,
       'isRecommended': isRecommended,
       'isAcceptingBookings': isAcceptingBookings,
@@ -161,7 +165,7 @@ class ClinicModel {
     return ClinicModel(
       id: docId,
       name: name,
-      specialty: map['specialty'] ?? 'General Veterinary',
+      specialty: (map['specialty'] ?? 'General Veterinary').toString().replaceAll('General Veterinary & Surgery', 'General Veterinary'),
       rating: (map['rating'] as num?)?.toDouble() ?? 4.7,
       reviewCount: (map['reviewCount'] as num?)?.toInt() ?? 100,
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 1.0,
@@ -177,7 +181,8 @@ class ClinicModel {
       googleMapsUrl: mapsUrl,
       services: List<String>.from(map['services'] ?? []),
       veterinarians: List<String>.from(map['veterinarians'] ?? []),
-      operatingDays: List<String>.from(map['operatingDays'] ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']),
+      operatingDays: List<String>.from(map['operatingDays'] ?? []),
+      operatingTimeSlots: List<String>.from(map['operatingTimeSlots'] ?? map['operatingSlots'] ?? []),
       isEmergency24h: map['isEmergency24h'] ?? false,
       isRecommended: map['isRecommended'] ?? true,
       isAcceptingBookings: acceptingBookings,

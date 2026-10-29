@@ -61,6 +61,12 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
     super.dispose();
   }
 
+  bool get _isPdfOrDoc {
+    if (_selectedImagePath == null) return false;
+    final lower = _selectedImagePath!.toLowerCase();
+    return lower.endsWith('.pdf') || lower.endsWith('.doc') || lower.endsWith('.docx');
+  }
+
   Future<void> _pickProofImage() async {
     try {
       final ImagePicker picker = ImagePicker();
@@ -75,7 +81,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         });
       }
     } catch (e) {
-      _showPawDialog("Image Picker Error", "Failed to select image: $e", isError: true);
+      _showPawDialog("Picker Error", "Failed to select document/image: $e", isError: true);
     }
   }
 
@@ -114,8 +120,8 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
 
     if (_selectedImagePath == null) {
       _showPawDialog(
-        "Proof Photo Required",
-        "Please attach a photo/document of your SSM Registration or Veterinary Operating License to prove authenticity.",
+        "Proof Document Required",
+        "Please attach a copy of your SSM Registration or Veterinary Operating License (Image or PDF) to prove authenticity.",
         isError: true,
       );
       return;
@@ -342,10 +348,10 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                       _buildField("GOOGLE MAPS LOCATION LINK", _googleMapsController, "e.g. https://maps.google.com/?q=yourclinic", keyboardType: TextInputType.url, isRequired: true),
                       const SizedBox(height: 16),
 
-                      // SSM / License Proof Photo Picker
+                      // SSM / License Proof Picker
                       Text.rich(
                         TextSpan(
-                          text: "PROOF OF AUTHENTICITY (SSM / LICENSE PHOTO)",
+                          text: "PROOF OF AUTHENTICITY (SSM / LICENSE)",
                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _fadedCopper),
                           children: const [
                             TextSpan(text: " *", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
@@ -372,12 +378,34 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                                   borderRadius: BorderRadius.circular(15),
                                   child: Stack(
                                     children: [
-                                      Image.file(
-                                        File(_selectedImagePath!),
-                                        width: double.infinity,
-                                        height: 140,
-                                        fit: BoxFit.cover,
-                                      ),
+                                      _isPdfOrDoc
+                                          ? Container(
+                                              width: double.infinity,
+                                              height: 140,
+                                              color: Colors.white,
+                                              padding: const EdgeInsets.all(16),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.picture_as_pdf_rounded, color: Colors.red.shade700, size: 38),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    _selectedImagePath!.split('/').last,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _darkText),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text("Document Attached", style: TextStyle(fontSize: 10, color: Colors.green.shade800, fontWeight: FontWeight.w600)),
+                                                ],
+                                              ),
+                                            )
+                                          : Image.file(
+                                              File(_selectedImagePath!),
+                                              width: double.infinity,
+                                              height: 140,
+                                              fit: BoxFit.cover,
+                                            ),
                                       Positioned(
                                         right: 8,
                                         top: 8,
@@ -397,14 +425,14 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                               : Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add_a_photo_outlined, color: _toffeeBrown, size: 32),
+                                    Icon(Icons.upload_file_rounded, color: _toffeeBrown, size: 32),
                                     const SizedBox(height: 6),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 12),
                                       child: FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: Text(
-                                          "Tap to upload SSM Certificate or License Photo",
+                                          "Tap to upload SSM Certificate or License Document",
                                           maxLines: 1,
                                           style: TextStyle(color: _toffeeBrown, fontSize: 11, fontWeight: FontWeight.w600),
                                         ),
@@ -412,7 +440,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      "Supports JPG, PNG (Max 10MB)",
+                                      "Supports JPG, PNG, PDF & Documents",
                                       style: TextStyle(color: Colors.grey[500], fontSize: 11),
                                     ),
                                   ],

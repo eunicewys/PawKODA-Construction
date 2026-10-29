@@ -75,7 +75,7 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
     final model = ClinicModel(
       id: uid,
       name: clinicName,
-      specialty: 'General Veterinary & Surgery',
+      specialty: 'General Veterinary',
       rating: 4.8,
       reviewCount: 50,
       distanceKm: 1.0,
@@ -781,7 +781,7 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                                       final newClinic = ClinicModel(
                                         id: docId,
                                         name: name,
-                                        specialty: 'General Veterinary & Surgery',
+                                        specialty: 'General Veterinary',
                                         rating: double.parse(rating.toStringAsFixed(1)),
                                         reviewCount: reviews,
                                         distanceKm: 1.0,

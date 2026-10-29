@@ -10,9 +10,6 @@ import '../../services/booking_service.dart';
 import '../../services/user_notification_service.dart';
 import '../../services/notification_service.dart';
 import '../profile/edit_profile_screen.dart';
-import '../profile/help_support_screen.dart';
-import '../profile/notification_center_screen.dart';
-import '../profile/privacy_security_screen.dart';
 import '../profile/vet_privacy_security_screen.dart';
 import '../widgets/fringe_header.dart';
 import '../login_screen.dart';
@@ -38,7 +35,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
   final BookingService _bookingService = BookingService();
 
-  bool _isAcceptingBookings = true;
+  bool _isAcceptingBookings = false;
   bool _isEmergencyService = false;
 
   bool _hasCheckedClinicStatus = false;
@@ -49,6 +46,130 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkVetClinicRegistrationStatus();
     });
+  }
+
+  Future<void> _showWarningDialog(BuildContext context, {required String title, required String message}) {
+    return showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        elevation: 10,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 32),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _darkText,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _coffeeBean,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSuccessDialog(BuildContext context, {required String title, required String message}) {
+    return showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        elevation: 10,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check_circle_rounded, color: Colors.green.shade800, size: 32),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _darkText,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade800,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _checkVetClinicRegistrationStatus() async {
@@ -175,14 +296,91 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
-  final List<Map<String, dynamic>> _staffList = [
-    {"name": "Dr. Kenique Lim (Senior Surgeon)", "isAvailable": true},
-    {"name": "Dr. Amanda Tan (Feline Specialist)", "isAvailable": true},
-    {"name": "Dr. Marcus Wong (General Practitioner)", "isAvailable": true},
-  ];
+  final List<Map<String, dynamic>> _staffList = [];
 
-  // Logout Logic
+  // Logout Logic with Confirmation Dialog Box
   Future<void> _handleLogout(BuildContext context) async {
+    final bool? confirmLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        elevation: 8,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.logout_rounded, color: Colors.red.shade700, size: 28),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Logout from Vet Portal?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _darkText,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Are you sure you want to sign out from PawKODA Veterinary Portal?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: _fadedCopper,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey.shade700,
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(dialogCtx, false),
+                      child: const Text("CANCEL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(dialogCtx, true),
+                      child: const Text("LOGOUT", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmLogout != true) return;
+
     await FirebaseAuth.instance.signOut();
     if (context.mounted) {
       Provider.of<UserProvider>(context, listen: false).clearUser();
@@ -194,8 +392,27 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     }
   }
 
-  void _showManageStaffModal(BuildContext context) {
+  void _showManageStaffModal(BuildContext context) async {
     final nameCtrl = TextEditingController();
+
+    // Fetch existing doctors list from Firestore for this clinic
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
+        if (doc.exists) {
+          final List<dynamic> savedVets = doc.data()?['veterinarians'] ?? [];
+          if (savedVets.isNotEmpty && _staffList.isEmpty) {
+            _staffList.clear();
+            for (var v in savedVets) {
+              _staffList.add({"name": v.toString(), "isAvailable": true});
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -295,80 +512,123 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
                   // Staff List
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: _staffList.length,
-                      itemBuilder: (context, index) {
-                        final staff = _staffList[index];
-                        final bool isAvailable = staff["isAvailable"] ?? true;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: _paleOak),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: isAvailable ? _coffeeBean.withAlpha(25) : Colors.grey.shade200,
-                                child: Icon(
-                                  Icons.person,
-                                  size: 18,
-                                  color: isAvailable ? _coffeeBean : Colors.grey,
-                                ),
+                    child: _staffList.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Text(
+                                "No doctors/staff added yet. Add your clinic's doctors above.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: _fadedCopper, fontSize: 13, fontWeight: FontWeight.w500),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _staffList.length,
+                            itemBuilder: (context, index) {
+                              final staff = _staffList[index];
+                              final bool isAvailable = staff["isAvailable"] ?? true;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: _paleOak),
+                                ),
+                                child: Row(
                                   children: [
-                                    Text(
-                                      staff["name"],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        color: isAvailable ? _darkText : Colors.grey,
+                                    CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: isAvailable ? _coffeeBean.withAlpha(25) : Colors.grey.shade200,
+                                      child: Icon(
+                                        Icons.person,
+                                        size: 18,
+                                        color: isAvailable ? _coffeeBean : Colors.grey,
                                       ),
                                     ),
-                                    Text(
-                                      isAvailable ? "Available for bookings" : "Off-Duty / Disabled",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isAvailable ? Colors.green.shade700 : Colors.redAccent,
-                                        fontWeight: FontWeight.w500,
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            staff["name"],
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: isAvailable ? _darkText : Colors.grey,
+                                            ),
+                                          ),
+                                          Text(
+                                            isAvailable ? "Available for bookings" : "Off-Duty / Disabled",
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isAvailable ? Colors.green.shade700 : Colors.redAccent,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                    ),
+                                    Switch(
+                                      value: isAvailable,
+                                      activeThumbColor: _coffeeBean,
+                                      activeTrackColor: _tan,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _staffList[index]["isAvailable"] = val;
+                                        });
+                                        setMState(() {});
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                      onPressed: () {
+                                        setState(() {
+                                          _staffList.removeAt(index);
+                                        });
+                                        setMState(() {});
+                                      },
                                     ),
                                   ],
                                 ),
-                              ),
-                              Switch(
-                                value: isAvailable,
-                                activeThumbColor: _coffeeBean,
-                                activeTrackColor: _tan,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _staffList[index]["isAvailable"] = val;
-                                  });
-                                  setMState(() {});
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                                onPressed: () {
-                                  setState(() {
-                                    _staffList.removeAt(index);
-                                  });
-                                  setMState(() {});
-                                },
-                              ),
-                            ],
+                              );
+                            },
                           ),
+                  ),
+
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final activeVets = _staffList
+                          .where((s) => s["isAvailable"] == true)
+                          .map((s) => s["name"].toString())
+                          .toList();
+
+                      if (uid != null) {
+                        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
+                          'veterinarians': activeVets,
+                        });
+                        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
+                          'veterinarians': activeVets,
+                        }, SetOptions(merge: true));
+                      }
+
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("✓ Doctors & staff list saved successfully!"), backgroundColor: Colors.green),
                         );
-                      },
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _coffeeBean,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
+                    child: const Text("Save Doctors & Staff List", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                 ],
               ),
@@ -481,13 +741,28 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
-  /// Computes Monday–Sunday dates for the current week rolling cycle
+  /// Computes operating dates for the active week and coming week
   List<DateTime> _getCurrentWeekOperatingDates() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final int daysFromMonday = today.weekday - 1;
-    final DateTime monday = today.subtract(Duration(days: daysFromMonday));
-    return List.generate(7, (index) => monday.add(Duration(days: index)));
+    final DateTime currentMonday = today.subtract(Duration(days: daysFromMonday));
+
+    if (today.weekday >= DateTime.saturday) {
+      // Saturday or Sunday: Include current Sat & Sun AND upcoming week's Mon-Sun
+      final currentSat = currentMonday.add(const Duration(days: 5));
+      final currentSun = currentMonday.add(const Duration(days: 6));
+      final nextMon = currentMonday.add(const Duration(days: 7));
+
+      final List<DateTime> dates = [currentSat, currentSun];
+      for (int i = 0; i < 7; i++) {
+        dates.add(nextMon.add(Duration(days: i)));
+      }
+      return dates; // 9 dates total
+    } else {
+      // Mon-Fri: Standard current week Mon-Sun
+      return List.generate(7, (index) => currentMonday.add(Duration(days: index)));
+    }
   }
 
   Widget _buildDateCardWidget(
@@ -561,11 +836,137 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
+  /// Capitalizes the first letter of each word in a string (Title Case)
+  String _toTitleCase(String text) {
+    if (text.trim().isEmpty) return '';
+    return text.trim().split(RegExp(r'\s+')).map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
+  /// Generates 30-minute interval time slots from operating session ranges
+  List<String> _generateSlotsFromSessions(List<Map<String, String>> sessions) {
+    final List<String> slots = [];
+
+    for (var s in sessions) {
+      final startStr = s['start'];
+      final endStr = s['end'];
+      if (startStr == null || endStr == null || startStr.isEmpty || endStr.isEmpty) continue;
+
+      final startMin = _parseTimeToMinutes(startStr);
+      final endMin = _parseTimeToMinutes(endStr);
+
+      if (startMin < endMin) {
+        for (int m = startMin; m < endMin; m += 30) {
+          slots.add(_formatMinutesToTimeString(m));
+        }
+      }
+    }
+
+    return slots.toSet().toList(); // Ensure unique time slot choices
+  }
+
+  int _parseTimeToMinutes(String timeStr) {
+    try {
+      final parts = timeStr.trim().split(' ');
+      if (parts.length >= 2) {
+        final timeParts = parts[0].split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1]);
+        final isPm = parts[1].toUpperCase() == 'PM';
+        if (isPm && hour < 12) hour += 12;
+        if (!isPm && hour == 12) hour = 0;
+        return hour * 60 + minute;
+      }
+    } catch (_) {}
+    return 540; // Default 9:00 AM
+  }
+
+  String _formatMinutesToTimeString(int totalMinutes) {
+    int hour = (totalMinutes ~/ 60) % 24;
+    int minute = totalMinutes % 60;
+    final String period = hour >= 12 ? 'PM' : 'AM';
+    int displayHour = hour % 12;
+    if (displayHour == 0) displayHour = 12;
+    final hStr = displayHour.toString().padLeft(2, '0');
+    final mStr = minute.toString().padLeft(2, '0');
+    return "$hStr:$mStr $period";
+  }
+
+  /// Handles Accepting Bookings toggle validation across all 4 prerequisite sections
+  Future<void> _handleToggleAcceptingBookings(
+    BuildContext context,
+    bool targetVal, {
+    required String currentHours,
+    required List<String> currentDays,
+    required List<String> currentTimeslots,
+    required List<String> currentServices,
+    required DateTime? lastUpdatedAt,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (targetVal == true) {
+      final bool hasDays = currentDays.isNotEmpty;
+      final bool hasHours = currentHours.trim().isNotEmpty;
+      final bool hasSlots = currentTimeslots.isNotEmpty;
+      final bool hasServices = currentServices.isNotEmpty;
+
+      // If any of the 4 prerequisite sections is missing, prevent enabling accepting bookings
+      if (!hasDays || !hasHours || !hasSlots || !hasServices) {
+        List<String> missingItems = [];
+        if (!hasDays) missingItems.add("Operating Days (Sec 1)");
+        if (!hasHours) missingItems.add("Operating Sessions (Sec 2)");
+        if (!hasSlots) missingItems.add("Time Slots (Sec 3)");
+        if (!hasServices) missingItems.add("Offered Services");
+
+        await _showWarningDialog(
+          context,
+          title: "Prerequisites Missing",
+          message: "Cannot enable accepting bookings until all sections are configured:\n\nMissing: ${missingItems.join(', ')}",
+        );
+
+        if (!context.mounted) return;
+
+        if (!hasDays || !hasHours || !hasSlots) {
+          _showManageOperatingHoursModal(
+            context,
+            currentHoursStr: currentHours,
+            currentDays: currentDays,
+            currentTimeSlots: currentTimeslots,
+            lastUpdatedAt: lastUpdatedAt,
+          );
+        } else if (!hasServices) {
+          _showManageServicesModal(
+            context,
+            currentServices: currentServices,
+          );
+        }
+        return;
+      }
+
+      // If ALL 4 sections are fulfilled, enable accepting bookings
+      setState(() => _isAcceptingBookings = true);
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({'isAcceptingBookings': true});
+        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({'isAcceptingBookings': true}, SetOptions(merge: true));
+      }
+    } else {
+      // Disable accepting bookings
+      setState(() => _isAcceptingBookings = false);
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({'isAcceptingBookings': false});
+        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({'isAcceptingBookings': false}, SetOptions(merge: true));
+      }
+    }
+  }
+
   /// Operating Hours & Days Modal with Weekly Saturday Update Restriction & Multiple Session Slots
   void _showManageOperatingHoursModal(
     BuildContext context, {
     required String currentHoursStr,
     required List<String> currentDays,
+    List<String>? currentTimeSlots,
     DateTime? lastUpdatedAt,
   }) {
     final bool isSaturday = DateTime.now().weekday == DateTime.saturday;
@@ -573,9 +974,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     final bool canEdit = isSaturday || isFirstTime;
 
     final currentWeekDates = _getCurrentWeekOperatingDates();
-    final List<String> selectedDays = List<String>.from(
-      currentDays.isNotEmpty ? currentDays : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    );
+    final List<String> selectedDays = List<String>.from(currentDays);
 
     // Parse existing slots or set default morning & afternoon sessions
     List<Map<String, String>> slots = [];
@@ -595,12 +994,18 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       ];
     }
 
+    final initialGenerated = _generateSlotsFromSessions(slots);
+    List<String> selectedTimeSlots = List<String>.from(currentTimeSlots ?? []);
+    bool isTimeSlotsExpanded = true;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setMState) {
+          final currentGeneratedSlots = _generateSlotsFromSessions(slots);
+
           return Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
             child: Container(
@@ -690,46 +1095,127 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                           ),
                           const SizedBox(height: 8),
 
-                          // 2 Rows Layout: Upper Row 4, Lower Row 3
-                          Column(
-                            children: [
-                              // Upper Row (4 Days)
-                              Row(
+                          if (currentWeekDates.length > 7) ...[
+                            // Present Week Active Weekend Days (Sat & Sun)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: _paleOak),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  for (int i = 0; i < 4; i++) ...[
-                                    if (i > 0) const SizedBox(width: 8),
-                                    Expanded(
-                                      child: _buildDateCardWidget(
-                                        currentWeekDates[i],
-                                        selectedDays,
-                                        canEdit,
-                                        setMState,
+                                  Row(
+                                    children: [
+                                      Icon(Icons.lock_rounded, color: Colors.grey.shade600, size: 14),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "Present Active Days",
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildDateCardWidget(currentWeekDates[0], selectedDays, false, setMState)),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: _buildDateCardWidget(currentWeekDates[1], selectedDays, false, setMState)),
+                                      const SizedBox(width: 8),
+                                      const Expanded(child: SizedBox()),
+                                      const SizedBox(width: 8),
+                                      const Expanded(child: SizedBox()),
+                                    ],
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              // Lower Row (3 Days)
-                              Row(
-                                children: [
-                                  for (int i = 4; i < 7; i++) ...[
-                                    if (i > 4) const SizedBox(width: 8),
-                                    Expanded(
-                                      child: _buildDateCardWidget(
-                                        currentWeekDates[i],
-                                        selectedDays,
-                                        canEdit,
-                                        setMState,
-                                      ),
+                            ),
+                            Text(
+                              "Coming Week Operating Days",
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _fadedCopper),
+                            ),
+                            const SizedBox(height: 6),
+                            // Upper Row (Mon, Tue, Wed, Thu)
+                            Row(
+                              children: [
+                                for (int i = 2; i < 6; i++) ...[
+                                  if (i > 2) const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildDateCardWidget(
+                                      currentWeekDates[i],
+                                      selectedDays,
+                                      canEdit,
+                                      setMState,
                                     ),
-                                  ],
-                                  const SizedBox(width: 8),
-                                  const Expanded(child: SizedBox()), // Alignment placeholder
+                                  ),
                                 ],
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // Lower Row (Fri, Sat, Sun)
+                            Row(
+                              children: [
+                                for (int i = 6; i < 9; i++) ...[
+                                  if (i > 6) const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildDateCardWidget(
+                                      currentWeekDates[i],
+                                      selectedDays,
+                                      canEdit,
+                                      setMState,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(width: 8),
+                                const Expanded(child: SizedBox()),
+                              ],
+                            ),
+                          ] else ...[
+                            // Standard Mon-Fri 2-Row Layout
+                            Column(
+                              children: [
+                                // Upper Row (4 Days)
+                                Row(
+                                  children: [
+                                    for (int i = 0; i < 4; i++) ...[
+                                      if (i > 0) const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _buildDateCardWidget(
+                                          currentWeekDates[i],
+                                          selectedDays,
+                                          canEdit,
+                                          setMState,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // Lower Row (3 Days)
+                                Row(
+                                  children: [
+                                    for (int i = 4; i < 7; i++) ...[
+                                      if (i > 4) const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _buildDateCardWidget(
+                                          currentWeekDates[i],
+                                          selectedDays,
+                                          canEdit,
+                                          setMState,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(width: 8),
+                                    const Expanded(child: SizedBox()), // Alignment placeholder
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 14),
 
                           Text(
@@ -868,29 +1354,339 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                          ],
+
+                          const SizedBox(height: 16),
+
+                          // 3. Open Booking Time Slots Selection (Dropdown Box)
+                          Text(
+                            "3. Open Booking Time Slots for the Week",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                          ),
+                          const SizedBox(height: 8),
+
+                          if (currentGeneratedSlots.isEmpty)
+                            Text(
+                              "Configure operational sessions above to auto-generate booking time slots.",
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                            )
+                          else
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: _paleOak, width: 1.5),
+                              ),
+                              child: Column(
+                                children: [
+                                  // Dropdown Header Tile
+                                  InkWell(
+                                    onTap: () {
+                                      setMState(() {
+                                        isTimeSlotsExpanded = !isTimeSlotsExpanded;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.more_time_rounded, color: _coffeeBean, size: 22),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "Select Open Booking Time Slots",
+                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _darkText),
+                                                ),
+                                                Text(
+                                                  "${selectedTimeSlots.length} of ${currentGeneratedSlots.length} time slots selected for booking",
+                                                  style: TextStyle(fontSize: 11, color: _fadedCopper),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Icon(
+                                            isTimeSlotsExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                            color: _coffeeBean,
+                                            size: 24,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Expanded Content (Multi-Choice Grid & Quick Select Controls)
+                                  if (isTimeSlotsExpanded) ...[
+                                    const Divider(height: 1),
+                                    Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (canEdit)
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    "Tap to check/uncheck slots:",
+                                                    style: TextStyle(fontSize: 11, color: _fadedCopper, fontWeight: FontWeight.w600),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Row(
+                                                  children: [
+                                                    InkWell(
+                                                      onTap: () {
+                                                        setMState(() {
+                                                          selectedTimeSlots = List.from(currentGeneratedSlots);
+                                                        });
+                                                      },
+                                                      child: Text("Select All", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _coffeeBean)),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text("•", style: TextStyle(color: _fadedCopper, fontSize: 10)),
+                                                    const SizedBox(width: 8),
+                                                    InkWell(
+                                                      onTap: () {
+                                                        setMState(() {
+                                                          selectedTimeSlots.clear();
+                                                        });
+                                                      },
+                                                      child: const Text("Clear All", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          const SizedBox(height: 10),
+
+                                          // Clean 3-Column Grid for Time Slots
+                                          GridView.builder(
+                                            shrinkWrap: true,
+                                            physics: const NeverScrollableScrollPhysics(),
+                                            itemCount: currentGeneratedSlots.length,
+                                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount: 3,
+                                              childAspectRatio: 2.8,
+                                              crossAxisSpacing: 8,
+                                              mainAxisSpacing: 8,
+                                            ),
+                                            itemBuilder: (context, idx) {
+                                              final slotTime = currentGeneratedSlots[idx];
+                                              final bool isSlotSelected = selectedTimeSlots.contains(slotTime);
+
+                                              return InkWell(
+                                                onTap: canEdit
+                                                    ? () {
+                                                        setMState(() {
+                                                          if (isSlotSelected) {
+                                                            selectedTimeSlots.remove(slotTime);
+                                                          } else {
+                                                            selectedTimeSlots.add(slotTime);
+                                                          }
+                                                        });
+                                                      }
+                                                    : null,
+                                                borderRadius: BorderRadius.circular(10),
+                                                child: AnimatedContainer(
+                                                  duration: const Duration(milliseconds: 150),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: isSlotSelected ? _coffeeBean : _almondCream.withAlpha(80),
+                                                    borderRadius: BorderRadius.circular(10),
+                                                    border: Border.all(
+                                                      color: isSlotSelected ? _coffeeBean : _paleOak,
+                                                      width: isSlotSelected ? 1.5 : 1,
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        isSlotSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                                                        size: 14,
+                                                        color: isSlotSelected ? Colors.white : _fadedCopper,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Flexible(
+                                                        child: FittedBox(
+                                                          fit: BoxFit.scaleDown,
+                                                          child: Text(
+                                                            slotTime,
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: isSlotSelected ? Colors.white : _darkText,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+
+                          if (canEdit) ...[
+                            const SizedBox(height: 20),
                             ElevatedButton(
                               onPressed: () async {
                                 final formatted = slots.map((s) => "${s['start']} - ${s['end']}").join(', ');
+
+                                // 1. Validate all 3 sections are selected
+                                final bool hasDays = selectedDays.isNotEmpty;
+                                final bool hasSessions = formatted.trim().isNotEmpty;
+                                final bool hasTimeSlots = selectedTimeSlots.isNotEmpty;
+
+                                if (!hasDays || !hasSessions || !hasTimeSlots) {
+                                  List<String> missing = [];
+                                  if (!hasDays) missing.add("Operating Days (Sec 1)");
+                                  if (!hasSessions) missing.add("Session Hours (Sec 2)");
+                                  if (!hasTimeSlots) missing.add("Booking Time Slots (Sec 3)");
+
+                                  await _showWarningDialog(
+                                    context,
+                                    title: "Incomplete Schedule",
+                                    message: "Please select all 3 sections before saving:\n\nMissing: ${missing.join(', ')}",
+                                  );
+                                  return;
+                                }
+
+                                // 2. Show confirmation popup window dialog
+                                final bool? confirmSave = await showDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (dialogCtx) => Dialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                    backgroundColor: Colors.white,
+                                    elevation: 8,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 56,
+                                            height: 56,
+                                            decoration: BoxDecoration(
+                                              color: _coffeeBean.withAlpha(25),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(Icons.lock_clock_rounded, color: _coffeeBean, size: 30),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            "Lock Operating Schedule?",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: _darkText,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            "Once saved, your operating schedule will be locked for the active week and cannot be changed until next Saturday.\n\nAre you sure you want to lock and save this schedule?",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: _fadedCopper,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: OutlinedButton(
+                                                  style: OutlinedButton.styleFrom(
+                                                    foregroundColor: Colors.grey.shade700,
+                                                    side: BorderSide(color: Colors.grey.shade300),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                  ),
+                                                  onPressed: () => Navigator.pop(dialogCtx, false),
+                                                  child: const Text("CANCEL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: _coffeeBean,
+                                                    foregroundColor: Colors.white,
+                                                    elevation: 0,
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                  ),
+                                                  onPressed: () => Navigator.pop(dialogCtx, true),
+                                                  child: const Text("CONFIRM & SAVE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+
+                                if (confirmSave != true) return;
+
+                                // 3. Save to Firestore
                                 final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                                List<String> currentServices = [];
+                                if (uid != null) {
+                                  try {
+                                    final doc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
+                                    if (doc.exists) {
+                                      currentServices = List<String>.from(doc.data()?['services'] ?? []);
+                                    }
+                                  } catch (_) {}
+                                }
+
+                                final bool isFullyConfigured = currentServices.isNotEmpty;
+
                                 if (uid != null) {
                                   await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
                                     'operatingHours': formatted,
                                     'operatingDays': selectedDays,
-                                    'isAcceptingBookings': true,
+                                    'operatingTimeSlots': selectedTimeSlots,
+                                    'isAcceptingBookings': isFullyConfigured,
                                     'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
                                   });
                                   await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
                                     'operatingHours': formatted,
                                     'operatingDays': selectedDays,
-                                    'isAcceptingBookings': true,
+                                    'operatingTimeSlots': selectedTimeSlots,
+                                    'isAcceptingBookings': isFullyConfigured,
                                     'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
                                   }, SetOptions(merge: true));
                                 }
+
                                 if (context.mounted) {
                                   Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("✓ Operating days & hours updated successfully!"), backgroundColor: Colors.green),
+                                  await _showSuccessDialog(
+                                    context,
+                                    title: "Schedule Saved & Locked",
+                                    message: isFullyConfigured
+                                        ? "Operating schedule locked and saved successfully! Accepting bookings is now active."
+                                        : "Operating schedule locked and saved. Please select offered services to enable accepting bookings.",
                                   );
                                 }
                               },
@@ -899,7 +1695,13 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                                 minimumSize: const Size(double.infinity, 50),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                               ),
-                              child: const Text("Save Operating Schedule", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                              child: const Center(
+                                child: Text(
+                                  "Save & Lock Schedule",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                              ),
                             ),
                           ],
                           const SizedBox(height: 20),
@@ -917,6 +1719,8 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
   }
 
   void _showManageServicesModal(BuildContext context, {required List<String> currentServices}) {
+    final TextEditingController otherSvcCtrl = TextEditingController();
+
     final List<String> availableServices = [
       'General Consultation',
       'Vaccination',
@@ -930,7 +1734,17 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       'Emergency Care',
     ];
 
-    final List<String> selectedServices = List<String>.from(currentServices);
+    // Capitalize and include any custom services from currentServices into availableServices
+    for (var c in currentServices) {
+      final cap = _toTitleCase(c);
+      if (cap.isNotEmpty && !availableServices.contains(cap)) {
+        availableServices.add(cap);
+      }
+    }
+
+    final List<String> selectedServices = List<String>.from(
+      currentServices.map((s) => _toTitleCase(s)).where((s) => s.isNotEmpty),
+    );
 
     showModalBottomSheet(
       context: context,
@@ -970,7 +1784,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          "Manage Offered Medical Services",
+                          "Manage Offered Services",
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _coffeeBean),
                         ),
                       ),
@@ -978,10 +1792,57 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "Select medical services offered at your clinic. Updates sync in real time to the Admin Registry and Pet Owner Booking Screen.",
+                    "Select medical services offered at your clinic. Updates sync real time to Pet Owner Booking screen",
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
+                  // Add Custom / "Others" Service Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: otherSvcCtrl,
+                          decoration: InputDecoration(
+                            hintText: "Add custom service / Others...",
+                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                            fillColor: Colors.white,
+                            filled: true,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _paleOak)),
+                          ),
+                          style: TextStyle(fontSize: 12, color: _darkText, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          final rawText = otherSvcCtrl.text.trim();
+                          if (rawText.isNotEmpty) {
+                            final capitalized = _toTitleCase(rawText);
+                            setSheetState(() {
+                              if (!availableServices.contains(capitalized)) {
+                                availableServices.add(capitalized);
+                              }
+                              if (!selectedServices.contains(capitalized)) {
+                                selectedServices.add(capitalized);
+                              }
+                              otherSvcCtrl.clear();
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                        label: const Text("Add", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _coffeeBean,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
 
                   Wrap(
                     spacing: 8,
@@ -1011,20 +1872,47 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   ElevatedButton(
                     onPressed: () async {
                       final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                      List<String> currentDays = [];
+                      String currentHours = "";
+                      List<String> currentSlots = [];
+                      if (uid != null) {
+                        try {
+                          final doc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
+                          if (doc.exists) {
+                            final data = doc.data();
+                            currentDays = List<String>.from(data?['operatingDays'] ?? []);
+                            currentHours = (data?['operatingHours'] ?? "").toString();
+                            currentSlots = List<String>.from(data?['operatingTimeSlots'] ?? []);
+                          }
+                        } catch (_) {}
+                      }
+
+                      final bool isFullyConfigured = selectedServices.isNotEmpty &&
+                          currentDays.isNotEmpty &&
+                          currentHours.trim().isNotEmpty &&
+                          currentSlots.isNotEmpty;
+
                       if (uid != null) {
                         await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
                           'services': selectedServices,
+                          'isAcceptingBookings': isFullyConfigured,
                           'lastServicesUpdatedAt': FieldValue.serverTimestamp(),
                         });
                         await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
                           'services': selectedServices,
+                          'isAcceptingBookings': isFullyConfigured,
                           'lastServicesUpdatedAt': FieldValue.serverTimestamp(),
                         }, SetOptions(merge: true));
                       }
                       if (context.mounted) {
                         Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("✓ Offered services updated in real time!"), backgroundColor: Colors.green),
+                        await _showSuccessDialog(
+                          context,
+                          title: "Services Saved",
+                          message: isFullyConfigured
+                              ? "Offered services updated successfully! Accepting bookings is now active."
+                              : "Offered services updated. Please complete your operating schedule to enable accepting bookings.",
                         );
                       }
                     },
@@ -1169,7 +2057,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Clinic Operating Schedule & Availability", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        Text("Clinic Availability", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
         const SizedBox(height: 12),
         _buildSchedulePanelCard(userProvider),
         const SizedBox(height: 80),
@@ -1378,7 +2266,10 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
           userData = userSnap.data!.data() as Map<String, dynamic>?;
         }
         final String currentHours = userData?['operatingHours'] ?? "";
-        final List<String> currentDays = List<String>.from(userData?['operatingDays'] ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+        final List<String> currentDays = List<String>.from(userData?['operatingDays'] ?? []);
+        final bool isAccepting = userData?['isAcceptingBookings'] ?? false;
+        final Timestamp? lastUpdatedTs = userData?['lastHoursUpdatedAt'] as Timestamp?;
+        final DateTime? lastUpdatedAt = lastUpdatedTs?.toDate();
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -1390,7 +2281,19 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _scheduleToggle("Accepting Bookings", _isAcceptingBookings, (val) => setState(() => _isAcceptingBookings = val)),
+              _scheduleToggle(
+                "Accepting Bookings",
+                isAccepting,
+                (val) => _handleToggleAcceptingBookings(
+                  context,
+                  val,
+                  currentHours: currentHours,
+                  currentDays: currentDays,
+                  lastUpdatedAt: lastUpdatedAt,
+                  currentTimeslots: List<String>.from(userData?['operatingTimeSlots'] ?? []),
+                  currentServices: List<String>.from(userData?['services'] ?? []),
+                ),
+              ),
               const Divider(),
               
               // Operating Days Active Display
@@ -1401,8 +2304,12 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "Operating Days: ${currentDays.join(', ')}",
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                      "Operating Days: ${currentDays.isNotEmpty ? currentDays.join(', ') : 'Not Set'}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: currentDays.isNotEmpty ? _darkText : Colors.redAccent,
+                      ),
                     ),
                   ),
                 ],
@@ -1444,7 +2351,8 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
           userData = userSnap.data!.data() as Map<String, dynamic>?;
         }
         final String currentHours = userData?['operatingHours'] ?? "";
-        final List<String> currentDays = List<String>.from(userData?['operatingDays'] ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+        final List<String> currentDays = List<String>.from(userData?['operatingDays'] ?? []);
+        final bool isAccepting = userData?['isAcceptingBookings'] ?? false;
         final Timestamp? lastUpdatedTs = userData?['lastHoursUpdatedAt'] as Timestamp?;
         final DateTime? lastUpdatedAt = lastUpdatedTs?.toDate();
 
@@ -1462,7 +2370,19 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _scheduleToggle("Accepting Bookings", _isAcceptingBookings, (val) => setState(() => _isAcceptingBookings = val)),
+                  _scheduleToggle(
+                    "Accepting Bookings",
+                    isAccepting,
+                    (val) => _handleToggleAcceptingBookings(
+                      context,
+                      val,
+                      currentHours: currentHours,
+                      currentDays: currentDays,
+                      lastUpdatedAt: lastUpdatedAt,
+                      currentTimeslots: List<String>.from(userData?['operatingTimeSlots'] ?? []),
+                      currentServices: List<String>.from(userData?['services'] ?? []),
+                    ),
+                  ),
                   const Divider(),
                   
                   // Operating Days Active Display
@@ -1473,8 +2393,12 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          "Operating Days: ${currentDays.join(', ')}",
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                          "Operating Days: ${currentDays.isNotEmpty ? currentDays.join(', ') : 'Not Set'}",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: currentDays.isNotEmpty ? _darkText : Colors.redAccent,
+                          ),
                         ),
                       ),
                     ],
@@ -1504,16 +2428,17 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
             const SizedBox(height: 16),
 
             // 3 Management Buttons (Outside & Below White Box)
-            // 1. Manage Operating Hours & Days Button
+            // 1. Manage Operating Schedule Button
             OutlinedButton.icon(
               onPressed: () => _showManageOperatingHoursModal(
                 context,
                 currentHoursStr: currentHours,
                 currentDays: currentDays,
+                currentTimeSlots: List<String>.from(userData?['operatingTimeSlots'] ?? []),
                 lastUpdatedAt: lastUpdatedAt,
               ),
               icon: const Icon(Icons.edit_calendar_rounded, size: 18),
-              label: const Text("Manage Operating Hours & Days", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              label: const Text("Manage Operating Schedule", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: _coffeeBean,
@@ -1524,14 +2449,14 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // 2. Manage Offered Medical Services Button
+            // 2. Manage Offered Services Button
             OutlinedButton.icon(
               onPressed: () => _showManageServicesModal(
                 context,
                 currentServices: List<String>.from(userData?['services'] ?? ['General Consultation', 'Vaccination', 'Deworming']),
               ),
               icon: const Icon(Icons.medical_services_outlined, size: 18),
-              label: const Text("Manage Offered Medical Services", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              label: const Text("Manage Offered Services", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: _coffeeBean,
@@ -1542,16 +2467,41 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
             ),
             const SizedBox(height: 10),
 
-            // 3. Manage Doctors & Staff Availability Button
-            ElevatedButton.icon(
-              onPressed: () => _showManageStaffModal(context),
-              icon: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 18),
-              label: const Text("Manage Doctors & Staff Availability", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _coffeeBean, 
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
+            // 3. Manage Vet Availability Button (LOCKED until schedule is configured)
+            Builder(
+              builder: (context) {
+                final bool isScheduleConfigured = currentHours.trim().isNotEmpty && currentDays.isNotEmpty;
+
+                return ElevatedButton.icon(
+                  onPressed: isScheduleConfigured
+                      ? () => _showManageStaffModal(context)
+                      : () {
+                          _showWarningDialog(
+                            context,
+                            title: "Schedule Required",
+                            message: "Please configure and save your operating schedule first before managing vet availability.",
+                          );
+                        },
+                  icon: Icon(
+                    isScheduleConfigured ? Icons.people_alt_rounded : Icons.lock_rounded,
+                    color: isScheduleConfigured ? Colors.white : Colors.grey.shade600,
+                    size: 18,
+                  ),
+                  label: Text(
+                    isScheduleConfigured ? "Manage Vet Availability" : "Manage Vet Availability (Schedule Required)",
+                    style: TextStyle(
+                      color: isScheduleConfigured ? Colors.white : Colors.grey.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isScheduleConfigured ? _coffeeBean : Colors.grey.shade300,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                );
+              },
             ),
           ],
         );
