@@ -10,6 +10,11 @@ import '../../services/booking_service.dart';
 import '../../services/user_notification_service.dart';
 import '../../services/notification_service.dart';
 import '../profile/edit_profile_screen.dart';
+import '../profile/help_support_screen.dart';
+import '../profile/notification_center_screen.dart';
+import '../profile/privacy_security_screen.dart';
+import '../profile/vet_privacy_security_screen.dart';
+import '../widgets/fringe_header.dart';
 import '../login_screen.dart';
 
 /// VetHomeScreen: Dashboard for Veterinarians.
@@ -35,6 +40,140 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
   bool _isAcceptingBookings = true;
   bool _isEmergencyService = false;
+
+  bool _hasCheckedClinicStatus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkVetClinicRegistrationStatus();
+    });
+  }
+
+  Future<void> _checkVetClinicRegistrationStatus() async {
+    if (_hasCheckedClinicStatus) return;
+    _hasCheckedClinicStatus = true;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final String uid = user.uid;
+    final String email = user.email?.toLowerCase().trim() ?? '';
+
+    try {
+      // 1. Check if document exists in CLINICS collection by doc ID (uid)
+      final clinicDocByUid = await FirebaseFirestore.instance.collection('CLINICS').doc(uid).get();
+      bool existsInClinics = clinicDocByUid.exists;
+
+      if (!existsInClinics && email.isNotEmpty) {
+        // Query CLINICS collection by email
+        final queryByEmail = await FirebaseFirestore.instance
+            .collection('CLINICS')
+            .where('email', isEqualTo: email)
+            .get();
+        if (queryByEmail.docs.isNotEmpty) {
+          existsInClinics = true;
+        }
+      }
+
+      // 2. Also check USERS doc status
+      final userDoc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
+      final userData = userDoc.data();
+      final status = (userData?['status'] ?? '').toString().toLowerCase();
+
+      if (!existsInClinics || status == 'removed') {
+        if (mounted) {
+          _showVetProfileRemovedDialog();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error checking clinic registration status: $e");
+    }
+  }
+
+  void _showVetProfileRemovedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "Vet Profile Removed",
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF2D3142)),
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Your Vet profile has been removed from Booking System. Contact PawKODA support line if this was a mistake.",
+              style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF2D3142)),
+            ),
+            SizedBox(height: 16),
+            Divider(height: 1),
+            SizedBox(height: 12),
+            Text(
+              "PAWKODA SUPPORT LINE",
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.8),
+            ),
+            SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.email_outlined, size: 15, color: Color(0xFF7F5539)),
+                SizedBox(width: 6),
+                SelectableText(
+                  "support@pawkoda.com",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7F5539)),
+                ),
+              ],
+            ),
+            SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.phone_outlined, size: 15, color: Color(0xFF7F5539)),
+                SizedBox(width: 6),
+                SelectableText(
+                  "+60 11-56939880",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7F5539)),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7F5539),
+              minimumSize: const Size(double.infinity, 44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await FirebaseAuth.instance.signOut();
+              if (mounted) {
+                Provider.of<UserProvider>(context, listen: false).clearUser();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            child: const Text("Okay", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
 
   final List<Map<String, dynamic>> _staffList = [
     {"name": "Dr. Kenique Lim (Senior Surgeon)", "isAvailable": true},
@@ -90,9 +229,12 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Manage Doctor Staff & Slots",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
+                      Expanded(
+                        child: Text(
+                          "Manage Doctor Staff & Slots",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(ctx),
@@ -339,15 +481,101 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
-  /// Operating Hours Modal with Weekly Saturday Update Restriction & Multiple Session Slots
+  /// Computes Monday–Sunday dates for the current week rolling cycle
+  List<DateTime> _getCurrentWeekOperatingDates() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final int daysFromMonday = today.weekday - 1;
+    final DateTime monday = today.subtract(Duration(days: daysFromMonday));
+    return List.generate(7, (index) => monday.add(Duration(days: index)));
+  }
+
+  Widget _buildDateCardWidget(
+    DateTime date,
+    List<String> selectedDays,
+    bool canEdit,
+    StateSetter setMState,
+  ) {
+    final String dayName = DateFormat('EEE').format(date); // e.g. Mon
+    final String monthDay = DateFormat('dd MMM').format(date); // e.g. 27 Jan
+    final String shortLabel = "$dayName, $monthDay"; // e.g. Mon, 27 Jan
+
+    final bool isSelected = selectedDays.contains(shortLabel) ||
+        selectedDays.contains(dayName) ||
+        selectedDays.any((d) => d.toLowerCase().startsWith(dayName.toLowerCase()));
+
+    return GestureDetector(
+      onTap: canEdit
+          ? () {
+              setMState(() {
+                if (isSelected) {
+                  selectedDays.removeWhere((d) =>
+                      d == shortLabel ||
+                      d == dayName ||
+                      d.toLowerCase().startsWith(dayName.toLowerCase()));
+                } else {
+                  selectedDays.add(shortLabel);
+                }
+              });
+            }
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        height: 56,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? _coffeeBean : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? _coffeeBean : _paleOak,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: _coffeeBean.withAlpha(50), blurRadius: 6, offset: const Offset(0, 3))]
+              : [],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              dayName.toUpperCase(),
+              style: TextStyle(
+                color: isSelected ? Colors.white70 : _fadedCopper,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              monthDay,
+              style: TextStyle(
+                color: isSelected ? Colors.white : _darkText,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Operating Hours & Days Modal with Weekly Saturday Update Restriction & Multiple Session Slots
   void _showManageOperatingHoursModal(
     BuildContext context, {
     required String currentHoursStr,
+    required List<String> currentDays,
     DateTime? lastUpdatedAt,
   }) {
     final bool isSaturday = DateTime.now().weekday == DateTime.saturday;
     final bool isFirstTime = lastUpdatedAt == null;
     final bool canEdit = isSaturday || isFirstTime;
+
+    final currentWeekDates = _getCurrentWeekOperatingDates();
+    final List<String> selectedDays = List<String>.from(
+      currentDays.isNotEmpty ? currentDays : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    );
 
     // Parse existing slots or set default morning & afternoon sessions
     List<Map<String, String>> slots = [];
@@ -376,7 +604,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
           return Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
             child: Container(
-              height: MediaQuery.of(ctx).size.height * 0.78,
+              height: MediaQuery.of(ctx).size.height * 0.82,
               decoration: BoxDecoration(
                 color: _almondCream,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -399,9 +627,12 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Weekly Operating Hours",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
+                      Expanded(
+                        child: Text(
+                          "Operating Schedule",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(ctx),
@@ -409,208 +640,273 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       ),
                     ],
                   ),
-
-                  // Weekly Rule Banner
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: canEdit ? Colors.amber.shade50 : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: canEdit ? Colors.amber.shade300 : Colors.blue.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          canEdit ? Icons.edit_calendar_rounded : Icons.lock_clock_rounded,
-                          color: canEdit ? Colors.amber.shade800 : Colors.blue.shade800,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            isFirstTime
-                                ? "Initial Setup: Set your clinic's operating hours & break sessions."
-                                : (isSaturday
-                                    ? "Saturday Update Window Open! Configure operating hours for Sunday through next Saturday."
-                                    : "Operating hours can only be updated every Saturday for the coming week. System is using active hours."),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: canEdit ? Colors.amber.shade900 : Colors.blue.shade900,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Text(
-                    "Daily Operational Sessions & Breaks",
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
-                  ),
                   const SizedBox(height: 8),
 
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: slots.length,
-                      itemBuilder: (context, index) {
-                        final slot = slots[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: _paleOak),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Weekly Rule Banner
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: canEdit ? Colors.amber.shade50 : Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: canEdit ? Colors.amber.shade300 : Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  canEdit ? Icons.edit_calendar_rounded : Icons.lock_clock_rounded,
+                                  color: canEdit ? Colors.amber.shade800 : Colors.blue.shade800,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    isFirstTime
+                                        ? "Initial Setup: Choose weekly operating days & session hours."
+                                        : (isSaturday
+                                            ? "Saturday Update Window Open! Configure operating days & hours for the coming week."
+                                            : "Schedule can only be updated every Saturday for the coming week. System is using active schedule."),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: canEdit ? Colors.amber.shade900 : Colors.blue.shade900,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: Row(
+
+                          Text(
+                            "1. Weekly Operating Dates & Days",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // 2 Rows Layout: Upper Row 4, Lower Row 3
+                          Column(
                             children: [
-                              CircleAvatar(
-                                radius: 14,
-                                backgroundColor: _coffeeBean.withAlpha(25),
-                                child: Text("${index + 1}", style: TextStyle(color: _coffeeBean, fontWeight: FontWeight.bold, fontSize: 12)),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    // Start Time Scroll Picker
+                              // Upper Row (4 Days)
+                              Row(
+                                children: [
+                                  for (int i = 0; i < 4; i++) ...[
+                                    if (i > 0) const SizedBox(width: 8),
                                     Expanded(
-                                      child: InkWell(
-                                        onTap: canEdit
-                                            ? () async {
-                                                final picked = await _showScrollTimePicker(context, slot['start']!);
-                                                if (picked != null) {
-                                                  setMState(() => slot['start'] = picked);
-                                                }
-                                              }
-                                            : null,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: _almondCream.withAlpha(80),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: _paleOak),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.access_time_rounded, size: 14, color: _coffeeBean),
-                                              const SizedBox(width: 4),
-                                              Flexible(
-                                                child: FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  child: Text(slot['start']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _darkText)),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 6),
-                                      child: Text("to", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                    ),
-                                    // End Time Scroll Picker
-                                    Expanded(
-                                      child: InkWell(
-                                        onTap: canEdit
-                                            ? () async {
-                                                final picked = await _showScrollTimePicker(context, slot['end']!);
-                                                if (picked != null) {
-                                                  setMState(() => slot['end'] = picked);
-                                                }
-                                              }
-                                            : null,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: _almondCream.withAlpha(80),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: _paleOak),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.access_time_rounded, size: 14, color: _coffeeBean),
-                                              const SizedBox(width: 4),
-                                              Flexible(
-                                                child: FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  child: Text(slot['end']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _darkText)),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                      child: _buildDateCardWidget(
+                                        currentWeekDates[i],
+                                        selectedDays,
+                                        canEdit,
+                                        setMState,
                                       ),
                                     ),
                                   ],
-                                ),
+                                ],
                               ),
-                              if (canEdit && slots.length > 1)
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                                  onPressed: () {
-                                    setMState(() => slots.removeAt(index));
-                                  },
-                                ),
+                              const SizedBox(height: 8),
+                              // Lower Row (3 Days)
+                              Row(
+                                children: [
+                                  for (int i = 4; i < 7; i++) ...[
+                                    if (i > 4) const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildDateCardWidget(
+                                        currentWeekDates[i],
+                                        selectedDays,
+                                        canEdit,
+                                        setMState,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(width: 8),
+                                  const Expanded(child: SizedBox()), // Alignment placeholder
+                                ],
+                              ),
                             ],
                           ),
-                        );
-                      },
+                          const SizedBox(height: 14),
+
+                          Text(
+                            "2. Daily Operational Sessions & Breaks",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Session Cards
+                          Column(
+                            children: List.generate(slots.length, (index) {
+                              final slot = slots[index];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: _paleOak),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: _coffeeBean.withAlpha(25),
+                                      child: Text("${index + 1}", style: TextStyle(color: _coffeeBean, fontWeight: FontWeight.bold, fontSize: 12)),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          // Start Time Scroll Picker
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap: canEdit
+                                                  ? () async {
+                                                      final picked = await _showScrollTimePicker(context, slot['start']!);
+                                                      if (picked != null) {
+                                                        setMState(() => slot['start'] = picked);
+                                                      }
+                                                    }
+                                                  : null,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: _almondCream.withAlpha(80),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: _paleOak),
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(Icons.access_time_rounded, size: 14, color: _coffeeBean),
+                                                    const SizedBox(width: 4),
+                                                    Flexible(
+                                                      child: FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        child: Text(slot['start']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _darkText)),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 6),
+                                            child: Text("to", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                          ),
+                                          // End Time Scroll Picker
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap: canEdit
+                                                  ? () async {
+                                                      final picked = await _showScrollTimePicker(context, slot['end']!);
+                                                      if (picked != null) {
+                                                        setMState(() => slot['end'] = picked);
+                                                      }
+                                                    }
+                                                  : null,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: _almondCream.withAlpha(80),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: _paleOak),
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(Icons.access_time_rounded, size: 14, color: _coffeeBean),
+                                                    const SizedBox(width: 4),
+                                                    Flexible(
+                                                      child: FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        child: Text(slot['end']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _darkText)),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (canEdit && slots.length > 1)
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                        onPressed: () {
+                                          setMState(() => slots.removeAt(index));
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ),
+
+                          if (canEdit) ...[
+                            const SizedBox(height: 4),
+                            // Button directly under session cards
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setMState(() {
+                                  slots.add({'start': '02:30 PM', 'end': '06:00 PM'});
+                                });
+                              },
+                              icon: const Icon(Icons.more_time_rounded, size: 18),
+                              label: const Text("Add Break / Additional Session"),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _coffeeBean,
+                                side: BorderSide(color: _coffeeBean, width: 1.5),
+                                minimumSize: const Size(double.infinity, 44),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final formatted = slots.map((s) => "${s['start']} - ${s['end']}").join(', ');
+                                final uid = FirebaseAuth.instance.currentUser?.uid;
+                                if (uid != null) {
+                                  await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
+                                    'operatingHours': formatted,
+                                    'operatingDays': selectedDays,
+                                    'isAcceptingBookings': true,
+                                    'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
+                                  });
+                                  await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
+                                    'operatingHours': formatted,
+                                    'operatingDays': selectedDays,
+                                    'isAcceptingBookings': true,
+                                    'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
+                                  }, SetOptions(merge: true));
+                                }
+                                if (context.mounted) {
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("✓ Operating days & hours updated successfully!"), backgroundColor: Colors.green),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _coffeeBean,
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              child: const Text("Save Operating Schedule", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
-
-                  if (canEdit) ...[
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setMState(() {
-                          slots.add({'start': '02:30 PM', 'end': '06:00 PM'});
-                        });
-                      },
-                      icon: const Icon(Icons.more_time_rounded, size: 18),
-                      label: const Text("Add Break / Additional Session"),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _coffeeBean,
-                        side: BorderSide(color: _coffeeBean),
-                        minimumSize: const Size(double.infinity, 44),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final formatted = slots.map((s) => "${s['start']} - ${s['end']}").join(', ');
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
-                        if (uid != null) {
-                          await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
-                            'operatingHours': formatted,
-                            'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
-                          });
-                          await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
-                            'operatingHours': formatted,
-                            'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
-                          }, SetOptions(merge: true));
-                        }
-                        if (context.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("✓ Operating hours updated successfully!"), backgroundColor: Colors.green),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _coffeeBean,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: const Text("Save Operating Hours", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -748,6 +1044,25 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
+  int _currentNavIndex = 0;
+  String _patientStatusFilter = 'ALL';
+  final TextEditingController _patientSearchCtrl = TextEditingController();
+
+  String _getNavHeaderTitle() {
+    switch (_currentNavIndex) {
+      case 0:
+        return "PAWKODA VETERINARY";
+      case 1:
+        return "OPERATIONAL SCHEDULE";
+      case 2:
+        return "PATIENTS & APPOINTMENTS";
+      case 3:
+        return "VET CLINIC SETTINGS";
+      default:
+        return "PAWKODA VETERINARY";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
@@ -755,217 +1070,557 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
     return Scaffold(
       backgroundColor: _almondCream, // Warm background
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      body: Column(
+        children: [
+          // 1. Sticky Wave Fringe Header for Vet Module
+          DashboardFringeHeader(
+            greeting: _getNavHeaderTitle(),
+            userName: clinicName,
+            photoUrl: userProvider.photoUrl,
+            backgroundColor: _coffeeBean,
+            onLogout: () => _handleLogout(context),
+            onTapAvatar: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+            },
+          ),
+
+          // 2. Scrollable Body Content corresponding to selected navigation tab
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: _buildCurrentTabView(userProvider, clinicName),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildCurrentTabView(UserProvider userProvider, String clinicName) {
+    switch (_currentNavIndex) {
+      case 0:
+        return _buildDashboardTab(userProvider, clinicName);
+      case 1:
+        return _buildScheduleTab(userProvider);
+      case 2:
+        return _buildPatientsTab(userProvider, clinicName);
+      case 3:
+        return _buildSettingsTab(userProvider, clinicName);
+      default:
+        return _buildDashboardTab(userProvider, clinicName);
+    }
+  }
+
+  // TAB 0: DASHBOARD TAB
+  Widget _buildDashboardTab(UserProvider userProvider, String clinicName) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Appointment Queue
+        Text("Appointment Queue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        const SizedBox(height: 12),
+        StreamBuilder<List<BookingModel>>(
+          stream: _bookingService.streamVetClinicBookings(
+            userProvider.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '',
+            clinicName,
+            vetEmail: userProvider.email ?? FirebaseAuth.instance.currentUser?.email ?? '',
+          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+            }
+            final bookings = snapshot.data ?? [];
+            if (bookings.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                child: Center(
+                  child: Text(
+                    "No appointment requests in queue.",
+                    style: TextStyle(color: _fadedCopper, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: bookings.map((b) => _appointmentCard(context, b)).toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 32),
+
+        // Schedule Panel
+        Text("Operational Schedule", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        const SizedBox(height: 12),
+        _buildDashboardScheduleCard(userProvider),
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  // TAB 1: SCHEDULE TAB
+  Widget _buildScheduleTab(UserProvider userProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Clinic Operating Schedule & Availability", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        const SizedBox(height: 12),
+        _buildSchedulePanelCard(userProvider),
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  // TAB 2: PATIENTS TAB
+  Widget _buildPatientsTab(UserProvider userProvider, String clinicName) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Patient Directory & Bookings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        const SizedBox(height: 12),
+
+        // Search Bar
+        TextField(
+          controller: _patientSearchCtrl,
+          onChanged: (val) => setState(() {}),
+          decoration: InputDecoration(
+            hintText: "Search patient or pet name...",
+            hintStyle: TextStyle(color: _fadedCopper, fontSize: 13),
+            prefixIcon: Icon(Icons.search_rounded, color: _coffeeBean, size: 20),
+            fillColor: Colors.white,
+            filled: true,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Status Filters
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: ['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map((st) {
+              final isSel = _patientStatusFilter == st;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(st, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSel ? Colors.white : _coffeeBean)),
+                  selected: isSel,
+                  selectedColor: _coffeeBean,
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(color: isSel ? _coffeeBean : _paleOak),
+                  ),
+                  onSelected: (sel) {
+                    if (sel) setState(() => _patientStatusFilter = st);
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        StreamBuilder<List<BookingModel>>(
+          stream: _bookingService.streamVetClinicBookings(
+            userProvider.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '',
+            clinicName,
+            vetEmail: userProvider.email ?? FirebaseAuth.instance.currentUser?.email ?? '',
+          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+            }
+            final allBookings = snapshot.data ?? [];
+            final String query = _patientSearchCtrl.text.trim().toLowerCase();
+
+            final filtered = allBookings.where((b) {
+              final matchesStatus = _patientStatusFilter == 'ALL' || b.status.toUpperCase() == _patientStatusFilter;
+              final matchesQuery = query.isEmpty ||
+                  b.petName.toLowerCase().contains(query) ||
+                  b.petSpecies.toLowerCase().contains(query) ||
+                  b.serviceType.toLowerCase().contains(query) ||
+                  b.preferredVet.toLowerCase().contains(query);
+              return matchesStatus && matchesQuery;
+            }).toList();
+
+            if (filtered.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                child: Center(
+                  child: Text(
+                    "No patient records found.",
+                    style: TextStyle(color: _fadedCopper, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: filtered.map((b) => _appointmentCard(context, b)).toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  // TAB 3: SETTINGS TAB
+  Widget _buildSettingsTab(UserProvider userProvider, String clinicName) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Clinic Profile Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _paleOak),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: _coffeeBean,
+                child: const Icon(Icons.local_hospital, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(clinicName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkText)),
+                    Text(userProvider.email ?? 'clinic@vet.com', style: TextStyle(fontSize: 12, color: _fadedCopper)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(6)),
+                      child: Text("Verified Vet Organization", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        Text("Clinic Portal Settings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkText)),
+        const SizedBox(height: 10),
+
+        _settingsTile(Icons.person_outline_rounded, "Edit Clinic Profile", "Update display name and clinic logo", () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()));
+        }),
+        _settingsTile(Icons.security_rounded, "Privacy & Service Policies", "SSM compliance, terms & account privacy", () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const VetPrivacySecurityScreen()));
+        }),
+
+        const SizedBox(height: 20),
+
+        // Logout
+        ElevatedButton.icon(
+          onPressed: () => _handleLogout(context),
+          icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+          label: const Text("Logout from Vet Portal", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade700,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  Widget _settingsTile(IconData icon, String title, String subtitle, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _paleOak),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: _coffeeBean.withAlpha(20), shape: BoxShape.circle),
+          child: Icon(icon, color: _coffeeBean, size: 20),
+        ),
+        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _darkText)),
+        subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: _fadedCopper)),
+        trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: _fadedCopper),
+      ),
+    );
+  }
+
+  Widget _buildDashboardScheduleCard(UserProvider userProvider) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseAuth.instance.currentUser?.uid != null
+          ? FirebaseFirestore.instance.collection('USERS').doc(FirebaseAuth.instance.currentUser!.uid).snapshots()
+          : null,
+      builder: (context, userSnap) {
+        Map<String, dynamic>? userData;
+        if (userSnap.hasData && userSnap.data!.exists) {
+          userData = userSnap.data!.data() as Map<String, dynamic>?;
+        }
+        final String currentHours = userData?['operatingHours'] ?? "";
+        final List<String> currentDays = List<String>.from(userData?['operatingDays'] ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white, 
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _paleOak, width: 1.5)
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header: Clinic Profile
+              _scheduleToggle("Accepting Bookings", _isAcceptingBookings, (val) => setState(() => _isAcceptingBookings = val)),
+              const Divider(),
+              
+              // Operating Days Active Display
+              const SizedBox(height: 4),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Icon(Icons.calendar_month_rounded, color: _coffeeBean, size: 18),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(clinicName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _coffeeBean)),
-                            const SizedBox(width: 6),
-                            Icon(Icons.verified, color: _toffeeBrown, size: 18),
-                          ],
-                        ),
-                        Text("Subang Jaya, Selangor", style: TextStyle(color: _fadedCopper, fontSize: 13)),
-                      ],
+                    child: Text(
+                      "Operating Days: ${currentDays.join(', ')}",
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Operating Hours Active Display
+              Row(
+                children: [
+                  Icon(Icons.access_time_filled_rounded, color: _coffeeBean, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Operating Hours: ${currentHours.isNotEmpty ? currentHours : 'Not Set (Configured by Vet)'}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: currentHours.isNotEmpty ? _darkText : Colors.redAccent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSchedulePanelCard(UserProvider userProvider) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseAuth.instance.currentUser?.uid != null
+          ? FirebaseFirestore.instance.collection('USERS').doc(FirebaseAuth.instance.currentUser!.uid).snapshots()
+          : null,
+      builder: (context, userSnap) {
+        Map<String, dynamic>? userData;
+        if (userSnap.hasData && userSnap.data!.exists) {
+          userData = userSnap.data!.data() as Map<String, dynamic>?;
+        }
+        final String currentHours = userData?['operatingHours'] ?? "";
+        final List<String> currentDays = List<String>.from(userData?['operatingDays'] ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+        final Timestamp? lastUpdatedTs = userData?['lastHoursUpdatedAt'] as Timestamp?;
+        final DateTime? lastUpdatedAt = lastUpdatedTs?.toDate();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // White Container Box (Operating Info & Accepting Bookings Toggle)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white, 
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: _paleOak, width: 1.5)
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _scheduleToggle("Accepting Bookings", _isAcceptingBookings, (val) => setState(() => _isAcceptingBookings = val)),
+                  const Divider(),
+                  
+                  // Operating Days Active Display
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => _handleLogout(context),
-                        icon: Icon(Icons.logout_rounded, color: _coffeeBean),
-                        tooltip: "Logout",
+                      Icon(Icons.calendar_month_rounded, color: _coffeeBean, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Operating Days: ${currentDays.join(', ')}",
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
+                        ),
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                          );
-                        },
-                        child: CircleAvatar(
-                          radius: 26, 
-                          backgroundColor: _coffeeBean, 
-                          child: const Icon(Icons.local_hospital, color: Colors.white, size: 24)
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Operating Hours Active Display
+                  Row(
+                    children: [
+                      Icon(Icons.access_time_filled_rounded, color: _coffeeBean, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Operating Hours: ${currentHours.isNotEmpty ? currentHours : 'Not Set (Configured by Vet)'}",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: currentHours.isNotEmpty ? _darkText : Colors.redAccent,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 16),
 
-              // 2. Appointment Queue
-              Text("Appointment Queue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
-              const SizedBox(height: 12),
-              StreamBuilder<List<BookingModel>>(
-                stream: _bookingService.streamVetClinicBookings(
-                  userProvider.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '',
-                  clinicName,
-                  vetEmail: userProvider.email ?? FirebaseAuth.instance.currentUser?.email ?? '',
-                ),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                    return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
-                  }
-                  final bookings = snapshot.data ?? [];
-                  if (bookings.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                      child: Center(
-                        child: Text(
-                          "No appointment requests in queue.",
-                          style: TextStyle(color: _fadedCopper, fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Column(
-                    children: bookings.map((b) => _appointmentCard(context, b)).toList(),
-                  );
-                },
+            // 3 Management Buttons (Outside & Below White Box)
+            // 1. Manage Operating Hours & Days Button
+            OutlinedButton.icon(
+              onPressed: () => _showManageOperatingHoursModal(
+                context,
+                currentHoursStr: currentHours,
+                currentDays: currentDays,
+                lastUpdatedAt: lastUpdatedAt,
               ),
-              const SizedBox(height: 32),
-
-              // 3. Schedule Panel
-              Text("Operational Schedule", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
-              const SizedBox(height: 12),
-              StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseAuth.instance.currentUser?.uid != null
-                    ? FirebaseFirestore.instance.collection('USERS').doc(FirebaseAuth.instance.currentUser!.uid).snapshots()
-                    : null,
-                builder: (context, userSnap) {
-                  Map<String, dynamic>? userData;
-                  if (userSnap.hasData && userSnap.data!.exists) {
-                    userData = userSnap.data!.data() as Map<String, dynamic>?;
-                  }
-                  final String currentHours = userData?['operatingHours'] ?? "09:00 AM - 06:00 PM";
-                  final Timestamp? lastUpdatedTs = userData?['lastHoursUpdatedAt'] as Timestamp?;
-                  final DateTime? lastUpdatedAt = lastUpdatedTs?.toDate();
-
-                  return Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white, 
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: _paleOak, width: 1.5)
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _scheduleToggle("Accepting Bookings", _isAcceptingBookings, (val) => setState(() => _isAcceptingBookings = val)),
-                        const Divider(),
-                        _scheduleToggle("Emergency Service", _isEmergencyService, (val) => setState(() => _isEmergencyService = val)),
-                        const Divider(),
-                        
-                        // Operating Hours Active Display
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.access_time_filled_rounded, color: _coffeeBean, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Operating Hours: $currentHours",
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _darkText),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Manage Operating Hours & Breaks Button
-                        OutlinedButton.icon(
-                          onPressed: () => _showManageOperatingHoursModal(
-                            context,
-                            currentHoursStr: currentHours,
-                            lastUpdatedAt: lastUpdatedAt,
-                          ),
-                          icon: const Icon(Icons.edit_calendar_rounded, size: 18),
-                          label: const Text("Manage Operating Hours & Breaks", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _coffeeBean,
-                            side: BorderSide(color: _coffeeBean),
-                            minimumSize: const Size(double.infinity, 46),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Manage Offered Medical Services Button
-                        OutlinedButton.icon(
-                          onPressed: () => _showManageServicesModal(
-                            context,
-                            currentServices: List<String>.from(userData?['services'] ?? ['General Consultation', 'Vaccination', 'Deworming']),
-                          ),
-                          icon: const Icon(Icons.medical_services_outlined, size: 18),
-                          label: const Text("Manage Offered Medical Services", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _coffeeBean,
-                            side: BorderSide(color: _coffeeBean),
-                            minimumSize: const Size(double.infinity, 46),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        ElevatedButton.icon(
-                          onPressed: () => _showManageStaffModal(context),
-                          icon: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 18),
-                          label: const Text("Manage Doctors & Staff Availability", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _coffeeBean, 
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              icon: const Icon(Icons.edit_calendar_rounded, size: 18),
+              label: const Text("Manage Operating Hours & Days", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: _coffeeBean,
+                side: BorderSide(color: _coffeeBean, width: 1.5),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              const SizedBox(height: 32),
+            ),
+            const SizedBox(height: 10),
 
-              // 4. Clinic Manager Shortcuts
-              Text("Clinic Manager", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _managerShortcut(Icons.photo_library, "Clinic Photos")),
-                  const SizedBox(width: 12),
-                  Expanded(child: _managerShortcut(Icons.contact_phone, "Contacts")),
-                ],
+            // 2. Manage Offered Medical Services Button
+            OutlinedButton.icon(
+              onPressed: () => _showManageServicesModal(
+                context,
+                currentServices: List<String>.from(userData?['services'] ?? ['General Consultation', 'Vaccination', 'Deworming']),
               ),
-              const SizedBox(height: 80), 
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: _buildBottomNav(),
+              icon: const Icon(Icons.medical_services_outlined, size: 18),
+              label: const Text("Manage Offered Medical Services", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: _coffeeBean,
+                side: BorderSide(color: _coffeeBean, width: 1.5),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // 3. Manage Doctors & Staff Availability Button
+            ElevatedButton.icon(
+              onPressed: () => _showManageStaffModal(context),
+              icon: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 18),
+              label: const Text("Manage Doctors & Staff Availability", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _coffeeBean, 
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  DateTime _getAppointmentDateTime(DateTime date, String slotStr) {
+    int hour = 9;
+    int minute = 0;
+    try {
+      if (slotStr.isNotEmpty) {
+        final parts = slotStr.trim().split(' ');
+        if (parts.length >= 2) {
+          final timeParts = parts[0].split(':');
+          hour = int.parse(timeParts[0]);
+          minute = int.parse(timeParts[1]);
+          final isPm = parts[1].toUpperCase() == 'PM';
+          if (isPm && hour < 12) hour += 12;
+          if (!isPm && hour == 12) hour = 0;
+        }
+      }
+    } catch (_) {}
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  Future<bool> _showCancelConfirmationDialog(BuildContext context, BookingModel booking, String dateStr) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+            const SizedBox(width: 8),
+            Text("Cancel Booking?", style: TextStyle(color: _darkText, fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to cancel the booking request for ${booking.petName} on $dateStr at ${booking.timeSlot}?\n\nThis will notify the pet owner and immediately release the time slot.",
+          style: TextStyle(fontSize: 13, color: _darkText, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Keep Booking", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Cancel Booking", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ) ?? false;
   }
 
   Widget _appointmentCard(BuildContext context, BookingModel booking) {
     final String statusUpper = booking.status.toUpperCase();
     final Color statusColor = statusUpper == 'PENDING'
         ? _toffeeBrown
-        : (statusUpper == 'CONFIRMED' ? Colors.green : Colors.red);
+        : (statusUpper == 'CONFIRMED' ? Colors.green : (statusUpper == 'COMPLETED' ? Colors.blue.shade700 : Colors.red));
 
     final String dateStr = DateFormat('dd MMM yyyy').format(booking.bookingDate);
+    final DateTime apptDateTime = _getAppointmentDateTime(booking.bookingDate, booking.timeSlot);
+    final bool isAppointmentTimeReached = DateTime.now().isAfter(apptDateTime) || DateTime.now().isAtSameMomentAs(apptDateTime);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1018,31 +1673,50 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
             ],
           ),
           if (statusUpper == 'PENDING') ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Row(
               children: [
-                const Spacer(),
-                TextButton(
+                ElevatedButton.icon(
                   onPressed: () async {
+                    final bool confirmed = await _showCancelConfirmationDialog(context, booking, dateStr);
+                    if (!confirmed) return;
+
                     await BookingService().updateBookingStatus(booking.userId, booking.id, 'CANCELLED');
                     
+                    // 1. Log notification for Pet Owner
                     await UserNotificationService().logNotification(
                       userId: booking.userId,
-                      title: "Booking Declined",
-                      body: "${booking.clinicName} was unable to accept your booking for ${booking.petName} on $dateStr.",
+                      title: "Booking Request Cancelled",
+                      body: "${booking.clinicName} was unable to accept your booking for ${booking.petName} on $dateStr at ${booking.timeSlot}. The time slot has been released.",
                       type: 'booking',
+                    );
+
+                    // 2. Trigger push notification for Pet Owner
+                    await NotificationService().showNotification(
+                      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                      title: "Booking Cancelled",
+                      body: "${booking.clinicName} cancelled booking request for ${booking.petName} on $dateStr at ${booking.timeSlot}.",
                     );
 
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Declined booking for ${booking.petName}")),
+                        SnackBar(
+                          content: Text("Cancelled booking for ${booking.petName}. Slot released."),
+                          backgroundColor: Colors.red.shade700,
+                        ),
                       );
                     }
-                  }, 
-                  child: const Text("Reject", style: TextStyle(color: Colors.grey)),
+                  },
+                  icon: const Icon(Icons.cancel_outlined, size: 16, color: Colors.white),
+                  label: const Text("Cancel", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade700,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
+                const Spacer(),
+                ElevatedButton.icon(
                   onPressed: () async {
                     await BookingService().updateBookingStatus(booking.userId, booking.id, 'CONFIRMED');
 
@@ -1070,12 +1744,48 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       );
                     }
                   }, 
+                  icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
+                  label: const Text("Accept", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _toffeeBrown, 
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text("Accept", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ] else if (statusUpper == 'CONFIRMED' && isAppointmentTimeReached) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await BookingService().updateBookingStatus(booking.userId, booking.id, 'COMPLETED');
+
+                    await UserNotificationService().logNotification(
+                      userId: booking.userId,
+                      title: "Appointment Completed! 🐾",
+                      body: "Your appointment for ${booking.petName} at ${booking.clinicName} on $dateStr has been completed.",
+                      type: 'booking',
+                    );
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("✓ Appointment for ${booking.petName} marked as COMPLETED!"),
+                          backgroundColor: Colors.blue.shade700,
+                        ),
+                      );
+                    }
+                  }, 
+                  icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
+                  label: const Text("Mark Completed", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700, 
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ],
             ),
@@ -1120,10 +1830,16 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
   Widget _buildBottomNav() {
     return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
       selectedItemColor: _coffeeBean,
       unselectedItemColor: _fadedCopper,
       backgroundColor: Colors.white,
-      currentIndex: 0,
+      currentIndex: _currentNavIndex,
+      onTap: (index) {
+        setState(() {
+          _currentNavIndex = index;
+        });
+      },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
         BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: "Schedule"),

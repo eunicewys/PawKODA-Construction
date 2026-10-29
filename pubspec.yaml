@@ -44,6 +44,8 @@ dependencies:
   geolocator: ^13.0.1
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
+  google_maps_flutter: ^2.12.0
+  google_maps_url_extractor: ^1.0.1
 
 dev_dependencies:
   flutter_test:

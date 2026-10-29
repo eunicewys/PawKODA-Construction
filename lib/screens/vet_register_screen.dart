@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/image_helper.dart';
 import '../services/booking_service.dart';
+import '../models/clinic_model.dart';
 
 /// VetRegisterScreen: Registration page for Veterinary Organizations.
 /// Vets must fill in all details, including SSM number and proof documents/photos
@@ -138,6 +139,11 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
       final String uid = userCredential.user!.uid;
       final String formattedPhone = BookingService.formatPhoneWithHyphen(phone);
 
+      // Parse exact GPS coordinates from Google Maps URL & Address (Async Resolution for Short Links)
+      final coords = await ClinicModel.resolveGoogleMapsCoordinatesAsync(googleMapsUrl, address, clinicName);
+      final double lat = coords['latitude'] ?? 5.4164;
+      final double lng = coords['longitude'] ?? 100.3327;
+
       // 4. Save to USERS collection with role 'vet' and status 'pending'
       final Map<String, dynamic> vetUserData = {
         'uid': uid,
@@ -147,7 +153,13 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'email': email,
         'phone': formattedPhone,
         'address': address,
-        'operatingHours': "09:00 AM - 06:00 PM", // Default schedule initially until updated in Vet Module
+        'latitude': lat,
+        'longitude': lng,
+        'operatingHours': "", // Not set until configured by Vet Personnel
+        'operatingDays': [],
+        'services': [],
+        'veterinarians': [],
+        'isAcceptingBookings': false,
         'websiteUrl': websiteUrl,
         'googleMapsUrl': googleMapsUrl,
         'proofDocumentUrl': base64ProofImage ?? '',
@@ -166,7 +178,13 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'address': address,
         'phone': formattedPhone,
         'email': email,
-        'operatingHours': "09:00 AM - 06:00 PM",
+        'latitude': lat,
+        'longitude': lng,
+        'operatingHours': "",
+        'operatingDays': [],
+        'services': [],
+        'veterinarians': [],
+        'isAcceptingBookings': false,
         'websiteUrl': websiteUrl,
         'googleMapsUrl': googleMapsUrl,
         'proofDocumentUrl': base64ProofImage ?? '',

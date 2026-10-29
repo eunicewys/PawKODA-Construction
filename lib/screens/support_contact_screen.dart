@@ -17,6 +17,7 @@ class SupportContactScreen extends StatefulWidget {
 
 class _SupportContactScreenState extends State<SupportContactScreen> {
   static const String adminEmail = 'support@pawkoda.com';
+  static const String adminPhone = '+60 11-56939880';
 
   // Specified Color Palette
   final Color _fadedCopper = const Color(0xFFB08968);
@@ -33,6 +34,23 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
             Icon(Icons.content_copy_rounded, color: Colors.white, size: 20),
             SizedBox(width: 8),
             Text("Admin email copied to clipboard! (support@pawkoda.com)"),
+          ],
+        ),
+        backgroundColor: _fadedCopper,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _copyPhoneToClipboard() {
+    Clipboard.setData(const ClipboardData(text: adminPhone));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.content_copy_rounded, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Text("Admin phone number copied to clipboard! (+60 11-56939880)"),
           ],
         ),
         backgroundColor: _fadedCopper,
@@ -515,6 +533,64 @@ class _SupportContactScreenState extends State<SupportContactScreen> {
                               const SizedBox(width: 8),
                               InkWell(
                                 onTap: _copyEmailToClipboard,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: _fadedCopper,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    "Copy",
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Admin Phone Section
+                        Text(
+                          "ADMIN CONTACT PHONE",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _subText,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _tan.withAlpha(60),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _fadedCopper.withAlpha(100)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.phone_outlined, color: _fadedCopper, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: SelectableText(
+                                    adminPhone,
+                                    style: TextStyle(
+                                      color: _blackText,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: _copyPhoneToClipboard,
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(

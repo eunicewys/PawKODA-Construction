@@ -73,220 +73,8 @@ class BookingService {
 
   /// Parses exact latitude & longitude coordinates from any Google Maps link, landmark, or address
   static Map<String, double> parseExactCoordinatesFromGoogleMapsUrl(String mapsUrl, String address, String clinicName) {
-    final url = mapsUrl.trim();
-
-    // 1. Universal Regex to extract exact latitude and longitude pair anywhere in URL
-    final RegExp coordRegex = RegExp(r'(-?\d{1,2}\.\d{3,}),\s*(-?\d{2,3}\.\d{3,})');
-    final matches = coordRegex.allMatches(url);
-    for (var match in matches) {
-      if (match.groupCount >= 2) {
-        final double? lat = double.tryParse(match.group(1)!);
-        final double? lng = double.tryParse(match.group(2)!);
-        if (lat != null && lng != null && lat >= 1.0 && lat <= 7.5 && lng >= 99.0 && lng <= 119.0) {
-          return {'latitude': lat, 'longitude': lng};
-        }
-      }
-    }
-
-    // 2. Match 3d/4d parameters in Google Maps embed/place URLs e.g. !3d5.405621!4d100.308985
-    final RegExp dRegex = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)');
-    final dMatch = dRegex.firstMatch(url);
-    if (dMatch != null && dMatch.groupCount >= 2) {
-      final double? lat = double.tryParse(dMatch.group(1)!);
-      final double? lng = double.tryParse(dMatch.group(2)!);
-      if (lat != null && lng != null && lat >= 1.0 && lat <= 7.5 && lng >= 99.0 && lng <= 119.0) {
-        return {'latitude': lat, 'longitude': lng};
-      }
-    }
-
-    // 4. Penang Landmark & Address Geocoding Dictionary
-    final String combinedText = "$clinicName $address $url".toLowerCase();
-    
-    if (combinedText.contains('free school') || combinedText.contains('kenique')) {
-      return {'latitude': 5.405621, 'longitude': 100.308985};
-    }
-    if (combinedText.contains('bayan baru') || combinedText.contains('neko inu')) {
-      return {'latitude': 5.326842, 'longitude': 100.286510};
-    }
-    if (combinedText.contains('air itam') || combinedText.contains('joyful pet')) {
-      return {'latitude': 5.398012, 'longitude': 100.284021};
-    }
-    if (combinedText.contains('angsana') || combinedText.contains('jalan angsana')) {
-      return {'latitude': 5.402031, 'longitude': 100.301045};
-    }
-    if (combinedText.contains('tanjung bungah') || combinedText.contains('tanjung tokong') || combinedText.contains('ark vet')) {
-      return {'latitude': 5.465012, 'longitude': 100.288034};
-    }
-    if (combinedText.contains('bukit tengah') || combinedText.contains('bukit mertajam') || combinedText.contains('perkhidmatan veterinar')) {
-      return {'latitude': 5.352811, 'longitude': 100.432023};
-    }
-    if (combinedText.contains('balik pulau') || combinedText.contains('barat daya')) {
-      return {'latitude': 5.348512, 'longitude': 100.231045};
-    }
-    if (combinedText.contains('butterworth')) {
-      return {'latitude': 5.399120, 'longitude': 100.363820};
-    }
-    if (combinedText.contains('relau')) {
-      return {'latitude': 5.334110, 'longitude': 100.274120};
-    }
-    if (combinedText.contains('gelugor') || combinedText.contains('sungai dua')) {
-      return {'latitude': 5.355110, 'longitude': 100.298120};
-    }
-
-    // 5. Unique, Deterministic Offset based on Place Name & Address Hash so every clinic gets its own distinct, exact coordinate pin
-    final int hash = (clinicName + address).hashCode.abs();
-    final double latOffset = ((hash % 1000) / 10000.0) - 0.05;
-    final double lngOffset = (((hash ~/ 1000) % 1000) / 10000.0) - 0.05;
-
-    return {
-      'latitude': double.parse((5.4164 + latOffset).toStringAsFixed(6)),
-      'longitude': double.parse((100.3327 + lngOffset).toStringAsFixed(6)),
-    };
+    return ClinicModel.parseExactCoordinatesFromGoogleMapsUrl(mapsUrl, address, clinicName);
   }
-
-  /// Exact Penang Vet Clinics extracted from Google Maps,
-  /// with real Google Review ratings, review counts, exact physical addresses, and GPS coordinates.
-  static const List<ClinicModel> penangClinics = [
-    // 1. Kenique Veterinary Centre (George Town)
-    ClinicModel(
-      id: 'kenique_01',
-      name: 'Kenique Veterinary Centre',
-      specialty: 'General & Internal Medicine',
-      rating: 4.8,
-      reviewCount: 106,
-      distanceKm: 0.8,
-      operatingHours: '09:00 AM - 06:00 PM',
-      city: 'George Town',
-      address: '13, Jalan Free School, 11600 George Town, Pulau Pinang',
-      phone: '+60 4-281 1228',
-      latitude: 5.4056,
-      longitude: 100.3090,
-      services: ['General Consultation', 'Vaccination', 'Dental Care', 'Blood Diagnostics', 'Soft Tissue Surgery'],
-      isEmergency24h: false,
-      isRecommended: true,
-      description: 'Kenique Veterinary Centre on Jalan Free School, George Town.',
-    ),
-
-    // 2. Neko Inu Veterinary Centre (Bayan Baru)
-    ClinicModel(
-      id: 'neko_inu_01',
-      name: 'Neko Inu Veterinary Centre',
-      specialty: 'Feline & Canine Medicine',
-      rating: 4.3,
-      reviewCount: 516,
-      distanceKm: 1.2,
-      operatingHours: '09:00 AM - 06:00 PM',
-      city: 'Bayan Lepas',
-      address: 'Bandar Bayan Baru, 11900 Bayan Lepas, Pulau Pinang',
-      phone: '+60 4-641 1238',
-      latitude: 5.3268,
-      longitude: 100.2865,
-      services: ['Feline Care', 'Canine Health', 'Vaccination', 'Surgery', 'Deworming'],
-      isEmergency24h: false,
-      isRecommended: true,
-      description: 'Neko Inu Veterinary Centre in Bayan Baru, Bayan Lepas.',
-    ),
-
-    // 3. Joyful Pet Veterinary Clinic (Air Itam)
-    ClinicModel(
-      id: 'joyful_pet_vet',
-      name: 'Joyful Pet Veterinary Clinic',
-      specialty: 'General Medicine & Surgery',
-      rating: 4.9,
-      reviewCount: 52,
-      distanceKm: 2.5,
-      operatingHours: '09:00 AM - 06:00 PM',
-      city: 'Air Itam',
-      address: 'Bandar Baru Air Itam, 11500 Air Itam, Pulau Pinang',
-      phone: '+60 4-828 3311',
-      latitude: 5.3980,
-      longitude: 100.2840,
-      services: ['General Checkup', 'Vaccination', 'Dental Scaling', 'Soft Tissue Surgery', 'Grooming Services'],
-      isEmergency24h: false,
-      isRecommended: true,
-      description: 'Joyful Pet Veterinary Clinic in Air Itam.',
-    ),
-
-    // 4. Angsana Veterinary Clinic (George Town)
-    ClinicModel(
-      id: 'angsana_vet',
-      name: 'Angsana Veterinary Clinic',
-      specialty: 'Wellness & Dermatology',
-      rating: 3.7,
-      reviewCount: 145,
-      distanceKm: 1.5,
-      operatingHours: '09:00 AM - 06:00 PM',
-      city: 'George Town',
-      address: 'Jalan Angsana, George Town, 10450 Pulau Pinang',
-      phone: '+60 4-226 3888',
-      latitude: 5.4020,
-      longitude: 100.3010,
-      services: ['Cat & Dog Wellness', 'Vaccination', 'Sterilization', 'Skin Care'],
-      isEmergency24h: false,
-      isRecommended: true,
-      description: 'Angsana Veterinary Clinic in George Town.',
-    ),
-
-    // 5. ARK Veterinary Centre (Tanjung Bungah)
-    ClinicModel(
-      id: 'ark_vet_01',
-      name: 'ARK Veterinary Centre',
-      specialty: 'General Surgery & Diagnostics',
-      rating: 4.6,
-      reviewCount: 214,
-      distanceKm: 4.1,
-      operatingHours: '09:00 AM - 06:00 PM',
-      city: 'Tanjung Tokong',
-      address: 'Jalan Tanjung Bungah, 11200 Tanjung Bungah, Pulau Pinang',
-      phone: '+60 4-890 9888',
-      latitude: 5.4650,
-      longitude: 100.2880,
-      services: ['General Surgery', 'Ultrasound', 'Dental Scaling', 'Vaccination', 'In-House Lab'],
-      isEmergency24h: false,
-      isRecommended: true,
-      description: 'ARK Veterinary Centre in Tanjung Bungah.',
-    ),
-
-    // 6. Jabatan Perkhidmatan Veterinar Negeri P.Pinang (Bukit Mertajam)
-    ClinicModel(
-      id: 'jpv_penang',
-      name: 'Jabatan Perkhidmatan Veterinar Negeri P.Pinang',
-      specialty: 'State Veterinary HQ & Services',
-      rating: 4.3,
-      reviewCount: 237,
-      distanceKm: 6.5,
-      operatingHours: '08:00 AM - 05:00 PM',
-      city: 'Bukit Mertajam',
-      address: 'Jalan Bukit Tengah, 14000 Bukit Mertajam, Pulau Pinang',
-      phone: '+60 4-508 4368',
-      latitude: 5.3528,
-      longitude: 100.4320,
-      services: ['State Veterinary Services', 'Health Certification', 'Animal Quarantine', 'Rabies Vaccination'],
-      isEmergency24h: false,
-      isRecommended: true,
-      description: 'Jabatan Perkhidmatan Veterinar Negeri P.Pinang in Bukit Mertajam.',
-    ),
-
-    // 7. PPV Barat Daya (Balik Pulau)
-    ClinicModel(
-      id: 'ppv_barat_daya',
-      name: 'PPV Barat Daya',
-      specialty: 'Public Veterinary Services',
-      rating: 4.0,
-      reviewCount: 93,
-      distanceKm: 7.8,
-      operatingHours: '08:30 AM - 04:30 PM',
-      city: 'Balik Pulau',
-      address: 'Jalan Kampung Terang, 11000 Balik Pulau, Pulau Pinang',
-      phone: '+60 4-866 1232',
-      latitude: 5.3485,
-      longitude: 100.2310,
-      services: ['Public Veterinary Care', 'Vaccination', 'Animal Health Licensing', 'Consultation'],
-      isEmergency24h: false,
-      isRecommended: true,
-      description: 'PPV Barat Daya in Balik Pulau.',
-    ),
-  ];
 
   /// Calculate precise geodesic distance between user's coordinates and vet clinic
   static double calculateDistanceKm({
@@ -339,32 +127,39 @@ class BookingService {
     }
   }
 
-  /// Stream live clinics from Firestore `CLINICS` collection merged with default Penang clinics
+  static const Set<String> legacySampleIds = {
+    'kenique_01',
+    'neko_inu_01',
+    'joyful_pet_vet',
+    'angsana_vet',
+    'ark_vet_01',
+    'jpv_penang',
+    'ppv_barat_daya',
+  };
+
+  /// One-time cleanup function to delete pre-existing legacy mock clinics from Firestore
+  static Future<void> purgeLegacySampleClinicsFromFirestore() async {
+    final FirebaseFirestore db = FirebaseFirestore.instance;
+    for (String legacyId in legacySampleIds) {
+      try {
+        await db.collection('CLINICS').doc(legacyId).delete();
+        await db.collection('USERS').doc(legacyId).delete();
+      } catch (e) {
+        debugPrint("Error purging legacy clinic $legacyId: $e");
+      }
+    }
+  }
+
+  /// Stream live clinics strictly from Firestore `CLINICS` collection (100% registered clinics)
   Stream<List<ClinicModel>> streamLiveClinics() {
+    purgeLegacySampleClinicsFromFirestore();
     return _db.collection('CLINICS').snapshots().map((snapshot) {
-      final customClinics = snapshot.docs.map((doc) {
+      return snapshot.docs
+          .where((doc) => !legacySampleIds.contains(doc.id) && !legacySampleIds.contains(doc.id.toLowerCase()))
+          .map((doc) {
         final data = doc.data();
         return ClinicModel.fromMap(data, doc.id);
       }).toList();
-
-      final List<ClinicModel> merged = [];
-
-      // 1. Add baseline penangClinics
-      for (var clinic in penangClinics) {
-        merged.add(clinic);
-      }
-
-      // 2. Override or add custom clinics from Firestore
-      for (var custom in customClinics) {
-        final existingIdx = merged.indexWhere((c) => c.id == custom.id || c.name.toLowerCase() == custom.name.toLowerCase());
-        if (existingIdx != -1) {
-          merged[existingIdx] = custom;
-        } else {
-          merged.add(custom);
-        }
-      }
-
-      return merged;
     });
   }
 
@@ -405,14 +200,20 @@ class BookingService {
   }
 
   /// Get clinics with precise distance calculated from user's place & sorted by nearest distance
-  List<ClinicModel> getClinics({
+  Future<List<ClinicModel>> getClinics({
     double? userLat,
     double? userLng,
     String selectedCity = 'All Cities (Penang)',
     String searchQuery = '',
-  }) {
+  }) async {
+    purgeLegacySampleClinicsFromFirestore();
+    final snapshot = await _db.collection('CLINICS').get();
+    final clinics = snapshot.docs
+        .where((doc) => !legacySampleIds.contains(doc.id) && !legacySampleIds.contains(doc.id.toLowerCase()))
+        .map((doc) => ClinicModel.fromMap(doc.data(), doc.id))
+        .toList();
     return processClinicsList(
-      penangClinics,
+      clinics,
       userLat: userLat,
       userLng: userLng,
       selectedCity: selectedCity,

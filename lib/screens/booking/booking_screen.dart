@@ -14,6 +14,32 @@ import '../../services/booking_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_notification_service.dart';
 import '../widgets/fringe_header.dart';
+import 'clinic_google_map_widget.dart';
+
+/// CustomPainter that draws a diagonal slash line from top-right to bottom-left for closed operating days
+class DiagonalSlashPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  DiagonalSlashPainter({
+    required this.color,
+    this.strokeWidth = 1.8,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(Offset(size.width - 8, 8), Offset(8, size.height - 8), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
 
 /// BookingScreen: Dedicated vet clinic discovery and appointment booking module
 /// focusing strictly on Penang, Malaysia with Google Maps integration.
@@ -52,6 +78,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   String _searchQuery = '';
   ClinicModel? _selectedMapClinic;
   bool _isMapView = false;
+  String _mapTileType = 'm'; // 'm' = Google Maps Standard, 's' = Satellite, 'y' = Hybrid
   final TextEditingController _searchCtrl = TextEditingController();
 
   double? _userLat;
@@ -218,7 +245,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     return StreamBuilder<List<ClinicModel>>(
       stream: _bookingService.streamLiveClinics(),
       builder: (context, snapshot) {
-        final rawClinics = snapshot.data ?? BookingService.penangClinics;
+        final rawClinics = snapshot.data ?? [];
         final filteredClinics = _bookingService.processClinicsList(
           rawClinics,
           userLat: _userLat,
@@ -684,340 +711,523 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     );
   }
 
+  final Map<String, LatLng> _clinicCoordinatesCache = {};
+
+  Future<Map<String, LatLng>> _resolveAllClinicCoordinates(List<ClinicModel> clinics) async {
+    final Map<String, LatLng> results = {};
+
+    for (final clinic in clinics) {
+      if (_clinicCoordinatesCache.containsKey(clinic.id)) {
+        results[clinic.id] = _clinicCoordinatesCache[clinic.id]!;
+        continue;
+      }
+
+      LatLng? resolvedLatLng;
+
+      // 1. Check if clinic already has valid custom non-default lat/lng
+      if (clinic.latitude != 0.0 && clinic.longitude != 0.0 && (clinic.latitude != 5.4164 || clinic.longitude != 100.3327)) {
+        resolvedLatLng = LatLng(clinic.latitude, clinic.longitude);
+      }
+
+      // 2. Resolve Google Maps URL or address asynchronously
+      if (resolvedLatLng == null) {
+        final String mapsUrl = (clinic.googleMapsUrl ?? '').trim();
+        final Map<String, double> resolved = await ClinicModel.resolveGoogleMapsCoordinatesAsync(
+          mapsUrl,
+          clinic.address,
+          clinic.name,
+        );
+        resolvedLatLng = LatLng(resolved['latitude']!, resolved['longitude']!);
+
+        // Asynchronously update Firestore so future loads have the exact coordinates
+        FirebaseFirestore.instance.collection('CLINICS').doc(clinic.id).set({
+          'latitude': resolved['latitude'],
+          'longitude': resolved['longitude'],
+        }, SetOptions(merge: true));
+      }
+
+      _clinicCoordinatesCache[clinic.id] = resolvedLatLng;
+      results[clinic.id] = resolvedLatLng;
+    }
+
+    return results;
+  }
+
   // ===========================================================================
-  // INTERACTIVE PENANG GOOGLE MAP VIEW (Powered by real Google Maps vector tiles)
+  // INTERACTIVE PENANG GOOGLE MAP VIEW (Rebuilt from scratch with exact plotting)
   // ===========================================================================
   Widget _buildPenangInteractiveMap(List<ClinicModel> clinics, String userId) {
-    final selectedClinic = _selectedMapClinic;
+    if (clinics.isEmpty) {
+      return Container(
+        height: 200,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        child: Text("No clinics found for map plotting.", style: TextStyle(color: _ashGrey, fontSize: 13)),
+      );
+    }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Google Maps Dark Header Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              color: Color(0xFF263238), // Google Maps dark top bar
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return FutureBuilder<Map<String, LatLng>>(
+      future: _resolveAllClinicCoordinates(clinics),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return Container(
+            height: 330,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: _dustyOlive),
+                  const SizedBox(height: 12),
+                  Text("Plotting clinic locations on Google Maps...", style: TextStyle(color: _darkCharcoal, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                // Google logo letters
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text("G", style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text("o", style: TextStyle(color: Color(0xFFEA4335), fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text("o", style: TextStyle(color: Color(0xFFFBBC05), fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text("g", style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text("l", style: TextStyle(color: Color(0xFF34A853), fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text("e", style: TextStyle(color: Color(0xFFEA4335), fontWeight: FontWeight.bold, fontSize: 15)),
+          );
+        }
+
+        final Map<String, LatLng> coordsMap = snapshot.data ?? {};
+        final selectedClinic = _selectedMapClinic;
+
+        // Calculate initial map center and camera position
+        LatLng initialCenter = const LatLng(5.3850, 100.3150); // Penang center
+        if (selectedClinic != null && coordsMap.containsKey(selectedClinic.id)) {
+          initialCenter = coordsMap[selectedClinic.id]!;
+        } else if (coordsMap.isNotEmpty) {
+          initialCenter = coordsMap.values.first;
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Google Maps Dark Header Bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF263238),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text("G", style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text("o", style: TextStyle(color: Color(0xFFEA4335), fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text("o", style: TextStyle(color: Color(0xFFFBBC05), fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text("g", style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text("l", style: TextStyle(color: Color(0xFF34A853), fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text("e", style: TextStyle(color: Color(0xFFEA4335), fontWeight: FontWeight.bold, fontSize: 15)),
+                      ],
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        "Maps • Penang (${clinics.length} Plotted)",
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(width: 6),
-                const Text(
-                  "Maps • Penang",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          // Real Interactive Google Map Container with Zoom In / Zoom Out / Drag
-          Container(
-            height: 250,
-            width: double.infinity,
-            clipBehavior: Clip.antiAlias,
-            decoration: const BoxDecoration(),
-            child: Stack(
-              children: [
-                // Real Google Map Tile Layer with Gestures (Zoom, Pan)
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: const LatLng(5.3850, 100.3150), // Center of Penang Island & Channel
-                    initialZoom: 11.5,
-                    minZoom: 9.0,
-                    maxZoom: 18.0,
-                    onTap: (_, _) {
-                      // Tap on empty map space deselects pin
-                      setState(() => _selectedMapClinic = null);
-                    },
-                  ),
+              // Interactive Google Map
+              Container(
+                height: 330,
+                width: double.infinity,
+                clipBehavior: Clip.antiAlias,
+                decoration: const BoxDecoration(),
+                child: Stack(
                   children: [
-                    // High-Definition Real Google Maps Tile Layer
-                    TileLayer(
-                      urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-                      userAgentPackageName: 'com.example.pawkoda_fyp',
-                    ),
-                    // Marker Layer for Kenique Vet & Grace Vet Branches
-                    MarkerLayer(
-                      markers: clinics.map((clinic) {
-                        final isSelected = selectedClinic?.id == clinic.id;
-                        final latLng = LatLng(clinic.latitude, clinic.longitude);
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: initialCenter,
+                        initialZoom: selectedClinic != null ? 15.0 : 11.5,
+                        minZoom: 9.0,
+                        maxZoom: 18.0,
+                        onTap: (_, _) {
+                          setState(() => _selectedMapClinic = null);
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://mt1.google.com/vt/lyrs=$_mapTileType&x={x}&y={y}&z={z}',
+                          userAgentPackageName: 'com.example.pawkoda_fyp',
+                        ),
+                        MarkerLayer(
+                          markers: clinics.map((clinic) {
+                            final LatLng pos = coordsMap[clinic.id] ?? LatLng(clinic.latitude, clinic.longitude);
+                            final bool isSelected = selectedClinic?.id == clinic.id;
 
-                        String pinLabel = clinic.name
-                            .replaceAll('Veterinary Centre', 'Vet')
-                            .replaceAll('Veterinary Clinic', 'Vet')
-                            .replaceAll('Animal Hospital', 'Vet')
-                            .replaceAll('Animal Clinic', 'Vet');
+                            String pinLabel = clinic.name
+                                .replaceAll('Veterinary Centre', 'Vet')
+                                .replaceAll('Veterinary Clinic', 'Vet')
+                                .replaceAll('Animal Hospital', 'Vet')
+                                .replaceAll('Animal Clinic', 'Vet');
 
-                        return Marker(
-                          point: latLng,
-                          width: 80,
-                          height: 55,
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedMapClinic = clinic),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
+                            return Marker(
+                              point: pos,
+                              width: 90,
+                              height: 60,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() => _selectedMapClinic = clinic);
+                                  _mapController.move(pos, 15.5);
+                                },
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      Icons.location_on_sharp,
-                                      color: isSelected ? const Color(0xFFD32F2F) : const Color(0xFFE53935),
-                                      size: isSelected ? 34 : 26,
-                                    ),
-                                    Positioned(
-                                      top: isSelected ? 6 : 4,
-                                      child: Container(
-                                        width: isSelected ? 10 : 8,
-                                        height: isSelected ? 10 : 8,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
+                                    Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.location_on_sharp,
+                                          color: isSelected ? const Color(0xFFD32F2F) : const Color(0xFFE53935),
+                                          size: isSelected ? 38 : 28,
                                         ),
+                                        Positioned(
+                                          top: isSelected ? 8 : 5,
+                                          child: Container(
+                                            width: isSelected ? 10 : 8,
+                                            height: isSelected ? 10 : 8,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? _darkCharcoal : Colors.white,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isSelected ? Colors.red : Colors.grey.shade400,
+                                          width: 1,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.18),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Text(
+                                        pinLabel,
+                                        style: TextStyle(
+                                          color: isSelected ? Colors.white : _darkCharcoal,
+                                          fontSize: 8.5,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? _darkCharcoal : Colors.white,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: isSelected ? Colors.red : Colors.grey.shade400,
-                                      width: 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.18),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    pinLabel,
-                                    style: TextStyle(
-                                      color: isSelected ? Colors.white : _darkCharcoal,
-                                      fontSize: 8.0,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+
+                    // Top Left: Map Tile Style Switcher (Roadmap / Satellite / Hybrid)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (_mapTileType == 'm') {
+                              _mapTileType = 'y'; // Hybrid
+                            } else if (_mapTileType == 'y') {
+                              _mapTileType = 's'; // Satellite
+                            } else {
+                              _mapTileType = 'm'; // Roadmap
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _mapTileType == 'm' ? Icons.map_outlined : Icons.satellite_alt_rounded,
+                                size: 14,
+                                color: _dustyOlive,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                _mapTileType == 'm' ? "Roadmap" : (_mapTileType == 'y' ? "Hybrid" : "Satellite"),
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Zoom / Fit Controls
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: Column(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              final currentZoom = _mapController.camera.zoom;
+                              _mapController.move(_mapController.camera.center, currentZoom + 1.0);
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
+                              ),
+                              child: const Icon(Icons.add, size: 18, color: Colors.black87),
                             ),
                           ),
-                        );
-                      }).toList(),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () {
+                              final currentZoom = _mapController.camera.zoom;
+                              _mapController.move(_mapController.camera.center, currentZoom - 1.0);
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
+                              ),
+                              child: const Icon(Icons.remove, size: 18, color: Colors.black87),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () {
+                              if (selectedClinic != null && coordsMap.containsKey(selectedClinic.id)) {
+                                _mapController.move(coordsMap[selectedClinic.id]!, 15.5);
+                              } else {
+                                _mapController.move(const LatLng(5.3850, 100.3150), 11.5);
+                              }
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
+                              ),
+                              child: Icon(Icons.my_location, size: 16, color: _dustyOlive),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
+              ),
 
-                // On-Screen Zoom Controls (+ / - / Recenter Penang)
-                Positioned(
-                  right: 10,
-                  bottom: 10,
+              // Selected Clinic Card Callout
+              if (selectedClinic != null) ...[
+                Padding(
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
-                      // Zoom In
-                      InkWell(
-                        onTap: () {
-                          final currentZoom = _mapController.camera.zoom;
-                          _mapController.move(_mapController.camera.center, currentZoom + 1.0);
-                        },
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
-                          ),
-                          child: const Icon(Icons.add, size: 18, color: Colors.black87),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _dustyOlive.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.pin_drop_rounded, size: 16, color: Colors.red.shade700),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                "Pin Selected: ${selectedClinic.name}",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: _darkCharcoal,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => setState(() => _selectedMapClinic = null),
+                              child: const Icon(Icons.close_rounded, size: 16, color: Colors.grey),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      // Zoom Out
-                      InkWell(
-                        onTap: () {
-                          final currentZoom = _mapController.camera.zoom;
-                          _mapController.move(_mapController.camera.center, currentZoom - 1.0);
-                        },
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
-                          ),
-                          child: const Icon(Icons.remove, size: 18, color: Colors.black87),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Recenter Penang
-                      InkWell(
-                        onTap: () {
-                          _mapController.move(const LatLng(5.3850, 100.3150), 11.5);
-                        },
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
-                          ),
-                          child: Icon(Icons.my_location, size: 16, color: _dustyOlive),
+                      const SizedBox(height: 8),
+                      _buildClinicCard(selectedClinic, userId),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.touch_app_rounded, size: 16, color: _dustyOlive),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          "Tap any pin marker to view clinic details and book appointment",
+                          style: TextStyle(fontSize: 11, color: _ashGrey, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                // Google Logo Watermark
-                Positioned(
-                  left: 10,
-                  bottom: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.map_rounded, size: 12, color: Colors.blue),
-                        SizedBox(width: 4),
-                        Text(
-                          "Google Maps • Penang",
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ],
-            ),
+            ],
           ),
-
-          // Instruction or Selected Clinic Details (ONLY appears when user taps a pin!)
-          if (selectedClinic != null) ...[
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _dustyOlive.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.pin_drop_rounded, size: 16, color: Colors.red.shade700),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            "Pin Selected: ${selectedClinic.name}",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _darkCharcoal,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => setState(() => _selectedMapClinic = null),
-                          child: const Icon(Icons.close_rounded, size: 16, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildClinicCard(selectedClinic, userId),
-                ],
-              ),
-            ),
-          ] else ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(Icons.touch_app_rounded, size: 16, color: _dustyOlive),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Tap any pin to show details",
-                    style: TextStyle(fontSize: 11, color: _ashGrey, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 
   Color _getClinicAvatarBg(String id) {
-    if (id.startsWith('kenique_')) return const Color(0xFFFFF3E0);
-    if (id.startsWith('neko_inu')) return const Color(0xFFF3E5F5);
-    if (id.startsWith('ark_vet')) return const Color(0xFFE8F5E9);
-    if (id.startsWith('ppv_barat')) return const Color(0xFFE0F2F1);
-    if (id.startsWith('jpv_penang')) return const Color(0xFFE3F2FD);
-    if (id.startsWith('angsana_vet')) return const Color(0xFFFFF8E1);
-    if (id.startsWith('joyful_pet')) return const Color(0xFFFCE4EC);
-    return _powderPetal;
+    final colors = const [
+      Color(0xFFFFF3E0),
+      Color(0xFFF3E5F5),
+      Color(0xFFE8F5E9),
+      Color(0xFFE0F2F1),
+      Color(0xFFE3F2FD),
+      Color(0xFFFFF8E1),
+      Color(0xFFFCE4EC),
+    ];
+    return colors[id.hashCode.abs() % colors.length];
   }
 
   Future<void> _openGoogleMapsForClinic(ClinicModel clinic) async {
-    final success = await _bookingService.openGoogleMaps(
-      clinicName: clinic.name,
-      address: clinic.address,
-      latitude: clinic.latitude,
-      longitude: clinic.longitude,
-      googleMapsUrl: clinic.googleMapsUrl,
-    );
+    final String mapsUrl = (clinic.googleMapsUrl ?? '').trim();
 
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Opening Google Maps for ${clinic.name}..."),
-          backgroundColor: _dustyOlive,
-        ),
-      );
-    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.location_on, color: Colors.red, size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      clinic.name,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkCharcoal),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              Text(
+                clinic.address,
+                style: TextStyle(fontSize: 12, color: _ashGrey),
+              ),
+              const SizedBox(height: 16),
+              ClinicGoogleMapWidget(
+                clinicLink: mapsUrl.isNotEmpty ? mapsUrl : 'https://maps.google.com/?q=${Uri.encodeComponent(clinic.name)}',
+                clinicName: clinic.name,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _bookingService.openGoogleMaps(
+                      clinicName: clinic.name,
+                      address: clinic.address,
+                      latitude: clinic.latitude,
+                      longitude: clinic.longitude,
+                      googleMapsUrl: clinic.googleMapsUrl,
+                    );
+                  },
+                  icon: const Icon(Icons.directions, color: Colors.white),
+                  label: const Text("Open in Google Maps App for Directions", style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _dustyOlive,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildEmptyState() {
@@ -2104,7 +2314,9 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                       date.month == selectedDate!.month &&
                                       date.day == selectedDate!.day;
 
-                                  final bool isFullyBooked = _isDateFullyBooked(
+                                  final bool isOpenDay = clinic.isOperatingDay(date);
+
+                                  final bool isFullyBooked = isOpenDay && _isDateFullyBooked(
                                     date: date,
                                     allSlots: timeSlots,
                                     selectedVet: selectedVet,
@@ -2114,8 +2326,66 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                   final String dayName = DateFormat('EEE').format(date);
                                   final String monthDay = DateFormat('dd MMM').format(date);
 
+                                  final Widget cardChild = Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        dayName.toUpperCase(),
+                                        style: TextStyle(
+                                          color: (!isOpenDay || isFullyBooked)
+                                              ? Colors.grey.shade400
+                                              : (isSelected ? Colors.white70 : _ashGrey),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        monthDay,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: (!isOpenDay || isFullyBooked)
+                                              ? Colors.grey.shade400
+                                              : (isSelected ? Colors.white : _darkCharcoal),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      if (!isOpenDay) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          "CLOSED",
+                                          style: TextStyle(
+                                            color: Colors.red.shade400,
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ] else if (isFullyBooked) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          "FULL",
+                                          style: TextStyle(
+                                            color: Colors.red.shade400,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  );
+
                                   return GestureDetector(
                                     onTap: () {
+                                      if (!isOpenDay) {
+                                        _showBookingErrorDialog(
+                                          modalCtx,
+                                          "Clinic Closed",
+                                          "Sorry, ${clinic.name} is closed on ${DateFormat('EEEE').format(date)}s. Please select an operating day.",
+                                        );
+                                        return;
+                                      }
                                       if (isFullyBooked) {
                                         _showBookingErrorDialog(
                                           modalCtx,
@@ -2129,67 +2399,34 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                         selectedTime = ''; // Reset time slot when date changes
                                       });
                                     },
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
-                                      width: 68,
-                                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                                      decoration: BoxDecoration(
-                                        color: isFullyBooked
-                                            ? Colors.grey.shade100
-                                            : (isSelected ? _dustyOlive : Colors.white),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: isFullyBooked
-                                              ? Colors.grey.shade300
-                                              : (isSelected ? _dustyOlive : _ashGrey.withAlpha(100)),
-                                          width: isSelected ? 2 : 1,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: isSelected ? _dustyOlive.withAlpha(50) : Colors.black.withAlpha(8),
-                                            blurRadius: isSelected ? 6 : 3,
-                                            offset: const Offset(0, 2),
+                                    child: CustomPaint(
+                                      foregroundPainter: !isOpenDay
+                                          ? DiagonalSlashPainter(color: Colors.red.shade300, strokeWidth: 1.8)
+                                          : null,
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        width: 68,
+                                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                        decoration: BoxDecoration(
+                                          color: (!isOpenDay || isFullyBooked)
+                                              ? Colors.grey.shade100
+                                              : (isSelected ? _dustyOlive : Colors.white),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: (!isOpenDay || isFullyBooked)
+                                                ? Colors.grey.shade300
+                                                : (isSelected ? _dustyOlive : _ashGrey.withAlpha(100)),
+                                            width: isSelected ? 2 : 1,
                                           ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            dayName.toUpperCase(),
-                                            style: TextStyle(
-                                              color: isFullyBooked
-                                                  ? Colors.grey.shade400
-                                                  : (isSelected ? Colors.white70 : _ashGrey),
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            monthDay,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: isFullyBooked
-                                                  ? Colors.grey.shade400
-                                                  : (isSelected ? Colors.white : _darkCharcoal),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          if (isFullyBooked) ...[
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              "FULL",
-                                              style: TextStyle(
-                                                color: Colors.red.shade400,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: isSelected ? _dustyOlive.withAlpha(50) : Colors.black.withAlpha(8),
+                                              blurRadius: isSelected ? 6 : 3,
+                                              offset: const Offset(0, 2),
                                             ),
                                           ],
-                                        ],
+                                        ),
+                                        child: cardChild,
                                       ),
                                     ),
                                   );

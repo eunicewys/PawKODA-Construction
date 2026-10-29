@@ -45,7 +45,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       'category': 'Penang Vet Bookings',
       'question': 'Which Penang clinics are available on PawKODA?',
       'answer':
-          'PawKODA features top Penang veterinary hospitals including Kenique Veterinary Centre (George Town) and Grace Veterinary Clinic branches (Bayan Lepas, Tanjung Tokong, and Butterworth). You can view operating hours, ratings, and book appointments directly.',
+          'PawKODA lists verified Penang veterinary hospitals. You can view operating hours, contact numbers, and book appointments directly.',
     },
     {
       'category': 'Penang Vet Bookings',

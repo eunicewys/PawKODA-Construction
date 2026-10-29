@@ -9,6 +9,7 @@ import 'package:pawkoda_fyp/screens/login_screen.dart';
 import 'package:pawkoda_fyp/screens/nutrition/nutrition_database_screen.dart';
 import 'package:pawkoda_fyp/screens/admin/breed_management_screen.dart';
 import 'package:pawkoda_fyp/screens/admin/clinics_registry_screen.dart';
+import 'package:pawkoda_fyp/screens/admin/past_vet_applications_screen.dart';
 
 /// AdminHomeScreen: Dashboard for System Administrators.
 /// Features a sticky wave FringeHeader, functional Bottom Navigation for Dashboard, Users, Data, and Security,
@@ -729,7 +730,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           icon: Icons.add_business_rounded,
           title: "Clinics Registry",
           subtitle: "Penang Vet Network & Operating Details",
-          color: _yaleBlue,
+          color: _pacificBlue, // 62B6CB
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ClinicsRegistryScreen()),
@@ -737,10 +738,21 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ),
         const SizedBox(height: 12),
         _databaseCardModule(
+          icon: Icons.history_edu_rounded,
+          title: "Past Veterinary Applications",
+          subtitle: "Approved & Rejected Application History",
+          color: _freshSky, // 5FA8D3
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PastVetApplicationsScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _databaseCardModule(
           icon: Icons.no_food_rounded,
           title: "Nutrition Database",
           subtitle: "Food & Nutrient Management",
-          color: _pacificBlue,
+          color: _pacificBlue, // 62B6CB
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const NutritionDatabaseScreen()),
@@ -751,7 +763,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           icon: Icons.pets_rounded,
           title: "Breeds Database",
           subtitle: "Dog & Cat Breed Management",
-          color: _freshSky,
+          color: _freshSky, // 5FA8D3
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const BreedManagementScreen()),
@@ -1298,26 +1310,36 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        final allDocs = snapshot.data?.docs ?? [];
+        final pendingDocs = allDocs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          final status = (data?['status'] ?? 'pending').toString().toLowerCase();
+          return status == 'pending';
+        }).toList();
+
+        if (pendingDocs.isEmpty) {
           return Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: _paleSky),
             ),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Icon(Icons.verified_user_outlined, color: _pacificBlue, size: 28),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
-                  "No Veterinary Organization Applications Yet",
-                  style: TextStyle(color: _darkText, fontWeight: FontWeight.bold, fontSize: 12),
+                  "No Pending Applications",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _darkText, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 const Text(
-                  "New clinic registrations will appear here for SSM verification.",
+                  "New clinic registration awaiting review will appear here.",
                   style: TextStyle(color: Colors.grey, fontSize: 11),
                   textAlign: TextAlign.center,
                 ),
@@ -1326,16 +1348,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           );
         }
 
-        final vetDocs = snapshot.data!.docs;
-
         return ListView.separated(
           padding: EdgeInsets.zero,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: vetDocs.length,
+          itemCount: pendingDocs.length,
           separatorBuilder: (context, index) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
-            final doc = vetDocs[index];
+            final doc = pendingDocs[index];
             final data = doc.data() as Map<String, dynamic>;
             return _vetVerificationCard(doc.id, data);
           },

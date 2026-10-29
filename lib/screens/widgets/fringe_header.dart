@@ -117,6 +117,7 @@ class DashboardFringeHeader extends StatelessWidget {
   final String? photoUrl;
   final VoidCallback onLogout;
   final VoidCallback? onTapAvatar;
+  final Color? backgroundColor;
 
   const DashboardFringeHeader({
     super.key,
@@ -125,11 +126,12 @@ class DashboardFringeHeader extends StatelessWidget {
     this.photoUrl,
     required this.onLogout,
     this.onTapAvatar,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    const Color dustyOlive = Color(0xFF6B705C);
+    final Color mainColor = backgroundColor ?? const Color(0xFF6B705C);
     const Color powderPetal = Color(0xFFFFE8D6);
     ImageProvider? avatarImgProvider = ImageHelper.getImageProvider(photoUrl);
 
@@ -144,7 +146,7 @@ class DashboardFringeHeader extends StatelessWidget {
             child: Container(
               height: 120,
               width: double.infinity,
-              color: dustyOlive.withAlpha(90),
+              color: mainColor.withAlpha(90),
             ),
           ),
 
@@ -154,7 +156,7 @@ class DashboardFringeHeader extends StatelessWidget {
             child: Container(
               height: 114,
               width: double.infinity,
-              color: dustyOlive,
+              color: mainColor,
               child: SafeArea(
                 bottom: false,
                 child: Padding(
@@ -220,8 +222,8 @@ class DashboardFringeHeader extends StatelessWidget {
                                 child: avatarImgProvider == null
                                     ? Text(
                                         userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
-                                        style: const TextStyle(
-                                          color: dustyOlive,
+                                        style: TextStyle(
+                                          color: mainColor,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
                                         ),

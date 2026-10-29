@@ -79,17 +79,16 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
       rating: 4.8,
       reviewCount: 50,
       distanceKm: 1.0,
-      operatingHours: '09:00 AM - 06:00 PM',
+      operatingHours: '',
       city: 'George Town',
       address: address,
       phone: phone,
       latitude: 5.4164,
       longitude: 100.3327,
-      services: const [
-        'General Consultation',
-        'Vaccination',
-        'Deworming',
-      ],
+      services: const [],
+      veterinarians: const [],
+      operatingDays: const [],
+      isAcceptingBookings: false,
       description: 'Approved Veterinary Organization in Penang.',
     );
 
@@ -212,24 +211,12 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance.collection('CLINICS').snapshots(),
               builder: (context, snapshot) {
-                final firestoreDocs = snapshot.data?.docs ?? [];
-                final customClinics = firestoreDocs.map((doc) {
+                final firestoreDocs = (snapshot.data?.docs ?? [])
+                    .where((doc) => !BookingService.legacySampleIds.contains(doc.id) && !BookingService.legacySampleIds.contains(doc.id.toLowerCase()))
+                    .toList();
+                List<ClinicModel> list = firestoreDocs.map((doc) {
                   return ClinicModel.fromMap(doc.data(), doc.id);
                 }).toList();
-
-                final Map<String, ClinicModel> mergedMap = {};
-
-                // 1. Add baseline Penang clinics
-                for (var clinic in BookingService.penangClinics) {
-                  mergedMap[clinic.id] = clinic;
-                }
-
-                // 2. Override / Add custom Firestore clinics
-                for (var customClinic in customClinics) {
-                  mergedMap[customClinic.id] = customClinic;
-                }
-
-                List<ClinicModel> list = mergedMap.values.toList();
 
                 // Search Filter
                 final query = _searchCtrl.text.trim().toLowerCase();
@@ -273,7 +260,7 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                   itemCount: list.length,
                   itemBuilder: (context, index) {
                     final item = list[index];
-                    final isCustom = firestoreDocs.any((doc) => doc.id == item.id);
+                    final isCustom = true;
 
                     // Find corresponding Firestore document data safely without unsafe doc.get() calls
                     final docMatch = firestoreDocs.where((doc) {
@@ -296,9 +283,8 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header Row: Icon, Clinic Name, Rating, Email & Edit/Delete
+                            // 1. TOP HEADER: Hospital Icon & Full Vet Clinic Name
                             Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(10),
@@ -309,83 +295,16 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                                   child: Icon(Icons.local_hospital_rounded, color: _yaleBlue, size: 24),
                                 ),
                                 const SizedBox(width: 12),
-
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.name,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: _darkText,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 3),
-
-                                      Row(
-                                        children: [
-                                          Icon(Icons.location_city_rounded, color: _subText, size: 14),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            item.city,
-                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _subText),
-                                          ),
-                                          if (item.phone.isNotEmpty) ...[
-                                            const SizedBox(width: 8),
-                                            Icon(Icons.phone_outlined, color: _yaleBlue, size: 13),
-                                            const SizedBox(width: 3),
-                                            Expanded(
-                                              child: SelectableText(
-                                                item.phone,
-                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _yaleBlue),
-                                                maxLines: 1,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-
-                                      if (email.isNotEmpty) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          "Vet Email: $email",
-                                          style: TextStyle(fontSize: 11, color: _yaleBlue, fontWeight: FontWeight.bold),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ],
+                                  child: Text(
+                                    item.name,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: _darkText,
+                                    ),
                                   ),
                                 ),
-
-                                const SizedBox(width: 6),
-
-                                // Edit Profile Action (Available for ALL Clinics)
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
-                                  tooltip: "Edit Clinic Profile",
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  onPressed: () {
-                                    final mapsUrl = docData?['googleMapsUrl']?.toString() ?? item.googleMapsUrl ?? '';
-                                    _openClinicModal(existing: item, vetEmail: email, initialMapsUrl: mapsUrl);
-                                  },
-                                ),
-
-                                if (isCustom) ...[
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
-                                    tooltip: "Delete Clinic",
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () => _confirmDelete(item),
-                                  ),
-                                ],
                               ],
                             ),
 
@@ -393,8 +312,58 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                             const Divider(height: 1),
                             const SizedBox(height: 10),
 
-                            // Physical Address
+                            // 2. CITY LOCATION & VET PHONE
                             Row(
+                              children: [
+                                Icon(Icons.location_city_rounded, color: _subText, size: 15),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "City: ",
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _subText),
+                                ),
+                                Text(
+                                  item.city,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkText),
+                                ),
+                                if (item.phone.isNotEmpty) ...[
+                                  const SizedBox(width: 12),
+                                  Icon(Icons.phone_outlined, color: _yaleBlue, size: 14),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: SelectableText(
+                                      item.phone,
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _yaleBlue),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+
+                            // 3. VET EMAIL (If present)
+                            if (email.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Icon(Icons.email_outlined, color: _yaleBlue, size: 15),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Vet Email: ",
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _subText),
+                                  ),
+                                  Expanded(
+                                    child: SelectableText(
+                                      email,
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _yaleBlue),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                            ],
+
+                            // 4. PHYSICAL ADDRESS
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Icon(Icons.location_on_outlined, size: 15, color: Colors.grey),
                                 const SizedBox(width: 4),
@@ -408,11 +377,11 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                             ),
                             const SizedBox(height: 6),
 
-                            // Full Operating Hours (Handles 1 or 2 time slots completely without cut-off)
+                            // 5. FULL OPERATING HOURS (1 or 2 slots completely visible)
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.access_time_rounded, size: 14, color: _yaleBlue),
+                                Icon(Icons.access_time_rounded, size: 15, color: _yaleBlue),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
@@ -425,7 +394,7 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
 
                             const SizedBox(height: 10),
 
-                            // Services Offered Chips
+                            // 6. OFFERED SERVICES CHIPS
                             Wrap(
                               spacing: 6,
                               runSpacing: 4,
@@ -443,6 +412,48 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                                   ),
                                 );
                               }).toList(),
+                            ),
+
+                            const SizedBox(height: 12),
+                            const Divider(height: 1),
+                            const SizedBox(height: 10),
+
+                            // 7. BOTTOM DEDICATED ACTION BAR (Edit Profile & Delete Clinic)
+                            Row(
+                              children: [
+                                // Edit Profile Button
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    final mapsUrl = docData?['googleMapsUrl']?.toString() ?? item.googleMapsUrl ?? '';
+                                    _openClinicModal(existing: item, vetEmail: email, initialMapsUrl: mapsUrl);
+                                  },
+                                  icon: const Icon(Icons.edit_outlined, size: 14, color: Colors.blue),
+                                  label: const Text("Edit Profile", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue)),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    side: const BorderSide(color: Colors.blue),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
+
+                                if (isCustom) ...[
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _confirmDelete(item),
+                                    icon: const Icon(Icons.delete_outline_rounded, size: 14, color: Colors.red),
+                                    label: const Text("Delete", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      side: const BorderSide(color: Colors.red),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
                         ),
@@ -758,8 +769,8 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
 
                                       final docId = existing?.id ?? "clinic_${DateTime.now().millisecondsSinceEpoch}";
 
-                                      // Parse Exact GPS Coordinates from Google Maps Location Link & Address
-                                      final coords = BookingService.parseExactCoordinatesFromGoogleMapsUrl(mapsUrl, address, name);
+                                      // Parse Exact GPS Coordinates from Google Maps Location Link & Address (Async Resolution for Short Links)
+                                      final coords = await ClinicModel.resolveGoogleMapsCoordinatesAsync(mapsUrl, address, name);
                                       final double lat = coords['latitude'] ?? 5.4164;
                                       final double lng = coords['longitude'] ?? 100.3327;
 
@@ -774,13 +785,16 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                                         rating: double.parse(rating.toStringAsFixed(1)),
                                         reviewCount: reviews,
                                         distanceKm: 1.0,
-                                        operatingHours: existing?.operatingHours ?? '09:00 AM - 06:00 PM',
+                                        operatingHours: existing?.operatingHours ?? '',
                                         city: city,
                                         address: address,
                                         phone: formattedPhone,
                                         latitude: lat,
                                         longitude: lng,
-                                        services: existing?.services ?? const ['General Consultation', 'Vaccination', 'Deworming'],
+                                        services: existing?.services ?? const [],
+                                        veterinarians: existing?.veterinarians ?? const [],
+                                        operatingDays: existing?.operatingDays ?? const [],
+                                        isAcceptingBookings: existing?.isAcceptingBookings ?? false,
                                       );
 
                                       try {
