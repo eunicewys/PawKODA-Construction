@@ -19,6 +19,7 @@ class ClinicModel {
   final List<String> veterinarians;
   final bool isEmergency24h;
   final bool isRecommended;
+  final bool isAcceptingBookings;
   final String description;
 
   const ClinicModel({
@@ -40,8 +41,26 @@ class ClinicModel {
     this.veterinarians = const ["Dr. Kenique Lim (Senior Surgeon)", "Dr. Amanda Tan (Feline Specialist)", "Dr. Marcus Wong (General Practitioner)"],
     this.isEmergency24h = false,
     this.isRecommended = true,
+    this.isAcceptingBookings = true,
     this.description = '',
   });
+
+  bool get isBookingReady {
+    // 1. Must be accepting bookings
+    if (!isAcceptingBookings) return false;
+
+    // 2. Service type must be set (not empty)
+    if (services.isEmpty) return false;
+
+    // 3. Vet doctor / surgeon names must be set (not empty)
+    if (veterinarians.isEmpty) return false;
+
+    // 4. Operating hours / time slots must be explicitly set (not empty or "Not Set")
+    final String hours = operatingHours.trim().toLowerCase();
+    if (hours.isEmpty || hours.contains('not set') || hours == 'closed') return false;
+
+    return true;
+  }
 
   ClinicModel copyWithDistance(double newDistanceKm) {
     return ClinicModel(
@@ -63,6 +82,7 @@ class ClinicModel {
       veterinarians: veterinarians,
       isEmergency24h: isEmergency24h,
       isRecommended: isRecommended,
+      isAcceptingBookings: isAcceptingBookings,
       description: description,
     );
   }
@@ -84,8 +104,10 @@ class ClinicModel {
       'imageUrl': imageUrl,
       'googleMapsUrl': googleMapsUrl,
       'services': services,
+      'veterinarians': veterinarians,
       'isEmergency24h': isEmergency24h,
       'isRecommended': isRecommended,
+      'isAcceptingBookings': isAcceptingBookings,
       'description': description,
     };
   }
@@ -105,6 +127,8 @@ class ClinicModel {
       lng = parsed['longitude'] ?? 100.3327;
     }
 
+    final bool acceptingBookings = map['isAcceptingBookings'] ?? map['isBookingEnabled'] ?? true;
+
     return ClinicModel(
       id: docId,
       name: name,
@@ -123,8 +147,10 @@ class ClinicModel {
       imageUrl: map['imageUrl'],
       googleMapsUrl: mapsUrl,
       services: List<String>.from(map['services'] ?? []),
+      veterinarians: List<String>.from(map['veterinarians'] ?? []),
       isEmergency24h: map['isEmergency24h'] ?? false,
       isRecommended: map['isRecommended'] ?? true,
+      isAcceptingBookings: acceptingBookings,
       description: map['description'] ?? '',
     );
   }

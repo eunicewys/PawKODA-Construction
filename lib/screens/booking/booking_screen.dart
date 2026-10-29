@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart';
 import '../../providers/user_provider.dart';
 import '../../models/pet_model.dart';
@@ -659,7 +660,13 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
               // Book Now Button
               ElevatedButton(
-                onPressed: () => _showBookingModal(context, clinic, userId),
+                onPressed: () {
+                  if (!clinic.isBookingReady) {
+                    _showClinicUnavailableDialog(context, clinic);
+                  } else {
+                    _showBookingModal(context, clinic, userId);
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _dustyOlive,
                   foregroundColor: Colors.white,
@@ -1705,10 +1712,134 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     ));
   }
 
+  void _showClinicUnavailableDialog(BuildContext context, ClinicModel clinic) {
+    final String phone = clinic.phone.trim();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.store_mall_directory_outlined,
+                  color: Colors.amber.shade800,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Service Unavailable",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _darkCharcoal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Service for ${clinic.name} is currently unavailable. Please contact clinic phone number.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _ashGrey,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (phone.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.phone, size: 16, color: _dustyOlive),
+                      const SizedBox(width: 8),
+                      Text(
+                        phone,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: _darkCharcoal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _ashGrey,
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text("CLOSE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ),
+                  if (phone.isNotEmpty) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dustyOlive,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          final Uri telUri = Uri.parse('tel:${phone.replaceAll(' ', '')}');
+                          if (await canLaunchUrl(telUri)) {
+                            await launchUrl(telUri);
+                          }
+                        },
+                        icon: const Icon(Icons.call, size: 16),
+                        label: const Text("CALL VET", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ===========================================================================
   // BOOKING MODAL SHEET (Scaled down compactness)
   // ===========================================================================
   void _showBookingModal(BuildContext context, ClinicModel clinic, String userId) {
+    if (!clinic.isBookingReady) {
+      _showClinicUnavailableDialog(context, clinic);
+      return;
+    }
+
     DateTime? selectedDate;
     String selectedTime = '';
     String selectedService = clinic.services.isNotEmpty ? clinic.services.first : 'General Checkup';
