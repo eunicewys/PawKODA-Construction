@@ -237,7 +237,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
       "Chronic Kidney Disease (CKD)",
       "Diabetes Mellitus",
       "Pancreatitis",
-      "Urinary Issue / FLUTD",
+      "Urinary Issue",
       "Ear Infection",
       "Skin Allergies",
       "Dental Disease",

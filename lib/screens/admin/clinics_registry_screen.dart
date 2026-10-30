@@ -528,7 +528,7 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
   void _openClinicModal({ClinicModel? existing, String? vetEmail, String? initialMapsUrl}) {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final emailCtrl = TextEditingController(text: vetEmail ?? '');
-    String selectedCity = existing?.city ?? 'George Town';
+    String selectedCity = (existing?.city != null && existing!.city.trim().isNotEmpty) ? existing.city : '';
     final addressCtrl = TextEditingController(text: existing?.address ?? '');
     final phoneCtrl = TextEditingController(
       text: (existing?.phone != null && existing!.phone.trim().isNotEmpty)
@@ -644,7 +644,8 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
 
                       // City / Location Dropdown (Full Penang List)
                       DropdownButtonFormField<String>(
-                        initialValue: _cities.contains(selectedCity) ? selectedCity : 'George Town',
+                        initialValue: _cities.contains(selectedCity) ? selectedCity : null,
+                        hint: const Text("-- Select City / Location --", style: TextStyle(fontSize: 12, color: Colors.grey)),
                         isExpanded: true,
                         style: TextStyle(fontSize: 13, color: _darkText, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(

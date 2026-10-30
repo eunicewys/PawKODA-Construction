@@ -110,7 +110,7 @@ class DiseaseProfile {
     ),
     DiseaseType.urinaryHealth: DiseaseProfile(
       type: DiseaseType.urinaryHealth,
-      displayName: "Urinary Issue / FLUTD",
+      displayName: "Urinary Issue",
       applicableSpecies: ['Dog', 'Cat'],
       dogAlphaOverride: 1.1,
       catAlphaOverride: 1.1,

@@ -1811,43 +1811,35 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     }
   }
 
-  List<String> _getVetWorkingSlots(String vetName, List<String> defaultSlots) {
+  List<String> _getVetWorkingSlots(
+    String vetName,
+    List<String> defaultSlots,
+    ClinicModel? clinic,
+  ) {
     final String trimmed = vetName.trim();
     if (trimmed.isEmpty || trimmed == 'Any Available Vet' || trimmed.startsWith('--')) {
       return defaultSlots; // No specific vet chosen: return all main available clinic slots
     }
 
-    final String lower = trimmed.toLowerCase();
-
-    // 1. Surgeon / Senior Vet Shift (e.g., Morning to Early Afternoon)
-    if (lower.contains('surgeon') || lower.contains('senior') || lower.contains('lim') || lower.contains('kenique')) {
-      return defaultSlots.where((s) => s.contains('08:00') || s.contains('09:00') || s.contains('10:30') || s.contains('02:00')).toList();
+    if (clinic != null) {
+      final vetSlots = clinic.getSlotsForDoctor(trimmed);
+      if (vetSlots.isNotEmpty) {
+        final filtered = defaultSlots.where((s) => vetSlots.contains(s)).toList();
+        return filtered.isNotEmpty ? filtered : vetSlots;
+      }
     }
 
-    // 2. Feline / Specialist Shift (e.g., Mid-Day)
-    if (lower.contains('feline') || lower.contains('specialist') || lower.contains('tan') || lower.contains('amanda')) {
-      return defaultSlots.where((s) => s.contains('10:30') || s.contains('11:45') || s.contains('02:00') || s.contains('03:30')).toList();
-    }
-
-    // 3. General Practitioner / Evening Shift
-    if (lower.contains('general') || lower.contains('practitioner') || lower.contains('wong') || lower.contains('marcus')) {
-      return defaultSlots.where((s) => s.contains('02:00') || s.contains('03:30') || s.contains('05:00') || s.contains('07:30')).toList();
-    }
-
-    // Default deterministic shift distribution for any custom vet
-    final int hash = trimmed.hashCode.abs() % 3;
-    if (hash == 0) {
-      return defaultSlots.where((s) => s.contains('08:00') || s.contains('09:00') || s.contains('10:30') || s.contains('02:00')).toList();
-    } else if (hash == 1) {
-      return defaultSlots.where((s) => s.contains('10:30') || s.contains('11:45') || s.contains('02:00') || s.contains('03:30')).toList();
-    } else {
-      return defaultSlots.where((s) => s.contains('02:00') || s.contains('03:30') || s.contains('05:00') || s.contains('07:30')).toList();
-    }
+    return defaultSlots;
   }
 
-  List<String> _getAvailableTimeSlots(DateTime date, List<String> allSlots, {String selectedVet = ''}) {
+  List<String> _getAvailableTimeSlots(
+    DateTime date,
+    List<String> allSlots, {
+    ClinicModel? clinic,
+    String selectedVet = '',
+  }) {
     // Filter time slots based on doctor personnel schedule/availability
-    final vetWorkingSlots = _getVetWorkingSlots(selectedVet, allSlots);
+    final vetWorkingSlots = _getVetWorkingSlots(selectedVet, allSlots, clinic);
 
     final now = DateTime.now();
     final bool isToday = date.year == now.year && date.month == now.month && date.day == now.day;
@@ -1908,8 +1900,9 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     required List<String> allSlots,
     required String selectedVet,
     required List<BookingModel> activeBookings,
+    ClinicModel? clinic,
   }) {
-    final slotsForDay = _getAvailableTimeSlots(date, allSlots, selectedVet: selectedVet);
+    final slotsForDay = _getAvailableTimeSlots(date, allSlots, clinic: clinic, selectedVet: selectedVet);
     if (slotsForDay.isEmpty) {
       return true; // No time slots available at all for this day
     }
@@ -2248,26 +2241,72 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                               items: [
                                 "-- Select if any --",
                                 ...clinic.veterinarians,
-                              ].map((v) => DropdownMenuItem<String>(
-                                value: v,
-                                child: Text(
-                                  v,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontWeight: v.startsWith("--") ? FontWeight.normal : FontWeight.bold,
-                                    color: v.startsWith("--") ? Colors.grey.shade600 : _darkCharcoal,
-                                    fontStyle: v.startsWith("--") ? FontStyle.italic : FontStyle.normal,
-                                    fontSize: 13,
+                              ].map((v) {
+                                final bool isAvailable = v.startsWith("--") ? true : clinic.isDoctorAvailable(v);
+
+                                return DropdownMenuItem<String>(
+                                  value: v,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          v,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontWeight: v.startsWith("--")
+                                                ? FontWeight.normal
+                                                : (isAvailable ? FontWeight.bold : FontWeight.normal),
+                                            color: v.startsWith("--")
+                                                ? Colors.grey.shade600
+                                                : (isAvailable ? _darkCharcoal : Colors.grey.shade400),
+                                            fontStyle: v.startsWith("--") ? FontStyle.italic : FontStyle.normal,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      if (!v.startsWith("--") && !isAvailable)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade200,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            "Off-Duty",
+                                            style: TextStyle(
+                                              color: Colors.redAccent,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                ),
-                              )).toList(),
+                                );
+                              }).toList(),
                               onChanged: (val) {
                                 if (val != null) {
+                                  if (!val.startsWith("--")) {
+                                    final bool isAvailable = clinic.isDoctorAvailable(val);
+                                    if (!isAvailable) {
+                                      _showBookingErrorDialog(
+                                        modalCtx,
+                                        "Doctor Unavailable",
+                                        "$val is unavailable at this moment.",
+                                      );
+                                      setMState(() {
+                                        selectedVet = "-- Select if any --";
+                                      });
+                                      return;
+                                    }
+                                  }
+
                                   setMState(() {
                                     selectedVet = val;
                                     // Re-check time slot validity when vet personnel changes
                                     if (selectedDate != null) {
-                                      final vetSlots = _getAvailableTimeSlots(selectedDate!, timeSlots, selectedVet: selectedVet);
+                                      final vetSlots = _getAvailableTimeSlots(selectedDate!, timeSlots, clinic: clinic, selectedVet: selectedVet);
                                       if (selectedTime.isNotEmpty && !vetSlots.contains(selectedTime)) {
                                         selectedTime = '';
                                       }
@@ -2276,6 +2315,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                         allSlots: timeSlots,
                                         selectedVet: selectedVet,
                                         activeBookings: activeClinicBookings,
+                                        clinic: clinic,
                                       )) {
                                         selectedDate = null;
                                         selectedTime = '';
@@ -2334,6 +2374,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                     allSlots: timeSlots,
                                     selectedVet: selectedVet,
                                     activeBookings: activeClinicBookings,
+                                    clinic: clinic,
                                   );
 
                                   final String dayName = DateFormat('EEE').format(date);
@@ -2462,7 +2503,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                         ] else ...[
                           Builder(
                             builder: (context) {
-                              final slotsForDay = _getAvailableTimeSlots(selectedDate!, timeSlots, selectedVet: selectedVet);
+                              final slotsForDay = _getAvailableTimeSlots(selectedDate!, timeSlots, clinic: clinic, selectedVet: selectedVet);
 
                               if (selectedTime.isNotEmpty &&
                                   (_isSlotBooked(

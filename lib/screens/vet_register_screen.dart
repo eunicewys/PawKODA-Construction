@@ -30,9 +30,33 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
 
   String? _selectedImagePath;
+  String? _selectedCity;
   bool _isLoading = false;
   bool _isObscuredPassword = true;
   bool _isObscuredConfirm = true;
+
+  final List<String> _penangCities = const [
+    'George Town',
+    'Bayan Lepas',
+    'Butterworth',
+    'Bukit Mertajam',
+    'Batu Kawan',
+    'Gelugor',
+    'Ayer Itam',
+    'Tanjung Tokong',
+    'Tanjung Bungah',
+    'Balik Pulau',
+    'Kepala Batas',
+    'Nibong Tebal',
+    'Seberang Jaya',
+    'Perai',
+    'Simpang Ampat',
+    'Batu Maung',
+    'Sungai Ara',
+    'Relau',
+    'Teluk Bahang',
+    'Juru',
+  ];
 
   // Colors
   final Color _coffeeBean = const Color(0xFF7F5539);
@@ -91,6 +115,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
     final String email = _emailController.text.trim();
     final String phone = _phoneController.text.trim();
     final String address = _addressController.text.trim();
+    final String city = _selectedCity ?? '';
     final String websiteUrl = _websiteController.text.trim();
     final String googleMapsUrl = _googleMapsController.text.trim();
     final String password = _passwordController.text.trim();
@@ -98,8 +123,8 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
 
     // 1. Validation
     if (clinicName.isEmpty || ssmNumber.isEmpty || email.isEmpty || 
-        phone.isEmpty || address.isEmpty || googleMapsUrl.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      _showPawDialog("Incomplete Application", "Please fill in all required fields marked with *.", isError: true);
+        phone.isEmpty || address.isEmpty || city.isEmpty || googleMapsUrl.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      _showPawDialog("Incomplete Application", "Please fill in all required fields marked with * (including City).", isError: true);
       return;
     }
 
@@ -130,19 +155,59 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 2. Convert proof image to Base64 data URL
+      // 1. Convert proof image to Base64 data URL
       String? base64ProofImage;
       if (_selectedImagePath != null) {
         base64ProofImage = await ImageHelper.imageToBase64(_selectedImagePath);
       }
 
-      // 3. Create Firebase Auth user
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      // 2. Create or re-authenticate Firebase Auth user
+      String uid = '';
+      try {
+        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        uid = userCredential.user!.uid;
+      } on FirebaseAuthException catch (authErr) {
+        if (authErr.code == 'email-already-in-use') {
+          // Attempt sign in to inspect Firestore user doc status
+          try {
+            UserCredential reAuthCred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: email,
+              password: password,
+            );
+            uid = reAuthCred.user!.uid;
 
-      final String uid = userCredential.user!.uid;
+            // Check if active user doc exists in USERS collection
+            final userDoc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
+            if (userDoc.exists) {
+              final status = (userDoc.data()?['status'] ?? '').toString().toLowerCase();
+              if (status == 'pending' || status == 'approved' || status == 'rejected') {
+                await FirebaseAuth.instance.signOut();
+                setState(() => _isLoading = false);
+                _showPawDialog(
+                  "Account Exists",
+                  "An active PawKODA Veterinary Organization account with this email address ($email) already exists in the system. Please sign in or contact PawKODA Support.",
+                  isError: true,
+                );
+                return;
+              }
+            }
+          } catch (_) {
+            setState(() => _isLoading = false);
+            _showPawDialog(
+              "Account Security Check",
+              "This email ($email) is already registered in the system. Please sign in or enter the correct password to submit a new application.",
+              isError: true,
+            );
+            return;
+          }
+        } else {
+          rethrow;
+        }
+      }
+
       final String formattedPhone = BookingService.formatPhoneWithHyphen(phone);
 
       // Parse exact GPS coordinates from Google Maps URL & Address (Async Resolution for Short Links)
@@ -159,9 +224,10 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'email': email,
         'phone': formattedPhone,
         'address': address,
+        'city': city,
         'latitude': lat,
         'longitude': lng,
-        'operatingHours': "", // Not set until configured by Vet Personnel
+        'operatingHours': "",
         'operatingDays': [],
         'services': [],
         'veterinarians': [],
@@ -182,6 +248,7 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
         'name': clinicName,
         'ssmNumber': ssmNumber,
         'address': address,
+        'city': city,
         'phone': formattedPhone,
         'email': email,
         'latitude': lat,
@@ -343,7 +410,60 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                       const SizedBox(height: 12),
                       _buildField("CLINIC ADDRESS", _addressController, "e.g. 123 Jalan Vet, Penang", maxLines: 2),
                       const SizedBox(height: 12),
-                      _buildField("WEBSITE / SOCIAL MEDIA LINK", _websiteController, "e.g. https://facebook.com/yourclinic", keyboardType: TextInputType.url, isRequired: false),
+
+                      // City Dropdown Field
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              text: "CITY (PENANG)",
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _fadedCopper),
+                              children: const [
+                                TextSpan(text: " *", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedCity,
+                            hint: Text(
+                              "-- Select Penang City / Area --",
+                              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                            ),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: _almondCream.withAlpha(80),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey[300]!),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey[300]!),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: _toffeeBrown, width: 1.5),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 13, color: _darkText, fontWeight: FontWeight.w600),
+                            dropdownColor: Colors.white,
+                            items: _penangCities.map((city) {
+                              return DropdownMenuItem<String>(
+                                value: city,
+                                child: Text(city),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedCity = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 12),
                       _buildField("GOOGLE MAPS LOCATION LINK", _googleMapsController, "e.g. https://maps.google.com/?q=yourclinic", keyboardType: TextInputType.url, isRequired: true),
                       const SizedBox(height: 16),
@@ -465,6 +585,14 @@ class _VetRegisterScreenState extends State<VetRegisterScreen> {
                         isPass: true,
                         isObscured: _isObscuredConfirm,
                         onToggle: () => setState(() => _isObscuredConfirm = !_isObscuredConfirm),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildField(
+                        "WEBSITE / SOCIAL MEDIA LINK",
+                        _websiteController,
+                        "e.g. https://facebook.com/yourclinic",
+                        keyboardType: TextInputType.url,
+                        isRequired: false,
                       ),
 
                       const SizedBox(height: 24),

@@ -8,6 +8,7 @@ import '../../models/recipe_model.dart';
 import '../../providers/nutritional_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/recipe_service.dart';
+import '../../services/pet_service.dart';
 import '../widgets/fringe_header.dart';
 import 'widgets/caloric_adequacy_banner.dart';
 import 'widgets/clinical_warning_box.dart';
@@ -360,6 +361,24 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
           ),
           const SizedBox(height: 10),
           _bigStatBox("DAILY ENERGY GOAL (DER)", "${provider.targetDER.toInt()} kcal/day", isPrimary: false),
+          const SizedBox(height: 6),
+          StreamBuilder<double>(
+            stream: PetService().streamTodayConsumedCalories(
+              Provider.of<UserProvider>(context, listen: false).uid ?? '',
+              pet.id,
+            ),
+            builder: (context, snapshot) {
+              final double consumedKcal = snapshot.data ?? 0.0;
+              return Text(
+                "Calories consumed so far: ${consumedKcal.toInt()} kcal",
+                style: TextStyle(
+                  color: Colors.white.withAlpha(220),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -659,7 +678,7 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                     icon: const Icon(Icons.clear, size: 18),
                     onPressed: () => _searchController.clear(),
                   )
-                : const Icon(Icons.qr_code_scanner, size: 20),
+                : null,
               fillColor: _powderPetal.withAlpha(80),
               filled: true,
               isDense: true,
@@ -1040,11 +1059,23 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF759C86)),
-                  onPressed: () {
+                  onPressed: () async {
+                    final uid = Provider.of<UserProvider>(context, listen: false).uid ?? '';
+                    if (uid.isNotEmpty && pet.id.isNotEmpty) {
+                      await PetService().logFedMeal(
+                        uid,
+                        pet.id,
+                        provider.totalKcal,
+                        "${pet.name}'s Meal",
+                      );
+                    }
+
                     provider.clearBowl(); // Clears bowl & resets all nutrient calculations!
-                    Navigator.of(context).pop(); // Close celebration dialog
-                    if (context.mounted && Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop(); // Return to previous screen / Home page!
+                    if (context.mounted) {
+                      Navigator.of(context).pop(); // Close celebration dialog
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop(); // Return to previous screen / Home page!
+                      }
                     }
                   },
                   child: const Text("OK", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),

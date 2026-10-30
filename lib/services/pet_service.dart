@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/pet_model.dart';
 import '../models/disease_model.dart';
@@ -106,5 +107,56 @@ class PetService {
     } catch (_) {
       return [];
     }
+  }
+
+  /// Logs a fed meal to USERS/{userId}/PETS/{petId}/MEAL_LOGS
+  Future<void> logFedMeal(String userId, String petId, double kcal, String mealName) async {
+    if (userId.isEmpty || petId.isEmpty || kcal <= 0) return;
+    try {
+      final now = DateTime.now();
+      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      await _db
+          .collection('USERS')
+          .doc(userId)
+          .collection('PETS')
+          .doc(petId)
+          .collection('MEAL_LOGS')
+          .add({
+        'kcal': kcal,
+        'mealName': mealName,
+        'timestamp': Timestamp.fromDate(now),
+        'dateStr': todayStr,
+      });
+    } catch (e) {
+      debugPrint("Error logging fed meal: $e");
+    }
+  }
+
+  /// Streams total calories consumed today by a specific pet (auto-resets at midnight!)
+  Stream<double> streamTodayConsumedCalories(String userId, String petId) {
+    if (userId.isEmpty || petId.isEmpty) {
+      return Stream.value(0.0);
+    }
+
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    return _db
+        .collection('USERS')
+        .doc(userId)
+        .collection('PETS')
+        .doc(petId)
+        .collection('MEAL_LOGS')
+        .where('dateStr', isEqualTo: todayStr)
+        .snapshots()
+        .map((snapshot) {
+      double total = 0.0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        total += (data['kcal'] as num?)?.toDouble() ?? 0.0;
+      }
+      return total;
+    });
   }
 }

@@ -23,6 +23,7 @@ class ClinicModel {
   final String? googleMapsUrl;
   final List<String> services;
   final List<String> veterinarians;
+  final List<Map<String, dynamic>> doctorSchedules;
   final List<String> operatingDays;
   final List<String> operatingTimeSlots;
   final bool isEmergency24h;
@@ -47,6 +48,7 @@ class ClinicModel {
     this.googleMapsUrl,
     required this.services,
     this.veterinarians = const [],
+    this.doctorSchedules = const [],
     this.operatingDays = const [],
     this.operatingTimeSlots = const [],
     this.isEmergency24h = false,
@@ -91,6 +93,44 @@ class ClinicModel {
     });
   }
 
+  /// Check if a specific doctor is available for bookings
+  bool isDoctorAvailable(String vetName) {
+    final String trimmed = vetName.trim();
+    if (trimmed.isEmpty || trimmed == 'Any Available Vet' || trimmed.startsWith('--')) {
+      return true;
+    }
+    final doc = doctorSchedules.firstWhere(
+      (d) => (d['name'] ?? '').toString().trim().toLowerCase() == trimmed.toLowerCase(),
+      orElse: () => <String, dynamic>{},
+    );
+    if (doc.isEmpty) return true; // Default to available if not explicitly set
+
+    final bool isAvailable = doc['isAvailable'] ?? true;
+    final List slots = (doc['timeSlots'] as List?) ?? [];
+    return isAvailable && slots.isNotEmpty;
+  }
+
+  /// Get specific working time slots for a preferred doctor
+  List<String> getSlotsForDoctor(String vetName) {
+    final String trimmed = vetName.trim();
+    if (trimmed.isEmpty || trimmed == 'Any Available Vet' || trimmed.startsWith('--')) {
+      return operatingTimeSlots;
+    }
+    final doc = doctorSchedules.firstWhere(
+      (d) => (d['name'] ?? '').toString().trim().toLowerCase() == trimmed.toLowerCase(),
+      orElse: () => <String, dynamic>{},
+    );
+    if (doc.isEmpty) return operatingTimeSlots;
+
+    final bool isAvailable = doc['isAvailable'] ?? true;
+    if (!isAvailable) return []; // Off-duty doctor has no available time slots
+
+    final List slots = (doc['timeSlots'] as List?) ?? [];
+    if (slots.isEmpty) return operatingTimeSlots; // Fallback to operating slots if not configured
+
+    return slots.map((s) => s.toString()).toList();
+  }
+
   ClinicModel copyWithDistance(double newDistanceKm) {
     return ClinicModel(
       id: id,
@@ -109,6 +149,7 @@ class ClinicModel {
       googleMapsUrl: googleMapsUrl,
       services: services,
       veterinarians: veterinarians,
+      doctorSchedules: doctorSchedules,
       operatingDays: operatingDays,
       operatingTimeSlots: operatingTimeSlots,
       isEmergency24h: isEmergency24h,
@@ -136,6 +177,7 @@ class ClinicModel {
       'googleMapsUrl': googleMapsUrl,
       'services': services,
       'veterinarians': veterinarians,
+      'doctorDetails': doctorSchedules,
       'operatingDays': operatingDays,
       'operatingTimeSlots': operatingTimeSlots,
       'isEmergency24h': isEmergency24h,
@@ -171,6 +213,43 @@ class ClinicModel {
 
     final bool acceptingBookings = map['isAcceptingBookings'] ?? map['isBookingEnabled'] ?? true;
 
+    final rawDoctorDetails = map['doctorDetails'] ?? map['doctorSchedules'];
+    List<Map<String, dynamic>> doctorSchedules = [];
+    if (rawDoctorDetails is List) {
+      doctorSchedules = rawDoctorDetails.map((e) {
+        if (e is Map) {
+          return Map<String, dynamic>.from(e);
+        } else if (e is String) {
+          return {
+            "name": e,
+            "isAvailable": true,
+            "timeSlots": <String>[],
+          };
+        }
+        return <String, dynamic>{};
+      }).where((element) => element.isNotEmpty).toList();
+    }
+
+    // Fallback if doctorDetails is not present but veterinarians list is present
+    if (doctorSchedules.isEmpty && map['veterinarians'] is List) {
+      final List<dynamic> vets = map['veterinarians'];
+      for (var v in vets) {
+        if (v is String && v.trim().isNotEmpty) {
+          doctorSchedules.add({
+            "name": v.trim(),
+            "isAvailable": true,
+            "timeSlots": <String>[],
+          });
+        } else if (v is Map) {
+          doctorSchedules.add(Map<String, dynamic>.from(v));
+        }
+      }
+    }
+
+    final List<String> vetNames = doctorSchedules.isNotEmpty
+        ? doctorSchedules.map((d) => (d['name'] ?? '').toString()).where((n) => n.isNotEmpty).toList()
+        : List<String>.from(map['veterinarians'] ?? []);
+
     return ClinicModel(
       id: docId,
       name: name,
@@ -181,7 +260,7 @@ class ClinicModel {
       operatingHours: (map['operatingHours'] != null && map['operatingHours'].toString().trim().isNotEmpty)
           ? map['operatingHours'].toString().trim()
           : '', // Do NOT set default fake operating hours!
-      city: map['city'] ?? 'George Town',
+      city: map['city'] ?? '',
       address: address,
       phone: map['phone'] ?? '',
       latitude: lat,
@@ -189,7 +268,8 @@ class ClinicModel {
       imageUrl: map['imageUrl'],
       googleMapsUrl: mapsUrl,
       services: List<String>.from(map['services'] ?? []),
-      veterinarians: List<String>.from(map['veterinarians'] ?? []),
+      veterinarians: vetNames,
+      doctorSchedules: doctorSchedules,
       operatingDays: List<String>.from(map['operatingDays'] ?? []),
       operatingTimeSlots: List<String>.from(map['operatingTimeSlots'] ?? map['operatingSlots'] ?? []),
       isEmergency24h: map['isEmergency24h'] ?? false,

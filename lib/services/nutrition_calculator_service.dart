@@ -207,7 +207,7 @@ class NutritionCalculatorService {
       case DiseaseType.urinaryHealth:
         if (isCat) {
           if (moisturePercent < 75.0 || magnesiumDmPercent > 0.08) {
-            warnings.add("FLUTD Alert: Feline urinary health requires ≥ 75% moisture and ≤ 0.08% DM magnesium to dissolve struvite crystals.");
+            warnings.add("Urinary Health Alert: Feline urinary health requires ≥ 75% moisture and ≤ 0.08% DM magnesium to dissolve struvite crystals.");
           }
         } else if (isDog) {
           if (moisturePercent < 70.0 || magnesiumDmPercent > 0.10) {

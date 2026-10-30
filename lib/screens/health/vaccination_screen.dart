@@ -348,58 +348,42 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Vet Name & Dosage
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel("VET / CLINIC NAME"),
-                              TextField(
-                                controller: vetCtrl,
-                                decoration: InputDecoration(
-                                  hintText: "e.g. Paw Clinic",
-                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
-                                  fillColor: Colors.white,
-                                  filled: true,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                ),
-                                style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel("DOSAGE"),
-                              TextField(
-                                controller: dosageCtrl,
-                                decoration: InputDecoration(
-                                  hintText: "e.g. 1 ml / 1 tab",
-                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
-                                  fillColor: Colors.white,
-                                  filled: true,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                ),
-                                style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    // Vet / Clinic Name (Stacked Vertical)
+                    _buildLabel("VET / CLINIC NAME"),
+                    TextField(
+                      controller: vetCtrl,
+                      decoration: InputDecoration(
+                        hintText: "e.g. Paw Clinic",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
+                        fillColor: Colors.white,
+                        filled: true,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Dosage (Stacked Vertical)
+                    _buildLabel("DOSAGE"),
+                    TextField(
+                      controller: dosageCtrl,
+                      decoration: InputDecoration(
+                        hintText: "e.g. 1 ml / 1 tab",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
+                        fillColor: Colors.white,
+                        filled: true,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: _darkCharcoal, fontSize: 13),
                     ),
                     const SizedBox(height: 14),
 
                     // Notes
-                    _buildLabel("NOTES / BATCH NO"),
+                    _buildLabel("NOTES"),
                     TextField(
                       controller: notesCtrl,
                       decoration: InputDecoration(

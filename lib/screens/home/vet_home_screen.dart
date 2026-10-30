@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -395,22 +396,39 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
   void _showManageStaffModal(BuildContext context) async {
     final nameCtrl = TextEditingController();
 
-    // Fetch existing doctors list from Firestore for this clinic
+    // Fetch existing doctors list & operating time slots from Firestore for this clinic
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    List<String> clinicOperatingTimeSlots = [];
+
     if (uid != null) {
       try {
         final doc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
         if (doc.exists) {
-          final List<dynamic> savedVets = doc.data()?['veterinarians'] ?? [];
-          if (savedVets.isNotEmpty && _staffList.isEmpty) {
-            _staffList.clear();
-            for (var v in savedVets) {
-              _staffList.add({"name": v.toString(), "isAvailable": true});
+          final data = doc.data();
+          clinicOperatingTimeSlots = List<String>.from(data?['operatingTimeSlots'] ?? []);
+
+          final List<dynamic> savedDetails = data?['doctorDetails'] ?? data?['veterinarians'] ?? [];
+          _staffList.clear();
+          for (var v in savedDetails) {
+            if (v is Map) {
+              _staffList.add({
+                "name": _toTitleCase(v["name"].toString()),
+                "isAvailable": v["isAvailable"] ?? false,
+                "timeSlots": List<String>.from(v["timeSlots"] ?? []),
+              });
+            } else if (v is String) {
+              _staffList.add({
+                "name": _toTitleCase(v.toString()),
+                "isAvailable": true,
+                "timeSlots": List<String>.from(clinicOperatingTimeSlots),
+              });
             }
           }
         }
       } catch (_) {}
     }
+
+    final String initialStaffJson = jsonEncode(_staffList);
 
     if (!context.mounted) return;
 
@@ -420,217 +438,405 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setMState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: Container(
-              height: MediaQuery.of(ctx).size.height * 0.75,
-              decoration: BoxDecoration(
-                color: _almondCream,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: _coffeeBean.withAlpha(80),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Manage Doctor Staff & Slots",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: Icon(Icons.close_rounded, color: _coffeeBean),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    "Enable/disable availability or add/remove doctors for slot booking.",
-                    style: TextStyle(fontSize: 12, color: _fadedCopper),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Add New Staff Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: nameCtrl,
-                          decoration: InputDecoration(
-                            hintText: "e.g. Dr. Sarah Lee (Surgeon)",
-                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                            fillColor: Colors.white,
-                            filled: true,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          Future<bool> checkUnsavedAndConfirmExit() async {
+            final String currentStaffJson = jsonEncode(_staffList);
+            if (currentStaffJson != initialStaffJson) {
+              final bool? shouldDiscard = await showDialog<bool>(
+                context: ctx,
+                barrierDismissible: false,
+                builder: (dialogCtx) => Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  backgroundColor: Colors.white,
+                  elevation: 8,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            shape: BoxShape.circle,
                           ),
-                          style: TextStyle(fontSize: 13, color: _darkText, fontWeight: FontWeight.w600),
+                          child: Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 30),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          if (nameCtrl.text.trim().isNotEmpty) {
-                            setState(() {
-                              _staffList.add({
-                                "name": nameCtrl.text.trim(),
-                                "isAvailable": true,
-                              });
-                            });
-                            setMState(() {
-                              nameCtrl.clear();
-                            });
-                          }
-                        },
-                        icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                        label: const Text("Add", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _coffeeBean,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Unsaved Changes",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _darkText,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Staff List
-                  Expanded(
-                    child: _staffList.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Text(
-                                "No doctors/staff added yet. Add your clinic's doctors above.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: _fadedCopper, fontSize: 13, fontWeight: FontWeight.w500),
+                        const SizedBox(height: 10),
+                        Text(
+                          "You have unsaved changes in your vet list and time slots. Are you sure you want to exit without saving?",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: _fadedCopper,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.grey.shade700,
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                                onPressed: () => Navigator.pop(dialogCtx, false),
+                                child: const Center(
+                                  child: Text("CANCEL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ),
                               ),
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: _staffList.length,
-                            itemBuilder: (context, index) {
-                              final staff = _staffList[index];
-                              final bool isAvailable = staff["isAvailable"] ?? true;
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: _paleOak),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red.shade700,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: isAvailable ? _coffeeBean.withAlpha(25) : Colors.grey.shade200,
-                                      child: Icon(
-                                        Icons.person,
-                                        size: 18,
-                                        color: isAvailable ? _coffeeBean : Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                onPressed: () => Navigator.pop(dialogCtx, true),
+                                child: const Center(
+                                  child: Text("DISCARD", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+
+              return shouldDiscard == true;
+            }
+            return true;
+          }
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              final bool canExit = await checkUnsavedAndConfirmExit();
+              if (canExit && ctx.mounted) {
+                Navigator.pop(ctx);
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(ctx).size.height * 0.82,
+                decoration: BoxDecoration(
+                  color: _almondCream,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: _coffeeBean.withAlpha(80),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Manage Doctor Staff & Slots",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () async {
+                            final bool canExit = await checkUnsavedAndConfirmExit();
+                            if (canExit && ctx.mounted) {
+                              Navigator.pop(ctx);
+                            }
+                          },
+                          icon: Icon(Icons.close_rounded, color: _coffeeBean),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      "Configure working time slots for each doctor.",
+                      style: TextStyle(fontSize: 12, color: _fadedCopper),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Add New Staff Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: nameCtrl,
+                            decoration: InputDecoration(
+                              hintText: "e.g. Dr. Sarah Lee (Surgeon)",
+                              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                              fillColor: Colors.white,
+                              filled: true,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
+                            style: TextStyle(fontSize: 13, color: _darkText, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final String formattedName = _toTitleCase(nameCtrl.text);
+                            if (formattedName.isNotEmpty) {
+                              setState(() {
+                                _staffList.add({
+                                  "name": formattedName,
+                                  "isAvailable": false,
+                                  "timeSlots": <String>[],
+                                });
+                              });
+                              setMState(() {
+                                nameCtrl.clear();
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                          label: const Text("Add", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _coffeeBean,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Staff List
+                    Expanded(
+                      child: _staffList.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Text(
+                                  "No doctors/staff added yet. Add your clinic's doctors above.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: _fadedCopper, fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _staffList.length,
+                              itemBuilder: (context, index) {
+                                final staff = _staffList[index];
+                                final bool isAvailable = staff["isAvailable"] == true;
+                                final List<String> staffSlots = List<String>.from(staff["timeSlots"] ?? []);
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: _paleOak),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
                                         children: [
-                                          Text(
-                                            staff["name"],
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: isAvailable ? _darkText : Colors.grey,
+                                          CircleAvatar(
+                                            radius: 16,
+                                            backgroundColor: isAvailable ? _coffeeBean.withAlpha(25) : Colors.grey.shade200,
+                                            child: Icon(
+                                              Icons.person,
+                                              size: 18,
+                                              color: isAvailable ? _coffeeBean : Colors.grey,
                                             ),
                                           ),
-                                          Text(
-                                            isAvailable ? "Available for bookings" : "Off-Duty / Disabled",
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: isAvailable ? Colors.green.shade700 : Colors.redAccent,
-                                              fontWeight: FontWeight.w500,
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  staff["name"],
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                    color: isAvailable ? _darkText : Colors.grey.shade700,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  isAvailable ? "Available for bookings" : "Off-Duty / Disabled",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isAvailable ? Colors.green.shade700 : Colors.redAccent,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
+                                          ),
+                                          Switch(
+                                            value: isAvailable,
+                                            activeThumbColor: _coffeeBean,
+                                            activeTrackColor: _tan,
+                                            onChanged: (val) async {
+                                              if (val == true && staffSlots.isEmpty) {
+                                                await _showWarningDialog(
+                                                  context,
+                                                  title: "No Time Slot Selected",
+                                                  message: "Please select at least one working time slot for ${staff['name']} before enabling availability for bookings.",
+                                                );
+                                                return;
+                                              }
+                                              setState(() {
+                                                _staffList[index]["isAvailable"] = val;
+                                              });
+                                              setMState(() {});
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                            onPressed: () {
+                                              setState(() {
+                                                _staffList.removeAt(index);
+                                              });
+                                              setMState(() {});
+                                            },
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Switch(
-                                      value: isAvailable,
-                                      activeThumbColor: _coffeeBean,
-                                      activeTrackColor: _tan,
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _staffList[index]["isAvailable"] = val;
-                                        });
-                                        setMState(() {});
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                                      onPressed: () {
-                                        setState(() {
-                                          _staffList.removeAt(index);
-                                        });
-                                        setMState(() {});
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final activeVets = _staffList
-                          .where((s) => s["isAvailable"] == true)
-                          .map((s) => s["name"].toString())
-                          .toList();
-
-                      if (uid != null) {
-                        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
-                          'veterinarians': activeVets,
-                        });
-                        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
-                          'veterinarians': activeVets,
-                        }, SetOptions(merge: true));
-                      }
-
-                      if (context.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("✓ Doctors & staff list saved successfully!"), backgroundColor: Colors.green),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _coffeeBean,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      const Divider(height: 16),
+                                      Text(
+                                        "Working Time Slots (Preset in Operating Schedule):",
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _fadedCopper),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (clinicOperatingTimeSlots.isEmpty) ...[
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 4),
+                                          child: Text(
+                                            "No time slots configured in Operating Schedule (Section 3) yet.",
+                                            style: TextStyle(fontSize: 11, color: Colors.redAccent, fontStyle: FontStyle.italic),
+                                          ),
+                                        ),
+                                      ] else ...[
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: clinicOperatingTimeSlots.map((slot) {
+                                            final bool isSelected = staffSlots.contains(slot);
+                                            return InkWell(
+                                              onTap: () {
+                                                setMState(() {
+                                                  if (isSelected) {
+                                                    staffSlots.remove(slot);
+                                                    if (staffSlots.isEmpty) {
+                                                      _staffList[index]["isAvailable"] = false;
+                                                    }
+                                                  } else {
+                                                    staffSlots.add(slot);
+                                                  }
+                                                  _staffList[index]["timeSlots"] = staffSlots;
+                                                });
+                                                setState(() {});
+                                              },
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected ? _coffeeBean : Colors.grey.shade100,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: isSelected ? _coffeeBean : Colors.grey.shade300,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  slot,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isSelected ? Colors.white : _darkText,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                     ),
-                    child: const Text("Save Doctors & Staff List", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                  ),
-                ],
+
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final String currentStaffJson = jsonEncode(_staffList);
+                        final bool hasChanges = currentStaffJson != initialStaffJson;
+
+                        if (hasChanges) {
+                          final allVets = _staffList.map((s) => s["name"].toString()).toList();
+
+                          if (uid != null) {
+                            await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
+                              'doctorDetails': _staffList,
+                              'veterinarians': allVets,
+                            });
+                            await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
+                              'doctorDetails': _staffList,
+                              'veterinarians': allVets,
+                            }, SetOptions(merge: true));
+                          }
+
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("✓ Vet list saved successfully!"), backgroundColor: Colors.green),
+                            );
+                          }
+                        } else {
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _coffeeBean,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text("Save Vet List", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -765,22 +971,107 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     }
   }
 
+  bool _isDayInActiveSchedule(DateTime date, List<String> activeDays) {
+    if (activeDays.isEmpty) return false;
+    final String dayName = DateFormat('EEE').format(date).toLowerCase().trim(); // e.g. 'sat'
+    final String shortLabel = DateFormat('EEE, dd MMM').format(date).toLowerCase().trim(); // e.g. 'sat, 22 feb'
+
+    return activeDays.any((d) {
+      final String trimmed = d.trim().toLowerCase();
+      return trimmed == shortLabel ||
+             trimmed == dayName ||
+             trimmed.startsWith(dayName);
+    });
+  }
+
   Widget _buildDateCardWidget(
     DateTime date,
     List<String> selectedDays,
     bool canEdit,
-    StateSetter setMState,
-  ) {
+    StateSetter setMState, {
+    bool forceSelected = false,
+    bool isClosed = false,
+  }) {
     final String dayName = DateFormat('EEE').format(date); // e.g. Mon
     final String monthDay = DateFormat('dd MMM').format(date); // e.g. 27 Jan
     final String shortLabel = "$dayName, $monthDay"; // e.g. Mon, 27 Jan
 
-    final bool isSelected = selectedDays.contains(shortLabel) ||
+    final bool isSelected = !isClosed && (forceSelected ||
+        selectedDays.contains(shortLabel) ||
         selectedDays.contains(dayName) ||
-        selectedDays.any((d) => d.toLowerCase().startsWith(dayName.toLowerCase()));
+        selectedDays.any((d) => d.toLowerCase().startsWith(dayName.toLowerCase())));
+
+    Widget cardChild = AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      height: 58,
+      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+      decoration: BoxDecoration(
+        color: isClosed
+            ? Colors.grey.shade100
+            : (isSelected ? _coffeeBean : Colors.white),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isClosed
+              ? Colors.grey.shade300
+              : (isSelected ? _coffeeBean : _paleOak),
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: isSelected
+            ? [BoxShadow(color: _coffeeBean.withAlpha(50), blurRadius: 6, offset: const Offset(0, 3))]
+            : [],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              dayName.toUpperCase(),
+              style: TextStyle(
+                color: isClosed
+                    ? Colors.grey.shade500
+                    : (isSelected ? Colors.white70 : _fadedCopper),
+                fontSize: 9.5,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              monthDay,
+              style: TextStyle(
+                color: isClosed
+                    ? Colors.grey.shade500
+                    : (isSelected ? Colors.white : _darkText),
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (isClosed) ...[
+              const SizedBox(height: 1),
+              Text(
+                "CLOSED",
+                style: TextStyle(
+                  color: Colors.red.shade400,
+                  fontSize: 7.5,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    if (isClosed) {
+      cardChild = CustomPaint(
+        foregroundPainter: DiagonalSlashPainter(color: Colors.red.shade300, strokeWidth: 1.8),
+        child: cardChild,
+      );
+    }
 
     return GestureDetector(
-      onTap: canEdit
+      onTap: (canEdit && !isClosed)
           ? () {
               setMState(() {
                 if (isSelected) {
@@ -794,45 +1085,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
               });
             }
           : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: 56,
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? _coffeeBean : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? _coffeeBean : _paleOak,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [BoxShadow(color: _coffeeBean.withAlpha(50), blurRadius: 6, offset: const Offset(0, 3))]
-              : [],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              dayName.toUpperCase(),
-              style: TextStyle(
-                color: isSelected ? Colors.white70 : _fadedCopper,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              monthDay,
-              style: TextStyle(
-                color: isSelected ? Colors.white : _darkText,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: cardChild,
     );
   }
 
@@ -841,6 +1094,9 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     if (text.trim().isEmpty) return '';
     return text.trim().split(RegExp(r'\s+')).map((word) {
       if (word.isEmpty) return '';
+      if (word.startsWith('(') && word.length > 1) {
+        return '(${word[1].toUpperCase()}${word.substring(2).toLowerCase()}';
+      }
       return word[0].toUpperCase() + word.substring(1).toLowerCase();
     }).join(' ');
   }
@@ -1097,42 +1353,67 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
                           if (currentWeekDates.length > 7) ...[
                             // Present Week Active Weekend Days (Sat & Sun)
-                            Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: _paleOak),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+                            Builder(
+                              builder: (ctx) {
+                                final bool isPresentSatOpen = _isDayInActiveSchedule(currentWeekDates[0], currentDays);
+                                final bool isPresentSunOpen = _isDayInActiveSchedule(currentWeekDates[1], currentDays);
+
+                                return Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: _paleOak),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Icon(Icons.lock_rounded, color: Colors.grey.shade600, size: 14),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        "Present Active Days",
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.lock_rounded, color: Colors.grey.shade600, size: 14),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            "Present Active Days",
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildDateCardWidget(
+                                              currentWeekDates[0],
+                                              selectedDays,
+                                              false,
+                                              setMState,
+                                              forceSelected: isPresentSatOpen,
+                                              isClosed: !isPresentSatOpen,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: _buildDateCardWidget(
+                                              currentWeekDates[1],
+                                              selectedDays,
+                                              false,
+                                              setMState,
+                                              forceSelected: isPresentSunOpen,
+                                              isClosed: !isPresentSunOpen,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Expanded(child: SizedBox()),
+                                          const SizedBox(width: 8),
+                                          const Expanded(child: SizedBox()),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(child: _buildDateCardWidget(currentWeekDates[0], selectedDays, false, setMState)),
-                                      const SizedBox(width: 8),
-                                      Expanded(child: _buildDateCardWidget(currentWeekDates[1], selectedDays, false, setMState)),
-                                      const SizedBox(width: 8),
-                                      const Expanded(child: SizedBox()),
-                                      const SizedBox(width: 8),
-                                      const Expanded(child: SizedBox()),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                );
+                              },
                             ),
                             Text(
                               "Coming Week Operating Days",
@@ -1610,6 +1891,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                                           ),
                                           const SizedBox(height: 24),
                                           Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               Expanded(
                                                 child: OutlinedButton(
@@ -1620,7 +1902,13 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                                   ),
                                                   onPressed: () => Navigator.pop(dialogCtx, false),
-                                                  child: const Text("CANCEL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                  child: const Center(
+                                                    child: Text(
+                                                      "CANCEL",
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                               const SizedBox(width: 12),
@@ -1634,7 +1922,13 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                                   ),
                                                   onPressed: () => Navigator.pop(dialogCtx, true),
-                                                  child: const Text("CONFIRM & SAVE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                  child: const Center(
+                                                    child: Text(
+                                                      "CONFIRM",
+                                                      textAlign: TextAlign.center,
+                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -2798,4 +3092,29 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       ],
     );
   }
+}
+
+/// CustomPainter that draws a diagonal slash line for closed operating days
+class DiagonalSlashPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  DiagonalSlashPainter({
+    required this.color,
+    this.strokeWidth = 1.8,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(Offset(size.width - 8, 8), Offset(8, size.height - 8), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
