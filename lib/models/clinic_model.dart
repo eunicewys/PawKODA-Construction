@@ -78,8 +78,17 @@ class ClinicModel {
   /// Check if the clinic is open on a specific day of the week
   bool isOperatingDay(DateTime date) {
     if (operatingDays.isEmpty) return false;
-    final String dayName = DateFormat('EEE').format(date); // 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
-    return operatingDays.any((d) => d.trim().toLowerCase() == dayName.trim().toLowerCase());
+    final String dayName = DateFormat('EEE').format(date); // e.g. 'Mon'
+    final String shortLabel = DateFormat('EEE, dd MMM').format(date); // e.g. 'Mon, 27 Jan'
+    final String dayNameLower = dayName.trim().toLowerCase();
+    final String shortLabelLower = shortLabel.trim().toLowerCase();
+
+    return operatingDays.any((d) {
+      final String trimmed = d.trim().toLowerCase();
+      return trimmed == shortLabelLower ||
+             trimmed == dayNameLower ||
+             trimmed.startsWith(dayNameLower);
+    });
   }
 
   ClinicModel copyWithDistance(double newDistanceKm) {

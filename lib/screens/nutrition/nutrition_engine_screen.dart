@@ -161,48 +161,49 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                 children: [
                   // 1. TOP PET METABOLIC CARD
                   _buildMetabolicHeader(pet, provider),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                  // 2. INTERACTIVE MIXING BOWL WIDGET
-                  _buildFeedingBowl(provider),
-                  const SizedBox(height: 24),
-
-                  // 3. ADD INGREDIENTS SEARCH BOX
-                  _buildAddIngredientsSection(provider),
-                  const SizedBox(height: 20),
-
-                  // 5. CALORIC ADEQUACY STATUS BANNER (POSITIONED DIRECTLY BELOW ADD INGREDIENTS SEARCH BOX & BEFORE NUTRIENT ANALYSIS)
+                  // 2. CALORIC ADEQUACY STATUS BANNER (POSITIONED ABOVE MIXING BOWL FOR EASY VIEWING)
                   if (provider.bowl.isNotEmpty) ...[
                     CaloricAdequacyBanner(
                       adequacyRatio: provider.adequacyRatio,
                       petName: pet.name,
                       isSickPet: provider.isSickPet,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
                   ],
 
-                  // 6. LIVE NUTRIENT ANALYSIS PROGRESS BARS
+                  // 3. INTERACTIVE MIXING BOWL WIDGET
+                  _buildFeedingBowl(provider),
+                  const SizedBox(height: 20),
+
+                  // 4. ADD INGREDIENTS SEARCH BOX
+                  _buildAddIngredientsSection(provider),
+                  const SizedBox(height: 20),
+
+                  // 5. LIVE NUTRIENT ANALYSIS PROGRESS BARS
                   _buildNutrientAnalysis(provider),
                   const SizedBox(height: 20),
 
-                  // 7. REAL-TIME CLINICAL WARNING BOX
+                  // 6. REAL-TIME CLINICAL WARNING BOX
                   if (provider.hasClinicalViolation) ...[
                     ClinicalWarningBox(warnings: provider.clinicalWarnings),
                     const SizedBox(height: 20),
                   ],
 
-                  // 8. ACTION BUTTONS (Feed Meal & Save Recipe)
+                  // 7. ACTION BUTTONS (Feed Meal & Save Recipe)
                   if (provider.bowl.isNotEmpty) ...[
                     _buildActionButtons(provider, pet),
                   ],
 
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
           ),
         ],
       ),
+      bottomNavigationBar: _buildStickyBottomCalorieBar(provider),
     );
   }
 
@@ -883,6 +884,113 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildStickyBottomCalorieBar(NutritionalProvider provider) {
+    final int currentKcal = provider.totalKcal.toInt();
+    final int targetKcal = provider.targetMealCalories.toInt();
+    final double ratio = provider.adequacyRatio;
+
+    Color badgeColor;
+
+    if (ratio < 80.0) {
+      badgeColor = Colors.redAccent; // Insufficient (<80%): RED
+    } else if (ratio < 90.0) {
+      badgeColor = Colors.orange; // Almost there (80% - 89%): ORANGE
+    } else if (ratio <= 110.0) {
+      badgeColor = const Color(0xFF759C86); // Achieve (90% - 110%): GREEN
+    } else {
+      badgeColor = const Color(0xFF7F5539); // Excessive (>110%): BROWN
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: _desertSand.withValues(alpha: 0.95), // Desert Sand semi-transparent bar
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        border: Border.all(color: _dustyOlive.withValues(alpha: 0.3), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.local_fire_department_rounded,
+                color: Colors.deepOrange,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "TOTAL CALORIES",
+                    style: TextStyle(
+                      color: _dustyOlive,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        "$currentKcal kcal",
+                        style: TextStyle(
+                          color: _darkCharcoal,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        " / $targetKcal kcal",
+                        style: TextStyle(
+                          color: _darkCharcoal.withValues(alpha: 0.7),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: badgeColor, width: 1.5),
+              ),
+              child: Text(
+                "${ratio.toStringAsFixed(0)}%",
+                style: TextStyle(
+                  color: badgeColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

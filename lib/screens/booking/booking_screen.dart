@@ -2292,16 +2292,27 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                         _buildStepLabel("4. APPOINTMENT DATE AND TIME", isRequired: true),
                         Builder(
                           builder: (context) {
-                            final nowTime = DateTime.now();
-                            final bool isAfter5PM = nowTime.hour >= 17;
-                            final DateTime startDate = isAfter5PM 
-                                ? DateTime(nowTime.year, nowTime.month, nowTime.day + 1) 
-                                : DateTime(nowTime.year, nowTime.month, nowTime.day);
+                            final now = DateTime.now();
+                            final today = DateTime(now.year, now.month, now.day);
+                            final int daysFromMonday = today.weekday - 1;
+                            final DateTime currentMonday = today.subtract(Duration(days: daysFromMonday));
 
-                            final List<DateTime> weekDays = List.generate(
-                              7, 
-                              (i) => DateTime(startDate.year, startDate.month, startDate.day + i),
-                            );
+                            List<DateTime> weekDays = [];
+                            if (today.weekday >= DateTime.saturday) {
+                              // On Saturday or Sunday: Include present Sat & Sun AND coming week Mon-Sun
+                              final currentSat = currentMonday.add(const Duration(days: 5));
+                              final currentSun = currentMonday.add(const Duration(days: 6));
+                              final nextMon = currentMonday.add(const Duration(days: 7));
+
+                              final List<DateTime> rawDates = [currentSat, currentSun];
+                              for (int i = 0; i < 7; i++) {
+                                rawDates.add(nextMon.add(Duration(days: i)));
+                              }
+                              weekDays = rawDates.where((d) => !d.isBefore(today)).toList();
+                            } else {
+                              final List<DateTime> rawDates = List.generate(7, (i) => currentMonday.add(Duration(days: i)));
+                              weekDays = rawDates.where((d) => !d.isBefore(today)).toList();
+                            }
 
                             return SizedBox(
                               height: 72,

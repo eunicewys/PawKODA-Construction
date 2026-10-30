@@ -233,6 +233,133 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     }
   }
 
+  void _handleMedsTap(List<PetProfile> pets) {
+    if (pets.isEmpty) {
+      _showPawDialog(
+        "No Pets Registered",
+        "Please add a pet first to view or record medical conditions.",
+        isError: true,
+      );
+    } else if (pets.length == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => HealthIssuesScreen(pet: pets.first)),
+      );
+    } else {
+      _showMedsPetSelectionSheet(pets);
+    }
+  }
+
+  void _showMedsPetSelectionSheet(List<PetProfile> pets) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.48,
+        ),
+        decoration: BoxDecoration(
+          color: _powderPetal,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: _darkCharcoal.withAlpha(50),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Icon(Icons.medical_services_rounded, color: _dustyOlive, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  "Select Pet",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _darkCharcoal,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Choose a pet passport to open their Medical Conditions page.",
+              style: TextStyle(fontSize: 11, color: _ashGrey),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView.separated(
+                itemCount: pets.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final pet = pets[index];
+                  return _buildMedsPetSelectionTile(pet);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMedsPetSelectionTile(PetProfile pet) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(6),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => HealthIssuesScreen(pet: pet)),
+          );
+        },
+        leading: CircleAvatar(
+          radius: 20,
+          backgroundColor: _desertSand,
+          backgroundImage: ImageHelper.getImageProvider(pet.imageUrl),
+          child: pet.imageUrl == null
+              ? Text(
+                  pet.name.isNotEmpty ? pet.name[0].toUpperCase() : 'P',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: _darkCharcoal),
+                )
+              : null,
+        ),
+        title: Text(
+          pet.name,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _darkCharcoal),
+        ),
+        subtitle: Text(
+          "${pet.species.name} • ${pet.breed}",
+          style: TextStyle(fontSize: 11, color: _ashGrey),
+        ),
+        trailing: Icon(Icons.chevron_right_rounded, color: _dustyOlive),
+      ),
+    );
+  }
+
   void _showPetSelectionSheet(List<PetProfile> pets) {
     showModalBottomSheet(
       context: context,
@@ -1758,7 +1885,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly, 
                     children: [
                       Flexible(child: _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets))),
-                      Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => setState(() => _selectedIndex = 1))),
+                      Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => _handleMedsTap(pets))),
                       Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() { _bookingInitialTab = 0; _selectedIndex = 2; }))),
                       Flexible(child: _buildActionItem(Icons.menu_book_rounded, "Recipes", _powderPetal, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SavedRecipesScreen())))),
                     ],
