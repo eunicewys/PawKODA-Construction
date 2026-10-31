@@ -406,15 +406,18 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
         if (doc.exists) {
           final data = doc.data();
           clinicOperatingTimeSlots = List<String>.from(data?['operatingTimeSlots'] ?? []);
+          clinicOperatingTimeSlots.sort((a, b) => _parseTimeToMinutes(a).compareTo(_parseTimeToMinutes(b)));
 
           final List<dynamic> savedDetails = data?['doctorDetails'] ?? data?['veterinarians'] ?? [];
           _staffList.clear();
           for (var v in savedDetails) {
             if (v is Map) {
+              final List<String> slots = List<String>.from(v["timeSlots"] ?? []);
+              slots.sort((a, b) => _parseTimeToMinutes(a).compareTo(_parseTimeToMinutes(b)));
               _staffList.add({
                 "name": _toTitleCase(v["name"].toString()),
                 "isAvailable": v["isAvailable"] ?? false,
-                "timeSlots": List<String>.from(v["timeSlots"] ?? []),
+                "timeSlots": slots,
               });
             } else if (v is String) {
               _staffList.add({
@@ -762,6 +765,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                                                   } else {
                                                     staffSlots.add(slot);
                                                   }
+                                                  staffSlots.sort((a, b) => _parseTimeToMinutes(a).compareTo(_parseTimeToMinutes(b)));
                                                   _staffList[index]["timeSlots"] = staffSlots;
                                                 });
                                                 setState(() {});
@@ -2399,10 +2403,14 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
           : null,
       builder: (context, userSnap) {
         List<String> operatingSlots = [];
+        List<String> operatingDays = [];
         if (userSnap.hasData && userSnap.data!.exists) {
           final data = userSnap.data!.data() as Map<String, dynamic>?;
           operatingSlots = List<String>.from(data?['operatingTimeSlots'] ?? []);
+          operatingDays = List<String>.from(data?['operatingDays'] ?? []);
         }
+
+        final bool isClinicOpenToday = _isDayInActiveSchedule(now, operatingDays);
 
         operatingSlots.sort((a, b) => _parseTimeToMinutes(a).compareTo(_parseTimeToMinutes(b)));
 
@@ -2463,22 +2471,43 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                             color: _coffeeBean,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Tap available to lock.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _fadedCopper,
-                            fontWeight: FontWeight.w600,
+                        if (isClinicOpenToday) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            "Tap available to lock.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _fadedCopper,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
-                  if (operatingSlots.isEmpty) ...[
+                  if (!isClinicOpenToday) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Column(
+                        children: [
+                          Icon(Icons.door_front_door_outlined, color: Colors.red.shade400, size: 32),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Clinic Closed today",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (operatingSlots.isEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Text(
@@ -3394,7 +3423,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                     // 1. Log notification for Pet Owner
                     await UserNotificationService().logNotification(
                       userId: booking.userId,
-                      title: "Booking Confirmed! 🎉",
+                      title: "Booking Confirmed!",
                       body: "${booking.clinicName} has confirmed your appointment for ${booking.petName} on $dateStr at ${booking.timeSlot}.",
                       type: 'booking',
                     );
@@ -3402,8 +3431,18 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                     // 2. Trigger push notification for Pet Owner
                     await NotificationService().showNotification(
                       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                      title: "Booking Confirmed! 🎉",
+                      title: "Booking Confirmed!",
                       body: "${booking.clinicName} confirmed appointment for ${booking.petName} on $dateStr at ${booking.timeSlot}.",
+                    );
+
+                    // 3. Schedule 3-days-before push notification for Pet Owner
+                    await NotificationService().scheduleBookingReminder(
+                      bookingId: booking.id,
+                      petName: booking.petName,
+                      clinicName: booking.clinicName,
+                      serviceType: booking.serviceType,
+                      bookingDate: booking.bookingDate,
+                      timeSlot: booking.timeSlot,
                     );
 
                     if (context.mounted) {
@@ -3436,7 +3475,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
                     await UserNotificationService().logNotification(
                       userId: booking.userId,
-                      title: "Appointment Completed! 🐾",
+                      title: "Appointment Completed!",
                       body: "Your appointment for ${booking.petName} at ${booking.clinicName} on $dateStr has been completed.",
                       type: 'booking',
                     );

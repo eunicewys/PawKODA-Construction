@@ -48,6 +48,45 @@ class UserNotificationService {
     }
   }
 
+  /// Check if a 3-day reminder for a specific title has already been logged recently.
+  /// If not yet logged, adds it to USERS/{userId}/NOTIFICATIONS to display inside PawKODA App.
+  Future<void> checkAndLog3DayReminder({
+    required String userId,
+    required String itemId,
+    required String title,
+    required String body,
+    required String type,
+  }) async {
+    if (userId.isEmpty || itemId.isEmpty) return;
+
+    try {
+      final isEnabled = await getNotificationSettings(userId);
+      if (!isEnabled) return;
+
+      final snapshot = await _db
+          .collection('USERS')
+          .doc(userId)
+          .collection('NOTIFICATIONS')
+          .where('title', isEqualTo: title)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        // Already logged for this reminder title
+        return;
+      }
+
+      await logNotification(
+        userId: userId,
+        title: title,
+        body: body,
+        type: type,
+      );
+    } catch (e) {
+      debugPrint("Error checking/logging 3-day reminder: $e");
+    }
+  }
+
   /// Stream notifications filtered by past days (7, 14, 21, or 30 days)
   Stream<List<UserNotificationModel>> streamNotifications(String userId, {int pastDays = 30}) {
     if (userId.isEmpty) {

@@ -44,14 +44,14 @@ class NotificationService {
       }
     }
 
-    // 2. Android Initialization Settings
+    // 2. Initialization Settings for Android & iOS
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
 
     const InitializationSettings initSettings = InitializationSettings(
@@ -87,6 +87,11 @@ class NotificationService {
       // 4. Request Runtime & Exact Alarm Permissions (Android 13+)
       await androidImplementation?.requestNotificationsPermission();
       await androidImplementation?.requestExactAlarmsPermission();
+    } else if (Platform.isIOS) {
+      await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
     }
 
     _isInitialized = true;
@@ -115,8 +120,9 @@ class NotificationService {
     return false;
   }
 
-  /// Ensures notification ID is a unique, safe 32-bit positive integer (0 to 2,147,483,000)
-  /// Using 2+ Billion ID range ensures different reminders on the same day stack without overlapping or replacing each other.
+  /// Ensures notification ID is a unique, stable 32-bit positive integer (0 to 2,147,483,000).
+  /// Uses FNV-1a 32-bit deterministic hashing so identical string IDs hash to the EXACT same integer
+  /// across app restarts and device reboots.
   int _toSafeNotificationId(dynamic input) {
     if (input == null) {
       return (DateTime.now().millisecondsSinceEpoch.abs() % 2147483000);
@@ -124,7 +130,14 @@ class NotificationService {
     if (input is int) {
       return (input.abs() % 2147483000);
     }
-    return (input.hashCode.abs() % 2147483000);
+
+    final String str = input.toString();
+    int hash = 2166136261;
+    for (int i = 0; i < str.length; i++) {
+      hash ^= str.codeUnitAt(i);
+      hash = (hash * 16777619) & 0xFFFFFFFF;
+    }
+    return (hash.abs() % 2147483000);
   }
 
   /// Normalize recordType string to 'Vaccination' or 'Deworm'
@@ -140,12 +153,8 @@ class NotificationService {
 
   /// Schedule Health Reminder
   ///
-  /// Triggers exactly 3 days before `nextDueDate` at 09:00 AM (or user-selected time) in Malaysia time.
-  /// Uses AndroidScheduleMode.alarmClock for maximum reliability on Huawei/OEM battery saver devices.
-  /// If 3 days prior has passed but the due date is still in the future, schedules for the next available 9:00 AM.
-  /// If the due date has already passed, fires an immediate overdue alert.
-  /// Title: Reminder: [Pet Name]'s [Vaccination/Deworm] ([Vaccine Name/Deworm Name]) Due Soon!
-  /// Body: Arrange Vet appointment today.
+  /// Triggers exactly 3 days before `nextDueDate` at 09:00 AM in local time.
+  /// Clean, un-crowded formatting without emojis.
   Future<void> scheduleHealthReminder({
     dynamic rawId,
     dynamic baseId,
@@ -166,7 +175,7 @@ class NotificationService {
 
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
 
-    // Calculate target date: exactly 3 days before due date
+    // Calculate target date: 3 days before due date
     final DateTime targetDay = nextDueDate.subtract(const Duration(days: 3));
 
     tz.TZDateTime scheduledDate = tz.TZDateTime(
@@ -178,7 +187,7 @@ class NotificationService {
       reminderTime.minute,
     );
 
-    // If 3 days prior is in the past, but due date is still in the future, adjust target to due date at 9:00 AM
+    // If 3 days prior is in the past, but due date is still in the future
     if (scheduledDate.isBefore(now)) {
       final tz.TZDateTime dueDateAt9 = tz.TZDateTime(
         tz.local,
@@ -190,20 +199,43 @@ class NotificationService {
       );
 
       if (dueDateAt9.isAfter(now)) {
-        scheduledDate = dueDateAt9;
+        final tz.TZDateTime next9AM = tz.TZDateTime(
+          tz.local,
+          now.year,
+          now.month,
+          now.hour < reminderTime.hour ? now.day : now.day + 1,
+          reminderTime.hour,
+          reminderTime.minute,
+        );
+
+        if (next9AM.isBefore(dueDateAt9)) {
+          scheduledDate = next9AM;
+        } else {
+          scheduledDate = dueDateAt9;
+        }
       }
     }
 
     debugPrint("Current Time: $now");
     debugPrint("Target Scheduled Time: $scheduledDate (ID:$safeId)");
 
-    // Exact title & body format
-    final String title = "Reminder: $petName's $formattedRecordType ($treatmentName) Due Soon!";
-    const String body = "Arrange Vet appointment today.";
+    final String dateStr = "${nextDueDate.day}/${nextDueDate.month}/${nextDueDate.year}";
 
-    // If scheduled date is STILL in the past (i.e. due date has already passed), fire immediate overdue notice
+    // Clean Title & Collapsed Body without emojis
+    final String title = "Reminder: $petName's $formattedRecordType Due Soon";
+    final String body = "$formattedRecordType ($treatmentName) is due on $dateStr. Tap dropdown for full details.";
+
+    // Expanded BigText content shown when user clicks dropdown button
+    final String bigText = "<b>Pet Name:</b> $petName<br/>"
+        "<b>Record Type:</b> $formattedRecordType<br/>"
+        "<b>Treatment:</b> $treatmentName<br/>"
+        "<b>Due Date:</b> $dateStr<br/><br/>"
+        "Please arrange a vet appointment today to keep $petName's health booster schedule up to date.";
+    final String summaryText = "$petName • Health Reminder";
+
+    // If scheduled date is STILL in the past (due date has passed), fire immediate overdue notice
     if (scheduledDate.isBefore(now)) {
-      debugPrint("⚠️ Target reminder time is in the past. Showing immediate alert.");
+      debugPrint("Target reminder time is in the past. Showing immediate alert.");
       await showImmediateOverdueNotice(
         rawId: safeId,
         petName: petName,
@@ -223,13 +255,17 @@ class NotificationService {
       playSound: true,
       enableVibration: true,
       visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.alarm,
-      audioAttributesUsage: AudioAttributesUsage.alarm,
+      category: AndroidNotificationCategory.reminder,
+      audioAttributesUsage: AudioAttributesUsage.notification,
       ticker: 'Pet Health Reminder',
       autoCancel: true,
       styleInformation: BigTextStyleInformation(
-        body,
+        bigText,
+        htmlFormatBigText: true,
         contentTitle: title,
+        htmlFormatContentTitle: true,
+        summaryText: summaryText,
+        htmlFormatSummaryText: true,
       ),
     );
 
@@ -238,42 +274,26 @@ class NotificationService {
       iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
     );
 
-    // Request permissions on Android 13+ / exact alarms
     if (Platform.isAndroid) {
       await requestExactAlarmsPermission();
     }
 
     try {
-      // AndroidScheduleMode.alarmClock bypasses Huawei/OEM Doze restrictions like a real alarm clock
       await _notificationsPlugin.zonedSchedule(
         safeId,
         title,
         body,
         scheduledDate,
         platformDetails,
-        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'health_reminder_$safeId',
       );
-      debugPrint("Health reminder scheduled with alarmClock mode for $scheduledDate (ID:$safeId)");
+      debugPrint("Health reminder scheduled with exactAllowWhileIdle for $scheduledDate (ID:$safeId)");
     } catch (e) {
-      debugPrint("alarmClock mode failed ($e). Retrying with exactAllowWhileIdle...");
+      debugPrint("exactAllowWhileIdle failed ($e). Falling back to inexactAllowWhileIdle...");
       try {
-        await _notificationsPlugin.zonedSchedule(
-          safeId,
-          title,
-          body,
-          scheduledDate,
-          platformDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: 'health_reminder_$safeId',
-        );
-        debugPrint("Health reminder scheduled with exactAllowWhileIdle for $scheduledDate (ID:$safeId)");
-      } catch (e2) {
-        debugPrint("exactAllowWhileIdle failed ($e2). Falling back to inexactAllowWhileIdle...");
         await _notificationsPlugin.zonedSchedule(
           safeId,
           title,
@@ -286,11 +306,143 @@ class NotificationService {
           payload: 'health_reminder_$safeId',
         );
         debugPrint("Health reminder fallback scheduled for $scheduledDate (ID:$safeId)");
+      } catch (e2) {
+        debugPrint("Error scheduling health reminder: $e2");
       }
     }
   }
 
-  /// Immediate alert if record is overdue or date has already passed
+  /// Schedule Vet Appointment Booking Reminder 3 days before event date.
+  /// Clean, un-crowded formatting without emojis.
+  Future<void> scheduleBookingReminder({
+    required String bookingId,
+    required String petName,
+    required String clinicName,
+    required String serviceType,
+    required DateTime bookingDate,
+    required String timeSlot,
+  }) async {
+    final int safeId = _toSafeNotificationId('booking_3d_$bookingId');
+
+    await cancelNotification(safeId);
+
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+
+    // Target: 3 days before appointment at 09:00 AM
+    final DateTime targetDay = bookingDate.subtract(const Duration(days: 3));
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      targetDay.year,
+      targetDay.month,
+      targetDay.day,
+      9,
+      0,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      final tz.TZDateTime apptAt9 = tz.TZDateTime(
+        tz.local,
+        bookingDate.year,
+        bookingDate.month,
+        bookingDate.day,
+        9,
+        0,
+      );
+
+      if (apptAt9.isAfter(now)) {
+        final tz.TZDateTime next9AM = tz.TZDateTime(
+          tz.local,
+          now.year,
+          now.month,
+          now.hour < 9 ? now.day : now.day + 1,
+          9,
+          0,
+        );
+        if (next9AM.isBefore(apptAt9)) {
+          scheduledDate = next9AM;
+        } else {
+          scheduledDate = apptAt9;
+        }
+      }
+    }
+
+    if (scheduledDate.isBefore(now)) {
+      debugPrint("Booking date $bookingDate is in the past. Skipping 3-day booking reminder.");
+      return;
+    }
+
+    final String apptDateStr = "${bookingDate.day}/${bookingDate.month}/${bookingDate.year}";
+
+    final String title = "Reminder: $petName's Vet Appointment in 3 Days";
+    final String body = "$serviceType at $clinicName on $apptDateStr ($timeSlot). Tap dropdown for details.";
+
+    final String bigText = "<b>Pet Name:</b> $petName<br/>"
+        "<b>Clinic Name:</b> $clinicName<br/>"
+        "<b>Service Type:</b> $serviceType<br/>"
+        "<b>Appointment Date:</b> $apptDateStr<br/>"
+        "<b>Time Slot:</b> $timeSlot<br/><br/>"
+        "Your appointment is in 3 days. Please arrive 10 minutes before your scheduled time slot.";
+    final String summaryText = "$petName • Appointment Reminder";
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      healthChannelId,
+      healthChannelName,
+      channelDescription: healthChannelDesc,
+      importance: Importance.max,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      playSound: true,
+      enableVibration: true,
+      visibility: NotificationVisibility.public,
+      category: AndroidNotificationCategory.reminder,
+      audioAttributesUsage: AudioAttributesUsage.notification,
+      styleInformation: BigTextStyleInformation(
+        bigText,
+        htmlFormatBigText: true,
+        contentTitle: title,
+        htmlFormatContentTitle: true,
+        summaryText: summaryText,
+        htmlFormatSummaryText: true,
+      ),
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+    );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        safeId,
+        title,
+        body,
+        scheduledDate,
+        platformDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'booking_reminder_$safeId',
+      );
+      debugPrint("Scheduled 3-day vet booking reminder for $scheduledDate (ID:$safeId)");
+    } catch (e) {
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          safeId,
+          title,
+          body,
+          scheduledDate,
+          platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+          payload: 'booking_reminder_$safeId',
+        );
+        debugPrint("Scheduled fallback 3-day vet booking reminder for $scheduledDate (ID:$safeId)");
+      } catch (e2) {
+        debugPrint("Error scheduling booking reminder: $e2");
+      }
+    }
+  }
+
+  /// Immediate alert if record is overdue or date has already passed. Clean text without emojis.
   Future<void> showImmediateOverdueNotice({
     dynamic rawId,
     dynamic baseId,
@@ -304,8 +456,14 @@ class NotificationService {
     final int safeId = _toSafeNotificationId(actualRawId);
     final String formattedRecordType = _formatRecordType(recordType ?? type ?? 'Vaccination');
 
-    final String title = "Reminder: $petName's $formattedRecordType ($treatmentName) Due Soon!";
-    const String body = "Arrange Vet appointment today.";
+    final String title = "Overdue Alert: $petName's $formattedRecordType ($treatmentName)";
+    final String body = "Treatment is overdue. Tap dropdown for full details.";
+
+    final String bigText = "<b>Pet Name:</b> $petName<br/>"
+        "<b>Record Type:</b> $formattedRecordType<br/>"
+        "<b>Treatment:</b> $treatmentName<br/><br/>"
+        "This booster schedule is overdue. Please arrange a vet appointment today to ensure $petName stays protected.";
+    final String summaryText = "$petName • Overdue Notice";
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
@@ -317,11 +475,15 @@ class NotificationService {
       playSound: true,
       enableVibration: true,
       visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.alarm,
-      audioAttributesUsage: AudioAttributesUsage.alarm,
+      category: AndroidNotificationCategory.reminder,
+      audioAttributesUsage: AudioAttributesUsage.notification,
       styleInformation: BigTextStyleInformation(
-        body,
+        bigText,
+        htmlFormatBigText: true,
         contentTitle: title,
+        htmlFormatContentTitle: true,
+        summaryText: summaryText,
+        htmlFormatSummaryText: true,
       ),
     );
 
@@ -341,7 +503,7 @@ class NotificationService {
     debugPrint("Showed Immediate Overdue Notice ID: $safeId for $petName's $treatmentName");
   }
 
-  /// Instant notification banner helper (e.g. for bookings)
+  /// Instant notification banner helper (e.g. for bookings). Clean text without emojis.
   Future<void> showNotification({
     dynamic baseId,
     dynamic id,
@@ -351,6 +513,10 @@ class NotificationService {
     String? payload,
   }) async {
     final int safeId = _toSafeNotificationId(rawId ?? baseId ?? id ?? title);
+
+    final String bigText = body.contains('<br/>') || body.contains('\n')
+        ? body
+        : "$body<br/><br/><i>Tap or pull down to view full notification details.</i>";
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
@@ -365,8 +531,10 @@ class NotificationService {
       category: AndroidNotificationCategory.reminder,
       audioAttributesUsage: AudioAttributesUsage.notification,
       styleInformation: BigTextStyleInformation(
-        body,
+        bigText,
+        htmlFormatBigText: true,
         contentTitle: title,
+        htmlFormatContentTitle: true,
       ),
     );
 

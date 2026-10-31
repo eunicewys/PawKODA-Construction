@@ -6,12 +6,16 @@ import '../models/pet_model.dart';
 import '../models/reminder_model.dart';
 import 'booking_service.dart';
 import 'health_service.dart';
+import 'notification_service.dart';
+import 'user_notification_service.dart';
 
 /// ReminderService: Merges real-time streams from BookingService and HealthService
 /// to produce unified, sorted upcoming reminders for the user's home screen.
+/// Automatically schedules local 3-days-before push notifications and syncs in-app logs.
 class ReminderService {
   final BookingService _bookingService = BookingService();
   final HealthService _healthService = HealthService();
+  final UserNotificationService _userNotificationService = UserNotificationService();
 
   /// Streams unified upcoming reminders (Vet Appointments + Vaccine/Deworming Boosters)
   Stream<List<ReminderItem>> streamUpcomingReminders(String userId, List<PetProfile> pets) {
@@ -116,6 +120,14 @@ class ReminderService {
       items.sort((a, b) => a.date.compareTo(b.date));
 
       controller.add(items);
+
+      // Trigger background 3-day notification sync for local push & in-app logs
+      sync3DayRemindersAndNotifications(
+        userId: userId,
+        bookings: currentBookings,
+        vaxMap: currentVaxMap,
+        pets: pets,
+      );
     }
 
     controller = StreamController<List<ReminderItem>>.broadcast(
@@ -160,5 +172,95 @@ class ReminderService {
     );
 
     return controller.stream;
+  }
+
+  /// Background sync to verify local phone 3-days-before push notifications
+  /// and log in-app notification center alerts when within 3 days.
+  Future<void> sync3DayRemindersAndNotifications({
+    required String userId,
+    required List<BookingModel> bookings,
+    required Map<String, List<VaccinationRecord>> vaxMap,
+    required List<PetProfile> pets,
+  }) async {
+    if (userId.isEmpty) return;
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    // 1. Process Confirmed Bookings
+    for (final booking in bookings) {
+      if (booking.status.toUpperCase() != 'CONFIRMED') continue;
+
+      final bookingDateOnly = DateTime(
+        booking.bookingDate.year,
+        booking.bookingDate.month,
+        booking.bookingDate.day,
+      );
+
+      final diffDays = bookingDateOnly.difference(todayStart).inDays;
+
+      if (diffDays >= 0) {
+        await NotificationService().scheduleBookingReminder(
+          bookingId: booking.id,
+          petName: booking.petName,
+          clinicName: booking.clinicName,
+          serviceType: booking.serviceType,
+          bookingDate: booking.bookingDate,
+          timeSlot: booking.timeSlot,
+        );
+      }
+
+      if (diffDays >= 0 && diffDays <= 3) {
+        final String title = "Reminder: ${booking.petName}'s Vet Appointment in 3 Days!";
+        final String body = "${booking.serviceType} at ${booking.clinicName} on ${booking.bookingDate.day}/${booking.bookingDate.month} at ${booking.timeSlot}.";
+        await _userNotificationService.checkAndLog3DayReminder(
+          userId: userId,
+          itemId: booking.id,
+          title: title,
+          body: body,
+          type: 'booking',
+        );
+      }
+    }
+
+    // 2. Process Vaccination & Deworming Records
+    for (final pet in pets) {
+      final vaxList = vaxMap[pet.id] ?? [];
+      for (final rec in vaxList) {
+        if (rec.isCompleted || rec.dueDate == null) continue;
+
+        final dueDateOnly = DateTime(
+          rec.dueDate!.year,
+          rec.dueDate!.month,
+          rec.dueDate!.day,
+        );
+
+        final diffDays = dueDateOnly.difference(todayStart).inDays;
+
+        if (diffDays >= 0) {
+          await NotificationService().scheduleHealthReminder(
+            rawId: rec.id,
+            petName: pet.name,
+            recordType: rec.type,
+            treatmentName: rec.doseName,
+            nextDueDate: rec.dueDate!,
+          );
+        }
+
+        if (diffDays >= 0 && diffDays <= 3) {
+          final isDeworm = rec.type.toLowerCase() == 'deworming' || rec.type.toLowerCase() == 'deworm';
+          final typeName = isDeworm ? 'Deworming' : 'Vaccination';
+          final title = "Reminder: ${pet.name}'s $typeName (${rec.doseName}) Due Soon!";
+          final body = "Scheduled due date: ${rec.dueDate!.day}/${rec.dueDate!.month}/${rec.dueDate!.year}. Please arrange vet appointment.";
+          await _userNotificationService.checkAndLog3DayReminder(
+            userId: userId,
+            itemId: rec.id,
+            title: title,
+            body: body,
+            type: isDeworm ? 'deworming' : 'vaccine',
+          );
+        }
+      }
+    }
   }
 }

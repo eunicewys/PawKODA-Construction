@@ -1594,6 +1594,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             onPressed: () async {
               Navigator.pop(ctx);
               await _bookingService.cancelBooking(userId, bookingId);
+              await NotificationService().cancelNotification('booking_3d_$bookingId');
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Booking cancelled successfully.")),
@@ -2719,7 +2720,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                 // 2. Log notification for Vet / Clinic
                                 await UserNotificationService().logNotification(
                                   userId: clinic.id,
-                                  title: "New Appointment Request 🐾",
+                                  title: "New Appointment Request",
                                   body: "New booking request from $userName for ${selectedPet!.name} (${selectedPet!.species.name}) on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime.",
                                   type: 'booking',
                                 );

@@ -471,6 +471,21 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                 body: "${selectedType! == 'Vaccine' ? 'Vaccination' : 'Deworm'} ($formattedName) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
                                 type: selectedType!.toLowerCase() == 'deworming' ? 'deworming' : 'vaccine',
                               );
+
+                              final diffDays = selectedDate.difference(DateTime.now()).inDays;
+                              if (diffDays >= 0 && diffDays <= 3) {
+                                final isDeworm = selectedType! == 'Deworm' || selectedType! == 'Deworming';
+                                final typeName = isDeworm ? 'Deworming' : 'Vaccination';
+                                final title = "Reminder: ${widget.pet.name}'s $typeName ($formattedName) Due Soon!";
+                                final body = "Scheduled due date: ${DateFormat('dd MMM yyyy').format(selectedDate)}. Please arrange vet appointment.";
+                                await UserNotificationService().checkAndLog3DayReminder(
+                                  userId: uid,
+                                  itemId: recordId,
+                                  title: title,
+                                  body: body,
+                                  type: isDeworm ? 'deworming' : 'vaccine',
+                                );
+                              }
                             } else if (existingRecord != null) {
                               // If converting an upcoming item to completed/past, cancel old notifications
                               await NotificationService().cancelReminder(recordId);

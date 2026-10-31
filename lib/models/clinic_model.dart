@@ -110,25 +110,51 @@ class ClinicModel {
     return isAvailable && slots.isNotEmpty;
   }
 
-  /// Get specific working time slots for a preferred doctor
+  static int parseTimeToMinutesStatic(String timeStr) {
+    try {
+      final parts = timeStr.trim().split(' ');
+      if (parts.length >= 2) {
+        final timeParts = parts[0].split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1]);
+        final isPm = parts[1].toUpperCase() == 'PM';
+        if (isPm && hour < 12) hour += 12;
+        if (!isPm && hour == 12) hour = 0;
+        return hour * 60 + minute;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  /// Get specific working time slots for a preferred doctor sorted from earliest to latest
   List<String> getSlotsForDoctor(String vetName) {
     final String trimmed = vetName.trim();
+    List<String> rawSlots = [];
+
     if (trimmed.isEmpty || trimmed == 'Any Available Vet' || trimmed.startsWith('--')) {
-      return operatingTimeSlots;
+      rawSlots = List<String>.from(operatingTimeSlots);
+    } else {
+      final doc = doctorSchedules.firstWhere(
+        (d) => (d['name'] ?? '').toString().trim().toLowerCase() == trimmed.toLowerCase(),
+        orElse: () => <String, dynamic>{},
+      );
+      if (doc.isEmpty) {
+        rawSlots = List<String>.from(operatingTimeSlots);
+      } else {
+        final bool isAvailable = doc['isAvailable'] ?? true;
+        if (!isAvailable) return []; // Off-duty doctor has no available time slots
+
+        final List slots = (doc['timeSlots'] as List?) ?? [];
+        if (slots.isEmpty) {
+          rawSlots = List<String>.from(operatingTimeSlots);
+        } else {
+          rawSlots = slots.map((s) => s.toString()).toList();
+        }
+      }
     }
-    final doc = doctorSchedules.firstWhere(
-      (d) => (d['name'] ?? '').toString().trim().toLowerCase() == trimmed.toLowerCase(),
-      orElse: () => <String, dynamic>{},
-    );
-    if (doc.isEmpty) return operatingTimeSlots;
 
-    final bool isAvailable = doc['isAvailable'] ?? true;
-    if (!isAvailable) return []; // Off-duty doctor has no available time slots
-
-    final List slots = (doc['timeSlots'] as List?) ?? [];
-    if (slots.isEmpty) return operatingTimeSlots; // Fallback to operating slots if not configured
-
-    return slots.map((s) => s.toString()).toList();
+    rawSlots.sort((a, b) => parseTimeToMinutesStatic(a).compareTo(parseTimeToMinutesStatic(b)));
+    return rawSlots;
   }
 
   ClinicModel copyWithDistance(double newDistanceKm) {
