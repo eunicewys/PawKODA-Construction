@@ -566,7 +566,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            "Manage Doctor Staff & Slots",
+                            "Manage Doctor Staff",
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -2302,8 +2302,39 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Appointment Queue
-        Text("Appointment Queue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        // Appointment Queue Title Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text("Appointment Queue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _currentNavIndex = 2; // Redirect to Patient Bookings tab
+                });
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "View All",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _coffeeBean,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 12, color: _coffeeBean),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         StreamBuilder<List<BookingModel>>(
           stream: _bookingService.streamVetClinicBookings(
@@ -2330,11 +2361,20 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
               );
             }
 
+            // Display maximum 2 appointment items on Dashboard tab
+            final displayedBookings = bookings.take(2).toList();
+
             return Column(
-              children: bookings.map((b) => _appointmentCard(context, b)).toList(),
+              children: displayedBookings.map((b) => _appointmentCard(context, b)).toList(),
             );
           },
         ),
+        const SizedBox(height: 32),
+
+        // Real-Time Daily Slot Management & Self-Occupied Lock
+        Text("Daily Slot View", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        const SizedBox(height: 12),
+        _buildDailySlotManagementCard(userProvider, clinicName),
         const SizedBox(height: 32),
 
         // Schedule Panel
@@ -2344,6 +2384,378 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
         const SizedBox(height: 80),
       ],
     );
+  }
+
+  Widget _buildDailySlotManagementCard(UserProvider userProvider, String clinicName) {
+    final String clinicUid = userProvider.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final String dayNameStr = DateFormat('EEEE').format(now).toUpperCase(); // e.g. SATURDAY
+    final String dateNumMonthYearStr = DateFormat('dd MMMM yyyy').format(now); // e.g. 31 October 2026
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: clinicUid.isNotEmpty
+          ? FirebaseFirestore.instance.collection('USERS').doc(clinicUid).snapshots()
+          : null,
+      builder: (context, userSnap) {
+        List<String> operatingSlots = [];
+        if (userSnap.hasData && userSnap.data!.exists) {
+          final data = userSnap.data!.data() as Map<String, dynamic>?;
+          operatingSlots = List<String>.from(data?['operatingTimeSlots'] ?? []);
+        }
+
+        operatingSlots.sort((a, b) => _parseTimeToMinutes(a).compareTo(_parseTimeToMinutes(b)));
+
+        return StreamBuilder<List<BookingModel>>(
+          stream: clinicUid.isNotEmpty
+              ? _bookingService.streamClinicActiveBookings(clinicUid)
+              : null,
+          builder: (context, bookingSnap) {
+            final activeBookings = bookingSnap.data ?? [];
+
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: _paleOak, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(8),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Squared Container Header: Day and Date at top middle
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: _almondCream.withAlpha(140),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _paleOak),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          dayNameStr,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: _coffeeBean,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          dateNumMonthYearStr,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: _coffeeBean,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Tap available to lock.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _fadedCopper,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (operatingSlots.isEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        "No operating time slots configured for today. Please configure Section 3 in Operating Schedule below.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Colors.redAccent, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ] else ...[
+                    // 3 Time Slots per row grid (read horizontally, earliest to latest)
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: 1.38,
+                      ),
+                      itemCount: operatingSlots.length,
+                      itemBuilder: (context, index) {
+                        final slotStr = operatingSlots[index];
+                        final slotDateTime = _parseTimeToTodayDateTime(slotStr);
+                        final bool isPast = now.isAfter(slotDateTime.add(const Duration(minutes: 30)));
+
+                        BookingModel? existingBooking;
+                        for (var b in activeBookings) {
+                          final bool sameDate = b.bookingDate.year == today.year &&
+                              b.bookingDate.month == today.month &&
+                              b.bookingDate.day == today.day;
+                          final bool sameSlot = b.timeSlot.trim().toLowerCase() == slotStr.trim().toLowerCase();
+                          if (sameDate && sameSlot) {
+                            existingBooking = b;
+                            break;
+                          }
+                        }
+
+                        final bool isBooked = existingBooking != null;
+                        final bool isSelfOccupied = isBooked &&
+                            (existingBooking.petName == 'Walk-In Patient' ||
+                             existingBooking.preferredVet == 'Clinic Occupied' ||
+                             existingBooking.notes.contains('Vet Personnel'));
+
+                        // Determine slot styling based on state
+                        Color bg;
+                        Color borderColor;
+                        Color textColor;
+                        String badgeText;
+
+                        if (isBooked) {
+                          bg = Colors.grey.shade100;
+                          borderColor = Colors.grey.shade300;
+                          textColor = Colors.grey.shade600;
+                          badgeText = isSelfOccupied ? "OCCUPIED" : "BOOKED BY OWNER";
+                        } else if (isPast) {
+                          bg = Colors.red.shade50;
+                          borderColor = Colors.red.shade200;
+                          textColor = Colors.red.shade800;
+                          badgeText = "PASSED";
+                        } else {
+                          bg = Colors.white;
+                          borderColor = _coffeeBean;
+                          textColor = _darkText;
+                          badgeText = "AVAILABLE";
+                        }
+
+                        Widget slotCard = Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: bg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor, width: isBooked ? 1 : (isPast ? 1 : 1.5)),
+                            boxShadow: (!isBooked && !isPast)
+                                ? [BoxShadow(color: _coffeeBean.withAlpha(20), blurRadius: 4, offset: const Offset(0, 2))]
+                                : [],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                slotStr,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                badgeText,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 7.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isBooked
+                                      ? Colors.grey.shade600
+                                      : (isPast ? Colors.red.shade700 : Colors.green.shade700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (isBooked) {
+                          slotCard = CustomPaint(
+                            foregroundPainter: DiagonalSlashPainter(color: Colors.red.shade300, strokeWidth: 1.8),
+                            child: slotCard,
+                          );
+                        }
+
+                        return InkWell(
+                          onTap: () async {
+                            if (isBooked) {
+                              if (isSelfOccupied) {
+                                // Confirm to release self-occupied slot
+                                final bool? unlock = await showDialog<bool>(
+                                  context: context,
+                                  builder: (dlgCtx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    title: Text("Unlock Time Slot?", style: TextStyle(fontWeight: FontWeight.bold, color: _darkText)),
+                                    content: Text(
+                                      "Do you want to release the $slotStr occupied time slot and make it available again for bookings?",
+                                      style: TextStyle(color: _fadedCopper, fontSize: 13),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dlgCtx, false),
+                                        child: Text("CANCEL", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red.shade700,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                        onPressed: () => Navigator.pop(dlgCtx, true),
+                                        child: const Text("UNLOCK SLOT", style: TextStyle(fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (unlock == true) {
+                                  await _bookingService.deleteBooking(clinicUid, existingBooking!.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("✓ $slotStr time slot released and unlocked!"),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                }
+                              } else {
+                                // Owner Booking details
+                                await showDialog(
+                                  context: context,
+                                  builder: (dlgCtx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    title: Text("Owner Booking Info", style: TextStyle(fontWeight: FontWeight.bold, color: _darkText)),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("Time Slot: $slotStr", style: TextStyle(fontWeight: FontWeight.bold, color: _coffeeBean)),
+                                        const SizedBox(height: 6),
+                                        Text("Pet Name: ${existingBooking!.petName}", style: TextStyle(color: _darkText, fontSize: 13)),
+                                        Text("Species: ${existingBooking.petSpecies}", style: TextStyle(color: _darkText, fontSize: 13)),
+                                        Text("Service: ${existingBooking.serviceType}", style: TextStyle(color: _darkText, fontSize: 13)),
+                                        Text("Preferred Vet: ${existingBooking.preferredVet}", style: TextStyle(color: _darkText, fontSize: 13)),
+                                        Text("Status: ${existingBooking.status}", style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
+                                      ],
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dlgCtx),
+                                        child: Text("OK", style: TextStyle(color: _coffeeBean, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            } else {
+                              // Unbooked slot tap: prompt to self-occupy / lock
+                              final bool? confirmLock = await showDialog<bool>(
+                                context: context,
+                                builder: (dlgCtx) => AlertDialog(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  title: Text("Occupy Time Slot?", style: TextStyle(fontWeight: FontWeight.bold, color: _darkText)),
+                                  content: Text(
+                                    "Reserve/lock the $slotStr time slot as occupied?\n\nThis will lock the slot in real-time so pet owners cannot book it.",
+                                    style: TextStyle(color: _fadedCopper, fontSize: 13, height: 1.4),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dlgCtx, false),
+                                      child: Text("CANCEL", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _coffeeBean,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                      onPressed: () => Navigator.pop(dlgCtx, true),
+                                      child: const Text("CONFIRM LOCK", style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirmLock == true) {
+                                final newBooking = BookingModel(
+                                  id: '',
+                                  userId: clinicUid,
+                                  petId: 'walkin_pet',
+                                  petName: 'Walk-In Patient',
+                                  petSpecies: 'Walk-In',
+                                  clinicId: clinicUid,
+                                  clinicName: clinicName,
+                                  clinicAddress: 'Clinic Location',
+                                  clinicPhone: '',
+                                  city: 'Penang',
+                                  serviceType: 'Walk-In / Direct Booking',
+                                  preferredVet: 'Clinic Occupied',
+                                  bookingDate: today,
+                                  timeSlot: slotStr,
+                                  notes: 'Self-occupied by Vet Personnel',
+                                  status: 'CONFIRMED',
+                                  createdAt: now,
+                                );
+
+                                await _bookingService.createBooking(newBooking);
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("✓ $slotStr slot set to occupied! Real-time synced."),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: slotCard,
+                        );
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  DateTime _parseTimeToTodayDateTime(String timeStr) {
+    final now = DateTime.now();
+    try {
+      final parts = timeStr.trim().split(' ');
+      if (parts.length >= 2) {
+        final timeParts = parts[0].split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1]);
+        final isPm = parts[1].toUpperCase() == 'PM';
+        if (isPm && hour < 12) hour += 12;
+        if (!isPm && hour == 12) hour = 0;
+        return DateTime(now.year, now.month, now.day, hour, minute);
+      }
+    } catch (_) {}
+    return DateTime(now.year, now.month, now.day, 23, 59);
   }
 
   // TAB 1: SCHEDULE TAB
@@ -2364,7 +2776,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Patient Directory & Bookings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
+        Text("Patient Bookings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _darkText)),
         const SizedBox(height: 12),
 
         // Search Bar
@@ -2766,7 +3178,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
               builder: (context) {
                 final bool isScheduleConfigured = currentHours.trim().isNotEmpty && currentDays.isNotEmpty;
 
-                return ElevatedButton.icon(
+                return OutlinedButton.icon(
                   onPressed: isScheduleConfigured
                       ? () => _showManageStaffModal(context)
                       : () {
@@ -2778,20 +3190,22 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                         },
                   icon: Icon(
                     isScheduleConfigured ? Icons.people_alt_rounded : Icons.lock_rounded,
-                    color: isScheduleConfigured ? Colors.white : Colors.grey.shade600,
+                    color: isScheduleConfigured ? _coffeeBean : Colors.grey.shade600,
                     size: 18,
                   ),
                   label: Text(
                     isScheduleConfigured ? "Manage Vet Availability" : "Manage Vet Availability (Schedule Required)",
                     style: TextStyle(
-                      color: isScheduleConfigured ? Colors.white : Colors.grey.shade700,
+                      color: isScheduleConfigured ? _coffeeBean : Colors.grey.shade700,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isScheduleConfigured ? _coffeeBean : Colors.grey.shade300,
-                    minimumSize: const Size(double.infinity, 50),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: isScheduleConfigured ? _coffeeBean : Colors.grey.shade600,
+                    side: BorderSide(color: isScheduleConfigured ? _coffeeBean : Colors.grey.shade400, width: 1.5),
+                    minimumSize: const Size(double.infinity, 48),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 );
@@ -2879,14 +3293,27 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(booking.petName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkText)),
-                  Text("${booking.petSpecies} • ${booking.serviceType}", style: TextStyle(color: _fadedCopper, fontSize: 12)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      booking.petName,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _darkText),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${booking.petSpecies} • ${booking.serviceType}",
+                      style: TextStyle(color: _fadedCopper, fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: statusColor.withAlpha(30), borderRadius: BorderRadius.circular(8)),
