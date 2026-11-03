@@ -6,10 +6,12 @@ import 'package:provider/provider.dart';
 import '../../models/pet_model.dart';
 import '../../models/health_model.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../services/health_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_notification_service.dart';
 import '../widgets/fringe_header.dart';
+import '../widgets/offline_banner.dart';
 
 /// VaccinationScreen: Log past immunization records (syncs to Passport)
 /// and schedule future upcoming dosage reminders with daily local phone notifications starting 3 days prior at 09:00 AM.
@@ -202,6 +204,12 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
   }
 
   void _showAddDoseDialog({bool isUpcoming = false, VaccinationRecord? existingRecord}) {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Logging or updating dose records");
+      return;
+    }
+
     final nameCtrl = TextEditingController(text: existingRecord?.doseName ?? '');
     final vetCtrl = TextEditingController(text: existingRecord?.vetName ?? '');
     final dosageCtrl = TextEditingController(text: existingRecord?.dosage ?? '');
@@ -657,6 +665,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const OfflineBanner(margin: EdgeInsets.only(bottom: 12)),
                       // -----------------------------------------------------------------
                       // SECTION 1: DOSAGE RECORDS (PAST / PASSED DOSES - SYNCS TO PASSPORT)
                       // -----------------------------------------------------------------
@@ -744,6 +753,11 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                           const SizedBox(width: 4),
                                           InkWell(
                                             onTap: () async {
+                                              final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+                                              if (connectivity.isOffline) {
+                                                ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Deleting dose records");
+                                                return;
+                                              }
                                               bool confirm = await _showDeleteConfirmationDialog(
                                                 context,
                                                 title: "Delete",
@@ -901,6 +915,11 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                           const SizedBox(width: 4),
                                           InkWell(
                                             onTap: () async {
+                                              final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+                                              if (connectivity.isOffline) {
+                                                ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Deleting dose reminders");
+                                                return;
+                                              }
                                               bool confirm = await _showDeleteConfirmationDialog(
                                                 context,
                                                 title: "Delete",

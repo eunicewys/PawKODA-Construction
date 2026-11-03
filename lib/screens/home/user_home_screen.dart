@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/nutritional_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../models/pet_model.dart';
 import '../../services/pet_service.dart';
 import '../../utils/image_helper.dart';
@@ -19,6 +20,7 @@ import '../health/health_issues_screen.dart';
 import '../booking/booking_screen.dart';
 import '../health/vaccination_screen.dart';
 import '../widgets/fringe_header.dart';
+import '../widgets/offline_banner.dart';
 import '../../models/reminder_model.dart';
 import '../../services/reminder_service.dart';
 import '../../services/breed_service.dart';
@@ -899,6 +901,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
 
   void _showAddPetDialog() {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Adding a pet passport");
+      return;
+    }
+
     final TextEditingController nameCtrl = TextEditingController();
     final TextEditingController weightCtrl = TextEditingController(text: "1.0");
     final TextEditingController otherAllergenCtrl = TextEditingController();
@@ -1572,6 +1580,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   void _confirmDeletePet(BuildContext context, String petId, String petName) {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Deleting a pet passport");
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1773,6 +1787,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final photoUrl = userProvider.photoUrl;
     final healthyCount = pets.where((p) => p.isHealthy == true).length;
     final attentionCount = pets.where((p) => p.isHealthy == false).length;
+    final isOffline = context.watch<ConnectivityProvider>().isOffline;
+
     return Column(
       children: [
         // Static Top Wave Fringe Header (pinned at top)
@@ -1794,6 +1810,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const OfflineBanner(margin: EdgeInsets.fromLTRB(24, 16, 24, 0)),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1828,7 +1845,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           boxShadow: [BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 8)],
                         ), 
                         child: InkWell(
-                          onTap: _showAddPetDialog, 
+                          onTap: () {
+                            if (isOffline) {
+                              ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Adding a pet passport");
+                              return;
+                            }
+                            _showAddPetDialog();
+                          }, 
                           child: Text("+ Add Pet", style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
                       ),
@@ -1837,7 +1860,54 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 ),
                 const SizedBox(height: 10),
                 if (pets.isEmpty)
-                  Padding(padding: const EdgeInsets.symmetric(vertical: 40), child: Center(child: Text("No pets registered yet.\nTap + Add Pet to start!", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 16))))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 24),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(10),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            isOffline ? Icons.cloud_off_rounded : Icons.pets_rounded,
+                            size: 48,
+                            color: _lightBronze,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            isOffline ? "No Cached Pet Passports" : "No Pets Registered Yet",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: _darkCharcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isOffline
+                                ? "You are currently in Offline Read-Only mode, and no pet profiles have been cached on this device yet. Reconnect to the internet to load your pet records."
+                                : "Tap + Add Pet to create your pet's digital health passport!",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _darkCharcoal.withAlpha(180),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                 else
                   SizedBox(
                     height: 350, 
@@ -1886,7 +1956,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     children: [
                       Flexible(child: _buildActionItem(Icons.restaurant, "Nutrition", _desertSand, () => _handleNutritionTap(pets))),
                       Flexible(child: _buildActionItem(Icons.medical_services, "Meds", _powderPetal, () => _handleMedsTap(pets))),
-                      Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () => setState(() { _bookingInitialTab = 0; _selectedIndex = 2; }))),
+                      Flexible(child: _buildActionItem(Icons.calendar_today, "Book Vet", _desertSand, () {
+                        if (isOffline) {
+                          ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Veterinary appointment booking");
+                          return;
+                        }
+                        setState(() { _bookingInitialTab = 0; _selectedIndex = 2; });
+                      })),
                       Flexible(child: _buildActionItem(Icons.menu_book_rounded, "Recipes", _powderPetal, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SavedRecipesScreen())))),
                     ],
                   ),

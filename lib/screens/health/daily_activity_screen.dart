@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import '../../models/pet_model.dart';
 import '../../models/health_model.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../services/health_service.dart';
 import '../widgets/fringe_header.dart';
+import '../widgets/offline_banner.dart';
 
 /// DailyActivityScreen: Daily Wellbeing & Activity Log module.
 /// Supports timeline filtering: "Past 3 days", "Past 7 days", "Past 14 days", "Past 30 days", "All time".
@@ -122,6 +124,12 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
   }
 
   void _showAddDiaryDialog(List<DailyActivityLog> existingLogs, [DailyActivityLog? existingLog]) {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Logging daily activity");
+      return;
+    }
+
     DateTime logDate = existingLog?.date ?? DateTime.now();
     String? appetite = existingLog?.appetite;
     String? stool = existingLog?.stool;
@@ -488,6 +496,7 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const OfflineBanner(margin: EdgeInsets.only(bottom: 12)),
                       // Add Diary Button
                       SizedBox(
                         width: double.infinity,
@@ -566,6 +575,11 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
                                           IconButton(
                                             icon: Icon(Icons.delete_outline_rounded, size: 18, color: _errorCoral),
                                             onPressed: () async {
+                                              final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+                                              if (connectivity.isOffline) {
+                                                ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Deleting daily activity logs");
+                                                return;
+                                              }
                                               String dateStr = DateFormat('EEEE, dd MMM yyyy').format(log.date);
                                               bool confirm = await _showDeleteConfirmationDialog(
                                                 context,

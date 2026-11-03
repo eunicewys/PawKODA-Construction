@@ -11,8 +11,10 @@ import '../../utils/image_helper.dart';
 import '../../models/health_model.dart';
 import '../../services/health_service.dart';
 import '../../services/breed_service.dart';
+import '../../providers/connectivity_provider.dart';
 import '../health/health_issues_screen.dart';
 import '../health/vaccination_screen.dart';
+import '../widgets/offline_banner.dart';
 
 class PetDetailsScreen extends StatefulWidget {
   final String petId;
@@ -78,9 +80,43 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
         }
         final pet = snapshot.data;
         if (pet == null) {
+          final isOffline = context.watch<ConnectivityProvider>().isOffline;
           return Scaffold(
-            appBar: AppBar(backgroundColor: _drySage),
-            body: const Center(child: Text("Pet passport not found.")),
+            backgroundColor: _drySage,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: Center(
+              child: Container(
+                margin: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(isOffline ? Icons.cloud_off_rounded : Icons.search_off_rounded, color: _desertSand, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      isOffline ? "Passport Not Cached" : "Pet Passport Not Found",
+                      style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isOffline
+                          ? "This pet's passport details are not available in local cache. Connect to the internet to sync updated records."
+                          : "Pet passport not found.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _ashGrey, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
@@ -106,6 +142,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const OfflineBanner(margin: EdgeInsets.only(bottom: 16)),
                 _buildHeader(pet),
                 const SizedBox(height: 32),
                 _buildProfileSection(pet),
@@ -615,6 +652,12 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
   // --- EDIT DIALOG LOGIC ---
 
   void _showEditPetDialog(PetProfile pet) {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Editing pet passport details");
+      return;
+    }
+
     final nameCtrl = TextEditingController(text: pet.name);
     final weightCtrl = TextEditingController(text: pet.weightKg.toString());
     

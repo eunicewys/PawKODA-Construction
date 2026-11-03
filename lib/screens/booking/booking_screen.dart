@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../models/pet_model.dart';
 import '../../models/clinic_model.dart';
 import '../../models/booking_model.dart';
@@ -14,6 +15,7 @@ import '../../services/booking_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_notification_service.dart';
 import '../widgets/fringe_header.dart';
+import '../widgets/offline_banner.dart';
 import 'clinic_google_map_widget.dart';
 
 /// CustomPainter that draws a diagonal slash line from top-right to bottom-left for closed operating days
@@ -169,6 +171,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             subtitle: "FIND CLINICS NEAR YOU IN PENANG, MALAYSIA",
             onBack: widget.onBackPressed,
           ),
+          const OfflineBanner(margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
 
             // Top Tab Toggle: Discover Clinics vs My Bookings (Kept as requested)
             Container(
@@ -2039,6 +2042,12 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   // BOOKING MODAL SHEET (Scaled down compactness)
   // ===========================================================================
   void _showBookingModal(BuildContext context, ClinicModel clinic, String userId) {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Veterinary appointment booking");
+      return;
+    }
+
     if (!clinic.isBookingReady) {
       _showClinicUnavailableDialog(context, clinic);
       return;

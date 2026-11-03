@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/connectivity_provider.dart';
 import 'support_contact_screen.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
@@ -33,6 +34,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Logic to authenticate and fetch profile data
   Future<void> _handleLogin() async {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      _showPawDialog(
+        "Internet Connection Required",
+        "You are currently offline. First-time login and logging in after logout require an active internet connection.",
+        isError: true,
+      );
+      return;
+    }
+
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showPawDialog("Error", "Please enter email and password.", isError: true);
       return;

@@ -5,8 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../utils/image_helper.dart';
 import '../widgets/fringe_header.dart';
+import '../widgets/offline_banner.dart';
 
 /// EditProfileScreen: Enables users to update their Display Name (User Name)
 /// and Profile Picture with instant live preview and Firestore/Provider synchronization.
@@ -154,6 +156,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Updating profile information");
+      return;
+    }
+
     final newName = _nameController.text.trim();
     if (newName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -263,6 +271,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  const OfflineBanner(margin: EdgeInsets.only(bottom: 12)),
                   const SizedBox(height: 10),
 
                   // Profile Picture Avatar with Edit Overlay

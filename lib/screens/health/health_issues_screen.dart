@@ -6,9 +6,11 @@ import '../../models/pet_model.dart';
 import '../../models/disease_model.dart';
 import '../../models/health_model.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../services/health_service.dart';
 import '../../services/pet_service.dart';
 import '../widgets/fringe_header.dart';
+import '../widgets/offline_banner.dart';
 
 /// HealthIssuesScreen: Log & track diseases / medical conditions for a pet.
 /// Fully connected with the Pet Passport.
@@ -224,6 +226,12 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
   }
 
   void _showAddIssueDialog([HealthIssue? existingIssue]) {
+    final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+    if (connectivity.isOffline) {
+      ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Logging or updating medical conditions");
+      return;
+    }
+
     final titleCtrl = TextEditingController(text: existingIssue?.title ?? '');
     final notesCtrl = TextEditingController(text: existingIssue?.notes ?? '');
     DateTime selectedDate = existingIssue?.diagnosisDate ?? DateTime.now();
@@ -611,6 +619,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const OfflineBanner(margin: EdgeInsets.only(bottom: 12)),
                       // Header Card
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -638,6 +647,11 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                       Expanded(
                                         child: InkWell(
                                           onTap: () async {
+                                            final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+                                            if (connectivity.isOffline) {
+                                              ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Updating health status");
+                                              return;
+                                            }
                                             await PetService().updatePetHealthStatus(uid, currentPet.id, true);
                                           },
                                           child: Container(
@@ -655,6 +669,11 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                       Expanded(
                                         child: InkWell(
                                           onTap: () async {
+                                            final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+                                            if (connectivity.isOffline) {
+                                              ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Updating health status");
+                                              return;
+                                            }
                                             await PetService().updatePetHealthStatus(uid, currentPet.id, false);
                                             _showAddIssueDialog();
                                           },
@@ -778,6 +797,11 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
                                           const SizedBox(width: 4),
                                           InkWell(
                                             onTap: () async {
+                                              final connectivity = Provider.of<ConnectivityProvider>(context, listen: false);
+                                              if (connectivity.isOffline) {
+                                                ConnectivityProvider.showOfflineReadOnlyDialog(context, action: "Deleting medical conditions");
+                                                return;
+                                              }
                                               bool confirm = await _showDeleteConfirmationDialog(
                                                 context,
                                                 title: "Delete",
