@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1316,8 +1315,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         }
                         
                         PetCondition finalCond = selectedReproductive == "Neutered/Spayed" ? PetCondition.neutered : PetCondition.intact;
-                        if (isNursing) finalCond = PetCondition.nursing;
-                        else if (isPregnant) finalCond = PetCondition.pregnant;
+                        if (isNursing) {
+                          finalCond = PetCondition.nursing;
+                        } else if (isPregnant) {
+                          finalCond = PetCondition.pregnant;
+                        }
 
                         List<String> allergens = List.from(selectedAllergens);
                         if (allergens.contains("Other")) {

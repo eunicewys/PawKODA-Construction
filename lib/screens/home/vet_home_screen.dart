@@ -36,9 +36,6 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
   final BookingService _bookingService = BookingService();
 
-  bool _isAcceptingBookings = false;
-  bool _isEmergencyService = false;
-
   bool _hasCheckedClinicStatus = false;
 
   @override
@@ -1206,14 +1203,12 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       }
 
       // If ALL 4 sections are fulfilled, enable accepting bookings
-      setState(() => _isAcceptingBookings = true);
       if (uid != null) {
         await FirebaseFirestore.instance.collection('USERS').doc(uid).update({'isAcceptingBookings': true});
         await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({'isAcceptingBookings': true}, SetOptions(merge: true));
       }
     } else {
       // Disable accepting bookings
-      setState(() => _isAcceptingBookings = false);
       if (uid != null) {
         await FirebaseFirestore.instance.collection('USERS').doc(uid).update({'isAcceptingBookings': false});
         await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({'isAcceptingBookings': false}, SetOptions(merge: true));
@@ -1254,7 +1249,6 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       ];
     }
 
-    final initialGenerated = _generateSlotsFromSessions(slots);
     List<String> selectedTimeSlots = List<String>.from(currentTimeSlots ?? []);
     bool isTimeSlotsExpanded = true;
 
@@ -3520,23 +3514,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     );
   }
 
-  Widget _managerShortcut(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white, 
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _paleOak)
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: _coffeeBean, size: 28),
-          const SizedBox(height: 8),
-          Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _darkText)),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildBottomNav() {
     return BottomNavigationBar(

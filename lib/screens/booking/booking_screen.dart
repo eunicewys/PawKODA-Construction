@@ -511,9 +511,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             offset: const Offset(0, 3),
           ),
         ],
-        border: clinic.isEmergency24h
-            ? Border.all(color: Colors.red.withValues(alpha: 0.3), width: 1.2)
-            : null,
       ),
       child: Column(
         children: [
@@ -521,46 +518,20 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Avatar Icon (Slightly smaller size: 50x50)
-              Stack(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: _getClinicAvatarBg(clinic.id),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        clinic.isEmergency24h
-                            ? Icons.local_hospital_rounded
-                            : Icons.medical_services_rounded,
-                        color: clinic.isEmergency24h ? Colors.red.shade700 : _dustyOlive,
-                        size: 24,
-                      ),
-                    ),
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: _getClinicAvatarBg(clinic.id),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.medical_services_rounded,
+                    color: _dustyOlive,
+                    size: 24,
                   ),
-                  if (clinic.isEmergency24h)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          "24H",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
               const SizedBox(width: 10),
 
@@ -625,15 +596,15 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.access_time_rounded, color: clinic.isEmergency24h ? Colors.red.shade700 : _dustyOlive, size: 14),
+                        Icon(Icons.access_time_rounded, color: _dustyOlive, size: 14),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             "Operating Hours:\n${clinic.operatingHours.replaceAll(', ', '\n').replaceAll(' and ', '\n')}",
                             style: TextStyle(
                               fontSize: 11,
-                              color: clinic.isEmergency24h ? Colors.red.shade700 : _darkCharcoal,
-                              fontWeight: clinic.isEmergency24h ? FontWeight.bold : FontWeight.w600,
+                              color: _darkCharcoal,
+                              fontWeight: FontWeight.w600,
                               height: 1.3,
                             ),
                           ),

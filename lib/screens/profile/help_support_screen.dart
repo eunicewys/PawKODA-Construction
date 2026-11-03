@@ -85,27 +85,6 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     },
   ];
 
-  Future<void> _launchSupportEmail() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: supportEmail,
-      queryParameters: {
-        'subject': 'PawKODA App Support Request',
-        'body': 'Hello PawKODA Support Team,\n\nI need help with:\n\n[Please describe your problem here]\n\nUser ID: ${Provider.of<UserProvider>(context, listen: false).uid ?? "N/A"}',
-      },
-    );
-
-    try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(emailUri, mode: LaunchMode.externalNonBrowserApplication);
-      }
-    } catch (e) {
-      _copyEmailToClipboard();
-    }
-  }
-
   void _copyEmailToClipboard() {
     Clipboard.setData(const ClipboardData(text: supportEmail));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -494,12 +473,15 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                               const Icon(Icons.email_outlined, color: Colors.white, size: 16),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(
-                                  supportEmail,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                                child: InkWell(
+                                  onTap: _copyEmailToClipboard,
+                                  child: Text(
+                                    supportEmail,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                               ),

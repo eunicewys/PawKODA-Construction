@@ -268,7 +268,7 @@ class SavedRecipesScreen extends StatelessWidget {
 
                                       if (context.mounted) {
                                         final provider = Provider.of<NutritionalProvider>(context, listen: false);
-                                        provider.setPet(targetPet!);
+                                        provider.setPet(targetPet);
                                         provider.setMealsPerDay(recipe.mealsPerDay);
                                         for (var ing in recipe.ingredients) {
                                           provider.addIngredient(ing.ingredient, ing.massGrams);

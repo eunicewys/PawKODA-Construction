@@ -26,8 +26,6 @@ class ClinicModel {
   final List<Map<String, dynamic>> doctorSchedules;
   final List<String> operatingDays;
   final List<String> operatingTimeSlots;
-  final bool isEmergency24h;
-  final bool isRecommended;
   final bool isAcceptingBookings;
   final String description;
 
@@ -51,8 +49,6 @@ class ClinicModel {
     this.doctorSchedules = const [],
     this.operatingDays = const [],
     this.operatingTimeSlots = const [],
-    this.isEmergency24h = false,
-    this.isRecommended = true,
     this.isAcceptingBookings = true,
     this.description = '',
   });
@@ -178,8 +174,6 @@ class ClinicModel {
       doctorSchedules: doctorSchedules,
       operatingDays: operatingDays,
       operatingTimeSlots: operatingTimeSlots,
-      isEmergency24h: isEmergency24h,
-      isRecommended: isRecommended,
       isAcceptingBookings: isAcceptingBookings,
       description: description,
     );
@@ -206,8 +200,6 @@ class ClinicModel {
       'doctorDetails': doctorSchedules,
       'operatingDays': operatingDays,
       'operatingTimeSlots': operatingTimeSlots,
-      'isEmergency24h': isEmergency24h,
-      'isRecommended': isRecommended,
       'isAcceptingBookings': isAcceptingBookings,
       'description': description,
     };
@@ -298,8 +290,6 @@ class ClinicModel {
       doctorSchedules: doctorSchedules,
       operatingDays: List<String>.from(map['operatingDays'] ?? []),
       operatingTimeSlots: List<String>.from(map['operatingTimeSlots'] ?? map['operatingSlots'] ?? []),
-      isEmergency24h: map['isEmergency24h'] ?? false,
-      isRecommended: map['isRecommended'] ?? true,
       isAcceptingBookings: acceptingBookings,
       description: map['description'] ?? '',
     );

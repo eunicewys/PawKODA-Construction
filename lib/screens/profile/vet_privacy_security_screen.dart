@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/fringe_header.dart';
 
 /// VetPrivacySecurityScreen: Dedicated Privacy, Security & Terms of Service screen
@@ -15,7 +14,6 @@ class VetPrivacySecurityScreen extends StatefulWidget {
 class _VetPrivacySecurityScreenState extends State<VetPrivacySecurityScreen> {
   // Warm Coffee / Toffee Palette for Vet Module
   final Color _coffeeBean = const Color(0xFF7F5539);
-  final Color _toffeeBrown = const Color(0xFF9C6644);
   final Color _fadedCopper = const Color(0xFFB08968);
   final Color _almondCream = const Color(0xFFEDE0D4);
   final Color _paleOak = const Color(0xFFE6CCB2);

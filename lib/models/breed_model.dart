@@ -40,7 +40,7 @@ class BreedModel {
   }
 
   factory BreedModel.fromMap(Map<String, dynamic> map, [String? id]) {
-    return BreedModel.fromJson({...map, 'breedId': ?id});
+    return BreedModel.fromJson({...map, 'breedId': id ?? map['breedId'] ?? ''});
   }
 
   Map<String, dynamic> toJson() {
