@@ -16,7 +16,6 @@ import '../../services/notification_service.dart';
 import '../../services/user_notification_service.dart';
 import '../widgets/fringe_header.dart';
 import '../widgets/offline_banner.dart';
-import 'clinic_google_map_widget.dart';
 
 /// CustomPainter that draws a diagonal slash line from top-right to bottom-left for closed operating days
 class DiagonalSlashPainter extends CustomPainter {
@@ -707,17 +706,18 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         }
       }
 
-      // 2. Check if clinic already has valid custom non-default lat/lng stored
+      // 2. Check if clinic has valid explicit custom coordinates stored
       if (resolvedLatLng == null && clinic.latitude != 0.0 && clinic.longitude != 0.0 && (clinic.latitude != 5.4164 || clinic.longitude != 100.3327)) {
         resolvedLatLng = LatLng(clinic.latitude, clinic.longitude);
       }
 
-      // 3. Resolve Google Maps URL or address asynchronously
+      // 3. Resolve Google Maps URL asynchronously or fallback to City location benchmark
       if (resolvedLatLng == null) {
         final Map<String, double> resolved = await ClinicModel.resolveGoogleMapsCoordinatesAsync(
           mapsUrl,
           clinic.address,
           clinic.name,
+          city: clinic.city,
         );
         resolvedLatLng = LatLng(resolved['latitude']!, resolved['longitude']!);
 
@@ -1123,69 +1123,12 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
   Future<void> _openGoogleMapsForClinic(ClinicModel clinic) async {
     final String mapsUrl = (clinic.googleMapsUrl ?? '').trim();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.red, size: 22),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      clinic.name,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _darkCharcoal),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              Text(
-                clinic.address,
-                style: TextStyle(fontSize: 12, color: _ashGrey),
-              ),
-              const SizedBox(height: 16),
-              ClinicGoogleMapWidget(
-                clinicLink: mapsUrl.isNotEmpty ? mapsUrl : 'https://maps.google.com/?q=${Uri.encodeComponent(clinic.name)}',
-                clinicName: clinic.name,
-                clinicAddress: clinic.address,
-              ),
-            ],
-          ),
-        );
-      },
+    await _bookingService.openGoogleMaps(
+      clinicName: clinic.name,
+      address: clinic.address,
+      latitude: clinic.latitude,
+      longitude: clinic.longitude,
+      googleMapsUrl: mapsUrl.isNotEmpty ? mapsUrl : null,
     );
   }
 

@@ -536,6 +536,16 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
           : '+60 ',
     );
     final mapsUrlCtrl = TextEditingController(text: initialMapsUrl ?? '');
+    final latCtrl = TextEditingController(
+      text: (existing != null && existing.latitude != 0.0 && existing.latitude != 5.4164)
+          ? existing.latitude.toString()
+          : '',
+    );
+    final lngCtrl = TextEditingController(
+      text: (existing != null && existing.longitude != 0.0 && existing.longitude != 100.3327)
+          ? existing.longitude.toString()
+          : '',
+    );
 
     bool isSaving = false;
 
@@ -698,6 +708,46 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                       ),
                       const SizedBox(height: 12),
 
+                      // Custom Latitude & Longitude (Optional)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: latCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              style: TextStyle(fontSize: 13, color: _darkText),
+                              decoration: InputDecoration(
+                                labelText: "Latitude (Optional)",
+                                labelStyle: TextStyle(fontSize: 12, color: _subText),
+                                hintText: "e.g., 5.4164",
+                                hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: lngCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              style: TextStyle(fontSize: 13, color: _darkText),
+                              decoration: InputDecoration(
+                                labelText: "Longitude (Optional)",
+                                labelStyle: TextStyle(fontSize: 12, color: _subText),
+                                hintText: "e.g., 100.3327",
+                                hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
                       // Phone Number
                       TextField(
                         controller: phoneCtrl,
@@ -755,6 +805,8 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                                       final phoneInput = phoneCtrl.text.trim();
                                       final city = selectedCity;
                                       final mapsUrl = mapsUrlCtrl.text.trim();
+                                      final latInput = latCtrl.text.trim();
+                                      final lngInput = lngCtrl.text.trim();
 
                                       if (name.isEmpty || address.isEmpty || phoneInput.isEmpty || email.isEmpty || mapsUrl.isEmpty) {
                                         ScaffoldMessenger.of(context).showSnackBar(
@@ -770,10 +822,28 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
 
                                       final docId = existing?.id ?? "clinic_${DateTime.now().millisecondsSinceEpoch}";
 
-                                      // Parse Exact GPS Coordinates from Google Maps Location Link & Address (Async Resolution for Short Links)
-                                      final coords = await ClinicModel.resolveGoogleMapsCoordinatesAsync(mapsUrl, address, name);
-                                      final double lat = coords['latitude'] ?? 5.4164;
-                                      final double lng = coords['longitude'] ?? 100.3327;
+                                      // 3-Tier Coordinate Resolution:
+                                      // 1. Explicit input coords if valid numbers
+                                      // 2. Resolve Google Maps URL (async redirect expansion)
+                                      // 3. Fallback to Penang City benchmark coordinates
+                                      double lat;
+                                      double lng;
+
+                                      final double? parsedLat = double.tryParse(latInput);
+                                      final double? parsedLng = double.tryParse(lngInput);
+
+                                      if (parsedLat != null && parsedLng != null && parsedLat >= -90.0 && parsedLat <= 90.0 && parsedLng >= -180.0 && parsedLng <= 180.0 && (parsedLat != 0.0 || parsedLng != 0.0)) {
+                                        lat = parsedLat;
+                                        lng = parsedLng;
+                                      } else if (mapsUrl.isNotEmpty) {
+                                        final coords = await ClinicModel.resolveGoogleMapsCoordinatesAsync(mapsUrl, address, name, city: city);
+                                        lat = coords['latitude'] ?? 5.4164;
+                                        lng = coords['longitude'] ?? 100.3327;
+                                      } else {
+                                        final fallback = ClinicModel.getCityFallbackCoordinates(city);
+                                        lat = fallback['latitude'] ?? 5.4164;
+                                        lng = fallback['longitude'] ?? 100.3327;
+                                      }
 
                                       // Auto-extract rating & review count based on place reference
                                       final double rating = existing?.rating ?? (4.7 + ((name.hashCode.abs() % 3) * 0.1));

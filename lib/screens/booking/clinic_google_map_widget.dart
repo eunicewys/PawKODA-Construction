@@ -56,16 +56,29 @@ class _ClinicGoogleMapWidgetState extends State<ClinicGoogleMapWidget> {
         lng = strict['longitude'];
       } else {
         // 2. Try GoogleMapsUrlExtractor
-        final dynamic rawResult = GoogleMapsUrlExtractor.extractCoordinates(widget.clinicLink);
-        if (rawResult is Map) {
-          lat = (rawResult['latitude'] ?? rawResult['lat'])?.toDouble();
-          lng = (rawResult['longitude'] ?? rawResult['lng'])?.toDouble();
-        } else if (rawResult != null) {
-          try {
-            lat = (rawResult.latitude as num?)?.toDouble();
-            lng = (rawResult.longitude as num?)?.toDouble();
-          } catch (_) {}
-        }
+        try {
+          final dynamic rawResult = GoogleMapsUrlExtractor.extractCoordinates(widget.clinicLink);
+          if (rawResult is Map) {
+            lat = (rawResult['latitude'] ?? rawResult['lat'])?.toDouble();
+            lng = (rawResult['longitude'] ?? rawResult['lng'])?.toDouble();
+          } else if (rawResult != null) {
+            try {
+              lat = (rawResult.latitude as num?)?.toDouble();
+              lng = (rawResult.longitude as num?)?.toDouble();
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+
+      // 3. Fall back to async Google Maps URL resolution (for short links like maps.app.goo.gl)
+      if (lat == null || lng == null || lat == 0.0 || lng == 0.0) {
+        final resolved = await ClinicModel.resolveGoogleMapsCoordinatesAsync(
+          widget.clinicLink,
+          widget.clinicAddress ?? '',
+          widget.clinicName ?? '',
+        );
+        lat = resolved['latitude'];
+        lng = resolved['longitude'];
       }
 
       if (lat != null && lng != null && lat != 0.0 && lng != 0.0 && mounted) {

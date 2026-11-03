@@ -297,9 +297,43 @@ class ClinicModel {
     );
   }
 
+  /// Returns default Penang benchmark coordinates based on city name.
+  static Map<String, double> getCityFallbackCoordinates(String city) {
+    final String c = city.trim().toLowerCase();
+    if (c.contains('bayan lepas')) return {'latitude': 5.2954, 'longitude': 100.2591};
+    if (c.contains('bayan baru')) return {'latitude': 5.3274, 'longitude': 100.2790};
+    if (c.contains('tanjung tokong')) return {'latitude': 5.4574, 'longitude': 100.3060};
+    if (c.contains('tanjung bungah')) return {'latitude': 5.4646, 'longitude': 100.2810};
+    if (c.contains('batu ferringhi')) return {'latitude': 5.4746, 'longitude': 100.2468};
+    if (c.contains('air itam')) return {'latitude': 5.4011, 'longitude': 100.2783};
+    if (c.contains('gelugor')) return {'latitude': 5.3758, 'longitude': 100.3075};
+    if (c.contains('jelutong')) return {'latitude': 5.3892, 'longitude': 100.3168};
+    if (c.contains('balik pulau')) return {'latitude': 5.3492, 'longitude': 100.2394};
+    if (c.contains('teluk bahang')) return {'latitude': 5.4578, 'longitude': 100.2105};
+    if (c.contains('relau')) return {'latitude': 5.3340, 'longitude': 100.2745};
+    if (c.contains('sungai dua')) return {'latitude': 5.3524, 'longitude': 100.2974};
+    if (c.contains('batu maung')) return {'latitude': 5.2842, 'longitude': 100.2848};
+    if (c.contains('butterworth')) return {'latitude': 5.3991, 'longitude': 100.3638};
+    if (c.contains('bukit mertajam')) return {'latitude': 5.3630, 'longitude': 100.4667};
+    if (c.contains('seberang jaya')) return {'latitude': 5.3970, 'longitude': 100.4001};
+    if (c.contains('kepala batas')) return {'latitude': 5.5171, 'longitude': 100.4278};
+    if (c.contains('nibong tebal')) return {'latitude': 5.1659, 'longitude': 100.4779};
+    if (c.contains('perai')) return {'latitude': 5.3806, 'longitude': 100.3804};
+    if (c.contains('simpang ampat')) return {'latitude': 5.2847, 'longitude': 100.4883};
+    if (c.contains('juru')) return {'latitude': 5.3164, 'longitude': 100.4136};
+    if (c.contains('alma')) return {'latitude': 5.3308, 'longitude': 100.4721};
+    if (c.contains('sungai bakap')) return {'latitude': 5.2230, 'longitude': 100.4950};
+    if (c.contains('tasek gelugor')) return {'latitude': 5.4831, 'longitude': 100.4958};
+    if (c.contains('permatang pauh')) return {'latitude': 5.4101, 'longitude': 100.4140};
+    if (c.contains('bertam')) return {'latitude': 5.5180, 'longitude': 100.4410};
+
+    // Default fallback: George Town / Penang Island central
+    return {'latitude': 5.4164, 'longitude': 100.3327};
+  }
+
   /// Strictly extracts latitude and longitude from the provided Google Maps URL.
   /// Priority order:
-  /// 1. Exact place pinpoint marker: `!3d[lat]!4d[lng]` or `3d[lat]!4d[lng]`
+  /// 1. Exact place pinpoint marker: `!3d[lat]` and `!4d[lng]` (in any parameter order)
   /// 2. Explicit query/destination/location params: q=, query=, ll=, point=, center=, destination=, near=, daddr=, saddr=
   /// 3. Path patterns: /search/lat,lng, /dir/lat,lng, /place/lat,lng, geo:lat,lng
   /// 4. Viewport camera center: @lat,lng (fallback when no place pin exists)
@@ -308,12 +342,14 @@ class ClinicModel {
     final String url = googleMapsUrl.trim();
     if (url.isEmpty) return null;
 
-    // 1. Priority 1: Check for exact place pinpoint marker !3dlatitude!4dlongitude (or 3dlatitude!4dlongitude)
-    final RegExp dRegex = RegExp(r'(?:!3d|3d)(-?\d+\.\d+).*?(?:!4d|4d)(-?\d+\.\d+)');
-    final dMatch = dRegex.firstMatch(url);
-    if (dMatch != null && dMatch.groupCount >= 2) {
-      final double? lat = double.tryParse(dMatch.group(1)!);
-      final double? lng = double.tryParse(dMatch.group(2)!);
+    // 1. Priority 1: Check for exact place pinpoint marker !3dlatitude and !4dlongitude in ANY order
+    final RegExp lat3dRegex = RegExp(r'(?:!3d|3d)(-?\d+\.\d+)');
+    final RegExp lng4dRegex = RegExp(r'(?:!4d|4d)(-?\d+\.\d+)');
+    final lat3dMatch = lat3dRegex.firstMatch(url);
+    final lng4dMatch = lng4dRegex.firstMatch(url);
+    if (lat3dMatch != null && lng4dMatch != null) {
+      final double? lat = double.tryParse(lat3dMatch.group(1)!);
+      final double? lng = double.tryParse(lng4dMatch.group(1)!);
       if (lat != null && lng != null && _isValidCoord(lat, lng)) {
         return {'latitude': lat, 'longitude': lng};
       }
@@ -387,7 +423,12 @@ class ClinicModel {
 
   /// Asynchronously resolves short Google Maps URLs (maps.app.goo.gl or goo.gl/maps)
   /// or geocodes the exact clinic name & address to guarantee 100% accurate location plotting.
-  static Future<Map<String, double>> resolveGoogleMapsCoordinatesAsync(String mapsUrl, String address, String clinicName) async {
+  static Future<Map<String, double>> resolveGoogleMapsCoordinatesAsync(
+    String mapsUrl,
+    String address,
+    String clinicName, {
+    String? city,
+  }) async {
     final String url = mapsUrl.trim();
 
     if (url.isNotEmpty) {
@@ -517,9 +558,7 @@ class ClinicModel {
       }
     }
 
-    return {
-      'latitude': 5.4164,
-      'longitude': 100.3327,
-    };
+    // 5. Fall back to Penang City location benchmark coordinates
+    return getCityFallbackCoordinates(city ?? address);
   }
 }
