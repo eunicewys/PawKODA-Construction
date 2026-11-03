@@ -153,8 +153,9 @@ class NotificationService {
 
   /// Schedule Health Reminder
   ///
-  /// Triggers exactly 3 days before `nextDueDate` at 09:00 AM in local time.
-  /// Clean, un-crowded formatting without emojis.
+  /// Schedules local phone notifications ONLY for 09:00 AM sharp (starting 3 days before up to due date).
+  /// If today's 09:00 AM has already passed, schedules for tomorrow at 09:00 AM sharp.
+  /// Never triggers immediate banner popups while user is navigating inside the app.
   Future<void> scheduleHealthReminder({
     dynamic rawId,
     dynamic baseId,
@@ -170,12 +171,9 @@ class NotificationService {
     final int safeId = _toSafeNotificationId(actualRawId);
     final String formattedRecordType = _formatRecordType(recordType ?? type ?? 'Vaccination');
 
-    // Cancel any existing reminder for this safeId first
-    await cancelReminder(actualRawId);
-
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
 
-    // Calculate target date: 3 days before due date
+    // Calculate target date: 3 days before due date at 09:00 AM
     final DateTime targetDay = nextDueDate.subtract(const Duration(days: 3));
 
     tz.TZDateTime scheduledDate = tz.TZDateTime(
@@ -187,63 +185,60 @@ class NotificationService {
       reminderTime.minute,
     );
 
-    // If 3 days prior is in the past, but due date is still in the future
+    // If 3 days prior 09:00 AM has already passed
     if (scheduledDate.isBefore(now)) {
-      final tz.TZDateTime dueDateAt9 = tz.TZDateTime(
+      final tz.TZDateTime today9AM = tz.TZDateTime(
         tz.local,
-        nextDueDate.year,
-        nextDueDate.month,
-        nextDueDate.day,
+        now.year,
+        now.month,
+        now.day,
         reminderTime.hour,
         reminderTime.minute,
       );
 
-      if (dueDateAt9.isAfter(now)) {
-        final tz.TZDateTime next9AM = tz.TZDateTime(
+      if (now.isBefore(today9AM)) {
+        scheduledDate = today9AM;
+      } else {
+        scheduledDate = tz.TZDateTime(
           tz.local,
           now.year,
           now.month,
-          now.hour < reminderTime.hour ? now.day : now.day + 1,
+          now.day + 1,
           reminderTime.hour,
           reminderTime.minute,
         );
-
-        if (next9AM.isBefore(dueDateAt9)) {
-          scheduledDate = next9AM;
-        } else {
-          scheduledDate = dueDateAt9;
-        }
       }
     }
 
-    debugPrint("Current Time: $now");
-    debugPrint("Target Scheduled Time: $scheduledDate (ID:$safeId)");
+    final tz.TZDateTime dueDateCutoff = tz.TZDateTime(
+      tz.local,
+      nextDueDate.year,
+      nextDueDate.month,
+      nextDueDate.day,
+      23,
+      59,
+    );
+
+    // If scheduled date exceeds due date or is past, do not schedule further
+    if (scheduledDate.isAfter(dueDateCutoff) || scheduledDate.isBefore(now)) {
+      debugPrint("Health reminder due date $nextDueDate passed or past 9:00 AM today. No instant popups in app.");
+      return;
+    }
+
+    // Cancel any existing alarm with same safeId before scheduling new one
+    await cancelReminder(actualRawId);
 
     final String dateStr = "${nextDueDate.day}/${nextDueDate.month}/${nextDueDate.year}";
 
-    // Clean Title & Collapsed Body without emojis
     final String title = "Reminder: $petName's $formattedRecordType Due Soon";
     final String body = "$formattedRecordType ($treatmentName) is due on $dateStr. Tap dropdown for full details.";
 
-    // Expanded BigText content shown when user clicks dropdown button
     final String bigText = "<b>Pet Name:</b> $petName<br/>"
         "<b>Record Type:</b> $formattedRecordType<br/>"
         "<b>Treatment:</b> $treatmentName<br/>"
         "<b>Due Date:</b> $dateStr<br/><br/>"
         "Please arrange a vet appointment today to keep $petName's health booster schedule up to date.";
     final String summaryText = "$petName • Health Reminder";
-
-    // If scheduled date is STILL in the past (due date has passed), fire immediate overdue notice
-    if (scheduledDate.isBefore(now)) {
-      debugPrint("Target reminder time is in the past. Showing immediate alert.");
-      await showImmediateOverdueNotice(
-        rawId: safeId,
-        petName: petName,
-        recordType: formattedRecordType,
-        treatmentName: treatmentName,
-      );
-      return;
-    }
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
@@ -290,9 +285,8 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'health_reminder_$safeId',
       );
-      debugPrint("Health reminder scheduled with exactAllowWhileIdle for $scheduledDate (ID:$safeId)");
+      debugPrint("Health reminder scheduled for 9:00 AM sharp at $scheduledDate (ID:$safeId)");
     } catch (e) {
-      debugPrint("exactAllowWhileIdle failed ($e). Falling back to inexactAllowWhileIdle...");
       try {
         await _notificationsPlugin.zonedSchedule(
           safeId,
@@ -312,8 +306,9 @@ class NotificationService {
     }
   }
 
-  /// Schedule Vet Appointment Booking Reminder 3 days before event date.
-  /// Clean, un-crowded formatting without emojis.
+  /// Schedule Vet Appointment Booking Reminder 3 days before event date at 09:00 AM sharp.
+  /// If today's 09:00 AM has passed, schedules for tomorrow at 09:00 AM sharp.
+  /// Never triggers immediate banner popups while user is in the app.
   Future<void> scheduleBookingReminder({
     required String bookingId,
     required String petName,
@@ -323,8 +318,6 @@ class NotificationService {
     required String timeSlot,
   }) async {
     final int safeId = _toSafeNotificationId('booking_3d_$bookingId');
-
-    await cancelNotification(safeId);
 
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
 
@@ -340,36 +333,44 @@ class NotificationService {
     );
 
     if (scheduledDate.isBefore(now)) {
-      final tz.TZDateTime apptAt9 = tz.TZDateTime(
+      final tz.TZDateTime today9AM = tz.TZDateTime(
         tz.local,
-        bookingDate.year,
-        bookingDate.month,
-        bookingDate.day,
+        now.year,
+        now.month,
+        now.day,
         9,
         0,
       );
 
-      if (apptAt9.isAfter(now)) {
-        final tz.TZDateTime next9AM = tz.TZDateTime(
+      if (now.isBefore(today9AM)) {
+        scheduledDate = today9AM;
+      } else {
+        scheduledDate = tz.TZDateTime(
           tz.local,
           now.year,
           now.month,
-          now.hour < 9 ? now.day : now.day + 1,
+          now.day + 1,
           9,
           0,
         );
-        if (next9AM.isBefore(apptAt9)) {
-          scheduledDate = next9AM;
-        } else {
-          scheduledDate = apptAt9;
-        }
       }
     }
 
-    if (scheduledDate.isBefore(now)) {
-      debugPrint("Booking date $bookingDate is in the past. Skipping 3-day booking reminder.");
+    final tz.TZDateTime apptCutoff = tz.TZDateTime(
+      tz.local,
+      bookingDate.year,
+      bookingDate.month,
+      bookingDate.day,
+      23,
+      59,
+    );
+
+    if (scheduledDate.isAfter(apptCutoff) || scheduledDate.isBefore(now)) {
+      debugPrint("Booking date $bookingDate has passed or today 9:00 AM passed. Next reminder tomorrow 9:00 AM.");
       return;
     }
+
+    await cancelNotification(safeId);
 
     final String apptDateStr = "${bookingDate.day}/${bookingDate.month}/${bookingDate.year}";
 
@@ -422,7 +423,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'booking_reminder_$safeId',
       );
-      debugPrint("Scheduled 3-day vet booking reminder for $scheduledDate (ID:$safeId)");
+      debugPrint("Scheduled 9:00 AM vet booking reminder for $scheduledDate (ID:$safeId)");
     } catch (e) {
       try {
         await _notificationsPlugin.zonedSchedule(
@@ -435,75 +436,14 @@ class NotificationService {
           uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
           payload: 'booking_reminder_$safeId',
         );
-        debugPrint("Scheduled fallback 3-day vet booking reminder for $scheduledDate (ID:$safeId)");
+        debugPrint("Scheduled fallback 9:00 AM vet booking reminder for $scheduledDate (ID:$safeId)");
       } catch (e2) {
         debugPrint("Error scheduling booking reminder: $e2");
       }
     }
   }
 
-  /// Immediate alert if record is overdue or date has already passed. Clean text without emojis.
-  Future<void> showImmediateOverdueNotice({
-    dynamic rawId,
-    dynamic baseId,
-    dynamic id,
-    required String petName,
-    String? recordType,
-    String? type,
-    required String treatmentName,
-  }) async {
-    final dynamic actualRawId = rawId ?? baseId ?? id;
-    final int safeId = _toSafeNotificationId(actualRawId);
-    final String formattedRecordType = _formatRecordType(recordType ?? type ?? 'Vaccination');
-
-    final String title = "Overdue Alert: $petName's $formattedRecordType ($treatmentName)";
-    final String body = "Treatment is overdue. Tap dropdown for full details.";
-
-    final String bigText = "<b>Pet Name:</b> $petName<br/>"
-        "<b>Record Type:</b> $formattedRecordType<br/>"
-        "<b>Treatment:</b> $treatmentName<br/><br/>"
-        "This booster schedule is overdue. Please arrange a vet appointment today to ensure $petName stays protected.";
-    final String summaryText = "$petName • Overdue Notice";
-
-    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      healthChannelId,
-      healthChannelName,
-      channelDescription: healthChannelDesc,
-      importance: Importance.max,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      playSound: true,
-      enableVibration: true,
-      visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.reminder,
-      audioAttributesUsage: AudioAttributesUsage.notification,
-      styleInformation: BigTextStyleInformation(
-        bigText,
-        htmlFormatBigText: true,
-        contentTitle: title,
-        htmlFormatContentTitle: true,
-        summaryText: summaryText,
-        htmlFormatSummaryText: true,
-      ),
-    );
-
-    final NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
-    );
-
-    await _notificationsPlugin.show(
-      safeId,
-      title,
-      body,
-      platformDetails,
-      payload: 'health_overdue_$safeId',
-    );
-
-    debugPrint("Showed Immediate Overdue Notice ID: $safeId for $petName's $treatmentName");
-  }
-
-  /// Instant notification banner helper (e.g. for bookings). Clean text without emojis.
+  /// Instant notification banner helper (only when explicitly called, e.g., on booking confirmation)
   Future<void> showNotification({
     dynamic baseId,
     dynamic id,
