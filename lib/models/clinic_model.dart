@@ -214,12 +214,14 @@ class ClinicModel {
     double lat = (map['latitude'] as num?)?.toDouble() ?? 0.0;
     double lng = (map['longitude'] as num?)?.toDouble() ?? 0.0;
 
-    // Prioritize parsing fresh coordinates from googleMapsUrl if present
-    if (mapsUrl != null && mapsUrl.trim().isNotEmpty) {
-      final parsed = ClinicModel.parseExactCoordinatesFromGoogleMapsUrl(mapsUrl, address, name);
-      if (parsed['latitude'] != 5.4164 || parsed['longitude'] != 100.3327 || lat == 0.0) {
-        lat = parsed['latitude'] ?? lat;
-        lng = parsed['longitude'] ?? lng;
+    // Prioritize parsing fresh coordinates from googleMapsUrl if lat/lng are missing or default
+    if (lat == 0.0 || lng == 0.0 || (lat == 5.4164 && lng == 100.3327)) {
+      if (mapsUrl != null && mapsUrl.trim().isNotEmpty) {
+        final parsed = ClinicModel.parseExactCoordinatesFromGoogleMapsUrl(mapsUrl, address, name);
+        if (parsed['latitude'] != 5.4164 || parsed['longitude'] != 100.3327) {
+          lat = parsed['latitude'] ?? lat;
+          lng = parsed['longitude'] ?? lng;
+        }
       }
     }
 
@@ -296,12 +298,50 @@ class ClinicModel {
   }
 
   /// Strictly extracts latitude and longitude from the provided Google Maps URL.
-  /// Returns null if the URL string itself does not contain valid coordinates.
+  /// Priority order:
+  /// 1. Exact place pinpoint marker: `!3d[lat]!4d[lng]` or `3d[lat]!4d[lng]`
+  /// 2. Explicit query/destination/location params: q=, query=, ll=, point=, center=, destination=, near=, daddr=, saddr=
+  /// 3. Path patterns: /search/lat,lng, /dir/lat,lng, /place/lat,lng, geo:lat,lng
+  /// 4. Viewport camera center: @lat,lng (fallback when no place pin exists)
+  /// 5. Universal coordinates pair: lat,lng
   static Map<String, double>? extractCoordinatesFromGoogleMapsUrlStrict(String googleMapsUrl) {
     final String url = googleMapsUrl.trim();
     if (url.isEmpty) return null;
 
-    // 1. Check for @latitude,longitude format (e.g., https://www.google.com/maps/place/.../@5.405621,100.308985,17z/...)
+    // 1. Priority 1: Check for exact place pinpoint marker !3dlatitude!4dlongitude (or 3dlatitude!4dlongitude)
+    final RegExp dRegex = RegExp(r'(?:!3d|3d)(-?\d+\.\d+).*?(?:!4d|4d)(-?\d+\.\d+)');
+    final dMatch = dRegex.firstMatch(url);
+    if (dMatch != null && dMatch.groupCount >= 2) {
+      final double? lat = double.tryParse(dMatch.group(1)!);
+      final double? lng = double.tryParse(dMatch.group(2)!);
+      if (lat != null && lng != null && _isValidCoord(lat, lng)) {
+        return {'latitude': lat, 'longitude': lng};
+      }
+    }
+
+    // 2. Priority 2: Check for explicit query/destination/location parameters e.g. q=5.407890,100.310123
+    final RegExp qRegex = RegExp(r'(?:q|query|ll|point|center|sll|destination|near|daddr|saddr)=(-?\d+\.\d+),\s*(-?\d+\.\d+)');
+    final qMatch = qRegex.firstMatch(url);
+    if (qMatch != null && qMatch.groupCount >= 2) {
+      final double? lat = double.tryParse(qMatch.group(1)!);
+      final double? lng = double.tryParse(qMatch.group(2)!);
+      if (lat != null && lng != null && _isValidCoord(lat, lng)) {
+        return {'latitude': lat, 'longitude': lng};
+      }
+    }
+
+    // 3. Priority 3: Check for path patterns e.g. /search/5.407890,100.310123 or /dir/5.407890,100.310123 or geo:5.407890,100.310123
+    final RegExp pathRegex = RegExp(r'(?:search|dir|place|geo:|\/)(-?\d+\.\d+),\s*(-?\d+\.\d+)');
+    final pathMatch = pathRegex.firstMatch(url);
+    if (pathMatch != null && pathMatch.groupCount >= 2) {
+      final double? lat = double.tryParse(pathMatch.group(1)!);
+      final double? lng = double.tryParse(pathMatch.group(2)!);
+      if (lat != null && lng != null && _isValidCoord(lat, lng)) {
+        return {'latitude': lat, 'longitude': lng};
+      }
+    }
+
+    // 4. Priority 4: Check for @latitude,longitude format (Viewport Camera Center - fallback)
     final RegExp atRegex = RegExp(r'@(-?\d+\.\d+),\s*(-?\d+\.\d+)');
     final atMatch = atRegex.firstMatch(url);
     if (atMatch != null && atMatch.groupCount >= 2) {
@@ -312,29 +352,7 @@ class ClinicModel {
       }
     }
 
-    // 2. Check for !3dlatitude!4dlongitude format (e.g., ...!3d5.405621!4d100.308985...)
-    final RegExp dRegex = RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)');
-    final dMatch = dRegex.firstMatch(url);
-    if (dMatch != null && dMatch.groupCount >= 2) {
-      final double? lat = double.tryParse(dMatch.group(1)!);
-      final double? lng = double.tryParse(dMatch.group(2)!);
-      if (lat != null && lng != null && _isValidCoord(lat, lng)) {
-        return {'latitude': lat, 'longitude': lng};
-      }
-    }
-
-    // 3. Check for query parameters e.g. q=5.405621,100.308985 or ll=5.405621,100.308985 or query=5.405621,100.308985
-    final RegExp qRegex = RegExp(r'(?:q|query|ll|point|center|sll|destination|near)=(-?\d+\.\d+),\s*(-?\d+\.\d+)');
-    final qMatch = qRegex.firstMatch(url);
-    if (qMatch != null && qMatch.groupCount >= 2) {
-      final double? lat = double.tryParse(qMatch.group(1)!);
-      final double? lng = double.tryParse(qMatch.group(2)!);
-      if (lat != null && lng != null && _isValidCoord(lat, lng)) {
-        return {'latitude': lat, 'longitude': lng};
-      }
-    }
-
-    // 4. Universal lat,lng search anywhere in URL string
+    // 5. Priority 5: Universal lat,lng search anywhere in URL string
     final RegExp coordRegex = RegExp(r'(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{2,3}\.\d{3,})');
     final matches = coordRegex.allMatches(url);
     for (var match in matches) {
@@ -379,7 +397,7 @@ class ClinicModel {
         return direct;
       }
 
-      // 2. Expand short Google Maps link using google_maps_url_extractor
+      // 2. Expand short Google Maps link using google_maps_url_extractor package
       try {
         final dynamic extracted = GoogleMapsUrlExtractor.extractCoordinates(url);
         if (extracted != null) {
@@ -394,7 +412,7 @@ class ClinicModel {
               lng = (extracted.longitude as num?)?.toDouble();
             } catch (_) {}
           }
-          if (lat != null && lng != null && (lat != 0.0 || lng != 0.0)) {
+          if (lat != null && lng != null && _isValidCoord(lat, lng)) {
             return {
               'latitude': lat,
               'longitude': lng,
@@ -405,38 +423,73 @@ class ClinicModel {
         debugPrint("GoogleMapsUrlExtractor error for short URL ($url): $e");
       }
 
-      // Fallback manual redirection expansion
+      // 3. Robust manual redirection & HTML body expansion for short links (maps.app.goo.gl, goo.gl/maps, g.co)
       try {
         final client = HttpClient();
-        client.connectionTimeout = const Duration(seconds: 5);
-        final Uri uri = Uri.parse(url);
-        final request = await client.getUrl(uri);
-        request.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
-        request.followRedirects = true;
-        request.maxRedirects = 5;
-        final response = await request.close();
+        client.connectionTimeout = const Duration(seconds: 6);
 
-        String finalUrl = uri.toString();
-        if (response.redirects.isNotEmpty) {
-          finalUrl = response.redirects.last.location.toString();
-        } else if (response.headers.value('location') != null) {
-          finalUrl = response.headers.value('location')!;
-        }
+        String currentUrl = url;
+        int redirectCount = 0;
 
-        client.close();
+        while (currentUrl.isNotEmpty && redirectCount < 6) {
+          final Uri uri = Uri.parse(currentUrl);
+          final request = await client.getUrl(uri);
+          request.headers.set(
+            'User-Agent',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          );
+          request.followRedirects = false; // Inspect each redirect status manually
 
-        if (finalUrl.isNotEmpty && finalUrl != url) {
-          final redirectParsed = extractCoordinatesFromGoogleMapsUrlStrict(finalUrl);
-          if (redirectParsed != null) {
-            return redirectParsed;
+          final response = await request.close();
+          final String? locationHeader = response.headers.value('location');
+
+          if (locationHeader != null && locationHeader.isNotEmpty) {
+            String nextUrl = locationHeader;
+            if (!nextUrl.startsWith('http')) {
+              nextUrl = uri.resolve(nextUrl).toString();
+            }
+
+            final redirectExtracted = extractCoordinatesFromGoogleMapsUrlStrict(nextUrl);
+            if (redirectExtracted != null) {
+              client.close();
+              return redirectExtracted;
+            }
+
+            currentUrl = nextUrl;
+            redirectCount++;
+          } else {
+            // Reached final destination (200 OK)
+            final String body = await response.transform(utf8.decoder).join();
+
+            // Try extracting from body string
+            final bodyExtracted = extractCoordinatesFromGoogleMapsUrlStrict(body);
+            if (bodyExtracted != null) {
+              client.close();
+              return bodyExtracted;
+            }
+
+            // Check HTML meta tags or static map URLs (center=lat%2Clng or markers=lat%2Clng)
+            final RegExp centerRegex = RegExp(r'(?:center|markers|query)=(-?\d+\.\d+)(?:%2C|,)\s*(-?\d+\.\d+)');
+            final centerMatch = centerRegex.firstMatch(body);
+            if (centerMatch != null && centerMatch.groupCount >= 2) {
+              final double? lat = double.tryParse(centerMatch.group(1)!);
+              final double? lng = double.tryParse(centerMatch.group(2)!);
+              if (lat != null && lng != null && _isValidCoord(lat, lng)) {
+                client.close();
+                return {'latitude': lat, 'longitude': lng};
+              }
+            }
+
+            break;
           }
         }
+        client.close();
       } catch (e) {
         debugPrint("Error expanding short Google Maps URL ($url): $e");
       }
     }
 
-    // 3. OpenStreetMap Nominatim Exact Address Geocoding Fallback
+    // 4. OpenStreetMap Nominatim Exact Address Geocoding Fallback
     if (clinicName.isNotEmpty || address.isNotEmpty) {
       try {
         final String searchQuery = Uri.encodeComponent("$clinicName, $address, Penang, Malaysia");

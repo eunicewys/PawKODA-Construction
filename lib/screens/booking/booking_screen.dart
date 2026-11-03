@@ -697,15 +697,23 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       }
 
       LatLng? resolvedLatLng;
+      final String mapsUrl = (clinic.googleMapsUrl ?? '').trim();
 
-      // 1. Check if clinic already has valid custom non-default lat/lng
-      if (clinic.latitude != 0.0 && clinic.longitude != 0.0 && (clinic.latitude != 5.4164 || clinic.longitude != 100.3327)) {
+      // 1. Check strict pinpoint match directly from googleMapsUrl (!3d...!4d...) if present
+      if (mapsUrl.isNotEmpty) {
+        final strict = ClinicModel.extractCoordinatesFromGoogleMapsUrlStrict(mapsUrl);
+        if (strict != null) {
+          resolvedLatLng = LatLng(strict['latitude']!, strict['longitude']!);
+        }
+      }
+
+      // 2. Check if clinic already has valid custom non-default lat/lng stored
+      if (resolvedLatLng == null && clinic.latitude != 0.0 && clinic.longitude != 0.0 && (clinic.latitude != 5.4164 || clinic.longitude != 100.3327)) {
         resolvedLatLng = LatLng(clinic.latitude, clinic.longitude);
       }
 
-      // 2. Resolve Google Maps URL or address asynchronously
+      // 3. Resolve Google Maps URL or address asynchronously
       if (resolvedLatLng == null) {
-        final String mapsUrl = (clinic.googleMapsUrl ?? '').trim();
         final Map<String, double> resolved = await ClinicModel.resolveGoogleMapsCoordinatesAsync(
           mapsUrl,
           clinic.address,
@@ -1172,30 +1180,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
               ClinicGoogleMapWidget(
                 clinicLink: mapsUrl.isNotEmpty ? mapsUrl : 'https://maps.google.com/?q=${Uri.encodeComponent(clinic.name)}',
                 clinicName: clinic.name,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _bookingService.openGoogleMaps(
-                      clinicName: clinic.name,
-                      address: clinic.address,
-                      latitude: clinic.latitude,
-                      longitude: clinic.longitude,
-                      googleMapsUrl: clinic.googleMapsUrl,
-                    );
-                  },
-                  icon: const Icon(Icons.directions, color: Colors.white),
-                  label: const Text("Open in Google Maps App for Directions", style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _dustyOlive,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
+                clinicAddress: clinic.address,
               ),
             ],
           ),
