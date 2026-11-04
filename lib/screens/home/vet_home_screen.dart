@@ -10,6 +10,7 @@ import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/user_notification_service.dart';
 import '../../services/notification_service.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../profile/edit_profile_screen.dart';
 import '../profile/vet_privacy_security_screen.dart';
 import '../widgets/fringe_header.dart';
@@ -441,90 +442,10 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
           Future<bool> checkUnsavedAndConfirmExit() async {
             final String currentStaffJson = jsonEncode(_staffList);
             if (currentStaffJson != initialStaffJson) {
-              final bool? shouldDiscard = await showDialog<bool>(
-                context: ctx,
-                barrierDismissible: false,
-                builder: (dialogCtx) => Dialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  backgroundColor: Colors.white,
-                  elevation: 8,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 30),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "Unsaved Changes",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          "You have unsaved changes in your vet list and time slots. Are you sure you want to exit without saving?",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _fadedCopper,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.grey.shade700,
-                                  side: BorderSide(color: Colors.grey.shade300),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                                onPressed: () => Navigator.pop(dialogCtx, false),
-                                child: const Center(
-                                  child: Text("CANCEL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red.shade700,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                                onPressed: () => Navigator.pop(dialogCtx, true),
-                                child: const Center(
-                                  child: Text("DISCARD", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              return await showUnsavedChangesDialog(
+                ctx,
+                message: "You have unsaved changes in your vet list and time slots. Are you sure you want to exit without saving?",
               );
-
-              return shouldDiscard == true;
             }
             return true;
           }
@@ -1282,6 +1203,10 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
     List<String> selectedTimeSlots = List<String>.from(currentTimeSlots ?? []);
     bool isTimeSlotsExpanded = true;
 
+    final String initialDaysJson = jsonEncode(currentDays);
+    final String initialSlotsJson = jsonEncode(currentTimeSlots);
+    final String initialSessionsJson = jsonEncode(slots);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1290,43 +1215,63 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
         builder: (ctx, setMState) {
           final currentGeneratedSlots = _generateSlotsFromSessions(slots);
 
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: Container(
-              height: MediaQuery.of(ctx).size.height * 0.82,
-              decoration: BoxDecoration(
-                color: _almondCream,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: _coffeeBean.withAlpha(80),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Operating Schedule",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
-                          overflow: TextOverflow.ellipsis,
+          bool checkUnsavedChanges() {
+            if (jsonEncode(selectedDays) != initialDaysJson) return true;
+            if (jsonEncode(selectedTimeSlots) != initialSlotsJson) return true;
+            if (jsonEncode(slots) != initialSessionsJson) return true;
+            return false;
+          }
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              if (!checkUnsavedChanges()) {
+                Navigator.of(ctx).pop();
+                return;
+              }
+              final bool shouldDiscard = await showUnsavedChangesDialog(ctx);
+              if (shouldDiscard && ctx.mounted) {
+                Navigator.of(ctx).pop();
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(ctx).size.height * 0.82,
+                decoration: BoxDecoration(
+                  color: _almondCream,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: _coffeeBean.withAlpha(80),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: Icon(Icons.close_rounded, color: _coffeeBean),
-                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Operating Schedule",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _coffeeBean),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.maybePop(ctx),
+                          icon: Icon(Icons.close_rounded, color: _coffeeBean),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -2047,10 +1992,11 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
+          ),
+        );
+      },
+    ),
+  );
   }
 
   void _showManageServicesModal(BuildContext context, {required List<String> currentServices}) {
@@ -2081,6 +2027,8 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       currentServices.map((s) => _toTitleCase(s)).where((s) => s.isNotEmpty),
     );
 
+    final String initialServicesJson = jsonEncode(selectedServices);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2088,30 +2036,48 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 38,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(10),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) {
+            bool checkUnsavedChanges() {
+              if (jsonEncode(selectedServices) != initialServicesJson) return true;
+              if (otherSvcCtrl.text.trim().isNotEmpty) return true;
+              return false;
+            }
+
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop) return;
+                if (!checkUnsavedChanges()) {
+                  Navigator.of(context).pop();
+                  return;
+                }
+                final bool shouldDiscard = await showUnsavedChangesDialog(context);
+                if (shouldDiscard && context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 16,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 38,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
-                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -2276,10 +2242,10 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   ),
                 ],
               ),
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 

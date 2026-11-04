@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/breed_model.dart';
 import '../../services/breed_service.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../widgets/fringe_header.dart';
 
 /// BreedManagementScreen: Admin screen for viewing full dog and cat breeds list,
@@ -481,62 +482,90 @@ class _BreedManagementScreenState extends State<BreedManagementScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 16,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 38,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            existing == null ? Icons.add_circle_outline_rounded : Icons.edit_note_rounded,
-                            color: _pacificBlue,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              existing == null ? "Add New Breed" : "Edit Breed",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: _darkText,
-                              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+            bool checkUnsavedChanges() {
+              if (existing == null) {
+                if (nameCtrl.text.trim().isNotEmpty) return true;
+                if (selectedSpecies != 'Dog') return true;
+                if (selectedSize != 'Small') return true;
+                if (weightCtrl.text.trim() != '5.0') return true;
+                return false;
+              } else {
+                if (nameCtrl.text.trim() != existing.name) return true;
+                if (selectedSpecies != existing.species) return true;
+                if (selectedSize != existing.sizeCategory) return true;
+                if (weightCtrl.text.trim() != existing.avgAdultWeightKg.toString()) return true;
+                return false;
+              }
+            }
+
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop) return;
+                if (isSaving || !checkUnsavedChanges()) {
+                  Navigator.of(context).pop();
+                  return;
+                }
+                final bool shouldDiscard = await showUnsavedChangesDialog(context);
+                if (shouldDiscard && context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 16,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                            onPressed: () {
-                              FocusScope.of(context).unfocus();
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              existing == null ? Icons.add_circle_outline_rounded : Icons.edit_note_rounded,
+                              color: _pacificBlue,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                existing == null ? "Add New Breed" : "Edit Breed",
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: _darkText,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                              onPressed: () {
+                                FocusScope.of(context).unfocus();
+                                Navigator.maybePop(context);
+                              },
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 4),
                       Text(
                         "Add a dog or cat breed to Firebase Firestore for automatic size and DER calculation.",
@@ -658,7 +687,7 @@ class _BreedManagementScreenState extends State<BreedManagementScreen> {
                                   ? null
                                   : () {
                                       FocusScope.of(context).unfocus();
-                                      Navigator.pop(context);
+                                      Navigator.maybePop(context);
                                     },
                               child: Text("Cancel", style: TextStyle(color: _darkText, fontWeight: FontWeight.bold)),
                             ),
@@ -742,10 +771,10 @@ class _BreedManagementScreenState extends State<BreedManagementScreen> {
                   ),
                 ),
               ),
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }

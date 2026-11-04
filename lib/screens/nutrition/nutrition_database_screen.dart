@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../models/ingredient_model.dart';
 import '../../providers/nutritional_provider.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../widgets/fringe_header.dart';
 
 /// Category Palette & Style mapping strictly aligned with Pet Owner's Nutrition Engine
@@ -743,64 +744,109 @@ class _NutritionDatabaseScreenState extends State<NutritionDatabaseScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
             final catStyle = _getCategoryStyle(selectedCat, isToxic: toxicDogs || toxicCats);
 
-            return GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 16,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 38,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            existing == null ? Icons.add_circle_outline_rounded : Icons.edit_note_rounded,
-                            color: _pacificBlue,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              existing == null ? "Add New Ingredient" : "Edit Ingredient",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: _darkText,
-                              ),
+            bool checkUnsavedChanges() {
+              if (existing == null) {
+                if (nameCtrl.text.trim().isNotEmpty) return true;
+                if (kcalCtrl.text.trim() != '0') return true;
+                if (proteinCtrl.text.trim() != '0') return true;
+                if (fatCtrl.text.trim() != '0') return true;
+                if (carbsCtrl.text.trim() != '0') return true;
+                if (fiberCtrl.text.trim() != '0') return true;
+                if (moistureCtrl.text.trim() != '0') return true;
+                if (calciumCtrl.text.trim() != '0') return true;
+                if (vitCtrl.text.trim() != '0') return true;
+                if (minCtrl.text.trim() != '0') return true;
+                if (toxicDogs || toxicCats) return true;
+                if (selectedCat != 'Poultry') return true;
+                return false;
+              } else {
+                if (nameCtrl.text.trim() != existing.name) return true;
+                if (kcalCtrl.text.trim() != existing.kcalPer100g.toString()) return true;
+                if (proteinCtrl.text.trim() != existing.proteinGrams.toString()) return true;
+                if (fatCtrl.text.trim() != existing.fatGrams.toString()) return true;
+                if (carbsCtrl.text.trim() != existing.carbsGrams.toString()) return true;
+                if (fiberCtrl.text.trim() != existing.fiberGrams.toString()) return true;
+                if (moistureCtrl.text.trim() != existing.moistureGrams.toString()) return true;
+                if (calciumCtrl.text.trim() != existing.calciumMg.toString()) return true;
+                if (vitCtrl.text.trim() != existing.vitaminsMg.toString()) return true;
+                if (minCtrl.text.trim() != existing.mineralsMg.toString()) return true;
+                if (toxicDogs != existing.isToxicToDogs) return true;
+                if (toxicCats != existing.isToxicToCats) return true;
+                if (selectedCat != _getPrimaryCategory(existing)) return true;
+                return false;
+              }
+            }
+
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop) return;
+                if (isSaving || !checkUnsavedChanges()) {
+                  Navigator.of(context).pop();
+                  return;
+                }
+                final bool shouldDiscard = await showUnsavedChangesDialog(context);
+                if (shouldDiscard && context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 16,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                            onPressed: () {
-                              FocusScope.of(context).unfocus();
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              existing == null ? Icons.add_circle_outline_rounded : Icons.edit_note_rounded,
+                              color: _pacificBlue,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                existing == null ? "Add New Ingredient" : "Edit Ingredient",
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: _darkText,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                              onPressed: () {
+                                FocusScope.of(context).unfocus();
+                                Navigator.maybePop(context);
+                              },
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 4),
                       Text(
                         "Input 100g nutritional profile values to save directly to Firebase.",
@@ -1009,7 +1055,7 @@ class _NutritionDatabaseScreenState extends State<NutritionDatabaseScreen> {
                                   ? null
                                   : () {
                                       FocusScope.of(context).unfocus();
-                                      Navigator.pop(context);
+                                      Navigator.maybePop(context);
                                     },
                               child: Text("Cancel", style: TextStyle(color: _darkText, fontWeight: FontWeight.bold)),
                             ),
@@ -1112,10 +1158,10 @@ class _NutritionDatabaseScreenState extends State<NutritionDatabaseScreen> {
                   ),
                 ),
               ),
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 

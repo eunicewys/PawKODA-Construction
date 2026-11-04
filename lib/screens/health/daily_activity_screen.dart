@@ -7,6 +7,7 @@ import '../../models/health_model.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../services/health_service.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../widgets/fringe_header.dart';
 import '../widgets/offline_banner.dart';
 
@@ -145,220 +146,253 @@ class _DailyActivityScreenState extends State<DailyActivityScreen> {
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) => StatefulBuilder(
         builder: (stContext, setMState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(stContext).viewInsets.bottom),
-            child: Container(
-              height: MediaQuery.of(stContext).size.height * 0.85,
-              decoration: BoxDecoration(
-                color: _desertSand,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: _darkCharcoal.withAlpha(80),
-                          borderRadius: BorderRadius.circular(2),
+          bool checkUnsavedChanges() {
+            if (existingLog == null) {
+              if (appetite != null || stool != null || waterIntake != null || activityLevel != null || wentForWalk) return true;
+              if (notesCtrl.text.trim().isNotEmpty) return true;
+              final now = DateTime.now();
+              if (logDate.year != now.year || logDate.month != now.month || logDate.day != now.day) return true;
+              return false;
+            } else {
+              if (appetite != existingLog.appetite) return true;
+              if (stool != existingLog.stool) return true;
+              if (waterIntake != existingLog.waterIntake) return true;
+              if (activityLevel != existingLog.activityLevel) return true;
+              if (wentForWalk != existingLog.wentForWalk) return true;
+              if (notesCtrl.text.trim() != existingLog.notes) return true;
+              if (logDate.year != existingLog.date.year || logDate.month != existingLog.date.month || logDate.day != existingLog.date.day) return true;
+              return false;
+            }
+          }
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              if (isSaving || !checkUnsavedChanges()) {
+                Navigator.of(stContext).pop();
+                return;
+              }
+              final bool shouldDiscard = await showUnsavedChangesDialog(stContext);
+              if (shouldDiscard && stContext.mounted) {
+                Navigator.of(stContext).pop();
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(stContext).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(stContext).size.height * 0.85,
+                decoration: BoxDecoration(
+                  color: _desertSand,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: _darkCharcoal.withAlpha(80),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      existingLog == null ? "Daily Activity" : "Edit Daily Activity", 
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      existingLog == null 
-                          ? "Record ${widget.pet.name}'s daily appetite, stool, water & energy"
-                          : "Update ${widget.pet.name}'s recorded activity entry", 
-                      style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13)
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Log Date
-                    _buildLabel("DIARY DATE", isRequired: true),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 46,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: stContext,
-                            initialDate: logDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime.now(),
-                          );
-                          if (picked != null) setMState(() => logDate = picked);
-                        },
-                        icon: Icon(Icons.calendar_month_rounded, color: _dustyOlive, size: 18),
-                        label: Text(
-                          DateFormat('EEEE, dd MMM yyyy').format(logDate),
-                          style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: _darkCharcoal.withAlpha(50)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
+                      Text(
+                        existingLog == null ? "Daily Activity" : "Edit Daily Activity", 
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _darkCharcoal)
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Appetite
-                    _buildLabel("APPETITE", isRequired: true),
-                    _buildDropdownField(
-                      value: appetite,
-                      options: const ['Good', 'Normal', 'Poor'],
-                      onChanged: (val) => setMState(() => appetite = val),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Stool
-                    _buildLabel("STOOL CONDITION", isRequired: true),
-                    _buildDropdownField(
-                      value: stool,
-                      options: const ['Normal', 'Soft', 'Hard', 'None'],
-                      onChanged: (val) => setMState(() => stool = val),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Water Intake
-                    _buildLabel("WATER INTAKE", isRequired: true),
-                    _buildDropdownField(
-                      value: waterIntake,
-                      options: const ['Good', 'Normal', 'Low'],
-                      onChanged: (val) => setMState(() => waterIntake = val),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Activity Level
-                    _buildLabel("ACTIVITY / ENERGY LEVEL", isRequired: true),
-                    _buildDropdownField(
-                      value: activityLevel,
-                      options: const ['Active', 'Normal', 'Lethargic'],
-                      onChanged: (val) => setMState(() => activityLevel = val),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Walk Checkbox
-                    CheckboxListTile(
-                      title: Text("Went for a walk / outdoor exercise?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _darkCharcoal)),
-                      value: wentForWalk,
-                      activeColor: _dustyOlive,
-                      onChanged: (val) => setMState(() => wentForWalk = val ?? false),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Notes
-                    _buildLabel("DAILY NOTES / DIARY ENTRY"),
-                    TextField(
-                      controller: notesCtrl,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        hintText: "e.g. Ate full bowl, played in park, slept early...",
-                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
-                        fillColor: Colors.white,
-                        filled: true,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      const SizedBox(height: 4),
+                      Text(
+                        existingLog == null 
+                            ? "Record ${widget.pet.name}'s daily appetite, stool, water & energy"
+                            : "Update ${widget.pet.name}'s recorded activity entry", 
+                        style: TextStyle(color: _darkCharcoal.withAlpha(180), fontSize: 13)
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 18),
 
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: isSaving ? null : () async {
-                          if (appetite == null || stool == null || waterIntake == null || activityLevel == null) {
-                            _showDialogAlert(
-                              stContext,
-                              "Selection Required",
-                              "Please select options for Appetite, Stool Condition, Water Intake, and Activity Level before saving.",
-                              Icons.warning_amber_rounded,
+                      // Log Date
+                      _buildLabel("DIARY DATE", isRequired: true),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: stContext,
+                              initialDate: logDate,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
                             );
-                            return;
-                          }
+                            if (picked != null) setMState(() => logDate = picked);
+                          },
+                          icon: Icon(Icons.calendar_month_rounded, color: _dustyOlive, size: 18),
+                          label: Text(
+                            DateFormat('EEEE, dd MMM yyyy').format(logDate),
+                            style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            side: BorderSide(color: _darkCharcoal.withAlpha(50)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                          // Duplicate Date Check (Avoid overlapping logs on same day)
-                          bool alreadyLoggedForDate = existingLogs.any((log) => 
-                            _isSameDay(log.date, logDate) && (existingLog == null || log.id != existingLog.id)
-                          );
-                          if (alreadyLoggedForDate) {
-                            _showDialogAlert(
-                              stContext,
-                              "Entry Already Exists",
-                              "A daily activity entry has already been logged for ${widget.pet.name} on ${DateFormat('EEEE, dd MMM yyyy').format(logDate)}.\n\nTo avoid overlapping logs, you cannot log duplicate entries for the same day.",
-                              Icons.event_busy_rounded,
-                            );
-                            return;
-                          }
+                      // Appetite
+                      _buildLabel("APPETITE", isRequired: true),
+                      _buildDropdownField(
+                        value: appetite,
+                        options: const ['Good', 'Normal', 'Poor'],
+                        onChanged: (val) => setMState(() => appetite = val),
+                      ),
+                      const SizedBox(height: 16),
 
-                          setMState(() => isSaving = true);
+                      // Stool
+                      _buildLabel("STOOL CONDITION", isRequired: true),
+                      _buildDropdownField(
+                        value: stool,
+                        options: const ['Normal', 'Soft', 'Hard', 'None'],
+                        onChanged: (val) => setMState(() => stool = val),
+                      ),
+                      const SizedBox(height: 16),
 
-                          try {
-                            final uid = Provider.of<UserProvider>(stContext, listen: false).uid
-                                ?? FirebaseAuth.instance.currentUser?.uid;
+                      // Water Intake
+                      _buildLabel("WATER INTAKE", isRequired: true),
+                      _buildDropdownField(
+                        value: waterIntake,
+                        options: const ['Good', 'Normal', 'Low'],
+                        onChanged: (val) => setMState(() => waterIntake = val),
+                      ),
+                      const SizedBox(height: 16),
 
-                            if (uid == null || uid.isEmpty) {
-                              if (stContext.mounted) {
-                                setMState(() => isSaving = false);
-                                ScaffoldMessenger.of(stContext).showSnackBar(
-                                  const SnackBar(content: Text("Error: User session invalid. Please log in again.")),
-                                );
-                              }
+                      // Activity Level
+                      _buildLabel("ACTIVITY / ENERGY LEVEL", isRequired: true),
+                      _buildDropdownField(
+                        value: activityLevel,
+                        options: const ['Active', 'Normal', 'Lethargic'],
+                        onChanged: (val) => setMState(() => activityLevel = val),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Walk Checkbox
+                      CheckboxListTile(
+                        title: Text("Went for a walk / outdoor exercise?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _darkCharcoal)),
+                        value: wentForWalk,
+                        activeColor: _dustyOlive,
+                        onChanged: (val) => setMState(() => wentForWalk = val ?? false),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Notes
+                      _buildLabel("DAILY NOTES / DIARY ENTRY"),
+                      TextField(
+                        controller: notesCtrl,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: "e.g. Ate full bowl, played in park, slept early...",
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal, fontSize: 13),
+                          fillColor: Colors.white,
+                          filled: true,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: isSaving ? null : () async {
+                            if (appetite == null || stool == null || waterIntake == null || activityLevel == null) {
+                              _showDialogAlert(
+                                stContext,
+                                "Selection Required",
+                                "Please select options for Appetite, Stool Condition, Water Intake, and Activity Level before saving.",
+                                Icons.warning_amber_rounded,
+                              );
                               return;
                             }
 
-                            final diary = DailyActivityLog(
-                              id: existingLog?.id ?? '',
-                              petId: widget.pet.id,
-                              date: logDate,
-                              appetite: appetite!,
-                              stool: stool!,
-                              waterIntake: waterIntake!,
-                              activityLevel: activityLevel!,
-                              wentForWalk: wentForWalk,
-                              notes: notesCtrl.text.trim(),
+                            // Duplicate Date Check (Avoid overlapping logs on same day)
+                            bool alreadyLoggedForDate = existingLogs.any((log) => 
+                              _isSameDay(log.date, logDate) && (existingLog == null || log.id != existingLog.id)
                             );
-
-                            if (existingLog == null) {
-                              await _healthService.addDailyActivityLog(uid, widget.pet.id, diary);
-                            } else {
-                              await _healthService.updateDailyActivityLog(uid, widget.pet.id, existingLog.id, diary);
-                            }
-
-                            if (stContext.mounted) Navigator.pop(bottomSheetContext);
-                          } catch (e) {
-                            debugPrint("Error saving daily activity log: $e");
-                            if (stContext.mounted) {
-                              setMState(() => isSaving = false);
-                              ScaffoldMessenger.of(stContext).showSnackBar(
-                                SnackBar(content: Text("Failed to save: $e")),
+                            if (alreadyLoggedForDate) {
+                              _showDialogAlert(
+                                stContext,
+                                "Entry Already Exists",
+                                "A daily activity entry has already been logged for ${widget.pet.name} on ${DateFormat('EEEE, dd MMM yyyy').format(logDate)}.\n\nTo avoid overlapping logs, you cannot log duplicate entries for the same day.",
+                                Icons.event_busy_rounded,
                               );
+                              return;
                             }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _dustyOlive,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+
+                            setMState(() => isSaving = true);
+
+                            try {
+                              final uid = Provider.of<UserProvider>(stContext, listen: false).uid
+                                  ?? FirebaseAuth.instance.currentUser?.uid;
+
+                              if (uid == null || uid.isEmpty) {
+                                if (stContext.mounted) {
+                                  setMState(() => isSaving = false);
+                                  ScaffoldMessenger.of(stContext).showSnackBar(
+                                    const SnackBar(content: Text("Error: User session invalid. Please log in again.")),
+                                  );
+                                }
+                                return;
+                              }
+
+                              final diary = DailyActivityLog(
+                                id: existingLog?.id ?? '',
+                                petId: widget.pet.id,
+                                date: logDate,
+                                appetite: appetite!,
+                                stool: stool!,
+                                waterIntake: waterIntake!,
+                                activityLevel: activityLevel!,
+                                wentForWalk: wentForWalk,
+                                notes: notesCtrl.text.trim(),
+                              );
+
+                              if (existingLog == null) {
+                                await _healthService.addDailyActivityLog(uid, widget.pet.id, diary);
+                              } else {
+                                await _healthService.updateDailyActivityLog(uid, widget.pet.id, existingLog.id, diary);
+                              }
+
+                              if (stContext.mounted) Navigator.pop(bottomSheetContext);
+                            } catch (e) {
+                              debugPrint("Error saving daily activity log: $e");
+                              if (stContext.mounted) {
+                                setMState(() => isSaving = false);
+                                ScaffoldMessenger.of(stContext).showSnackBar(
+                                  SnackBar(content: Text("Failed to save: $e")),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _dustyOlive,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: isSaving
+                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : Text(existingLog == null ? "Save Daily Entry" : "Update Entry", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                         ),
-                        child: isSaving
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : Text(existingLog == null ? "Save Daily Entry" : "Update Entry", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

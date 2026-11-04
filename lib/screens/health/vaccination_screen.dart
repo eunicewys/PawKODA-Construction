@@ -10,6 +10,7 @@ import '../../providers/connectivity_provider.dart';
 import '../../services/health_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_notification_service.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../widgets/fringe_header.dart';
 import '../widgets/offline_banner.dart';
 
@@ -230,15 +231,50 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setMState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.82,
-              decoration: BoxDecoration(
-                color: _desertSand,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          bool checkUnsavedChanges() {
+            if (existingRecord == null) {
+              if (selectedType != null) return true;
+              if (nameCtrl.text.trim().isNotEmpty) return true;
+              if (vetCtrl.text.trim().isNotEmpty) return true;
+              if (dosageCtrl.text.trim().isNotEmpty) return true;
+              if (notesCtrl.text.trim().isNotEmpty) return true;
+              final defaultDate = isUpcoming ? DateTime.now().add(const Duration(days: 1)) : DateTime.now();
+              if (selectedDate.year != defaultDate.year || selectedDate.month != defaultDate.month || selectedDate.day != defaultDate.day) return true;
+              return false;
+            } else {
+              if (selectedType != existingRecord.type) return true;
+              if (nameCtrl.text.trim() != existingRecord.doseName) return true;
+              if (vetCtrl.text.trim() != existingRecord.vetName) return true;
+              if (dosageCtrl.text.trim() != existingRecord.dosage) return true;
+              if (notesCtrl.text.trim() != existingRecord.notes) return true;
+              final originalDate = existingRecord.dueDate ?? existingRecord.dateGiven;
+              if (selectedDate.year != originalDate.year || selectedDate.month != originalDate.month || selectedDate.day != originalDate.day) return true;
+              return false;
+            }
+          }
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              if (isSaving || !checkUnsavedChanges()) {
+                Navigator.of(context).pop();
+                return;
+              }
+              final bool shouldDiscard = await showUnsavedChangesDialog(context);
+              if (shouldDiscard && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.82,
+                decoration: BoxDecoration(
+                  color: _desertSand,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,10 +588,11 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                 ),
               ),
             ),
-          );
-        },
-      ),
-    );
+          ),
+        );
+      },
+    ),
+  );
   }
 
   Future<bool> _showDeleteConfirmationDialog(

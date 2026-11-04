@@ -11,6 +11,7 @@ import '../../models/health_model.dart';
 import '../../services/health_service.dart';
 import '../../services/breed_service.dart';
 import '../../providers/connectivity_provider.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../health/health_issues_screen.dart';
 import '../health/vaccination_screen.dart';
 import '../widgets/offline_banner.dart';
@@ -716,31 +717,14 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
           return PopScope(
             canPop: false,
-            onPopInvoked: (didPop) async {
+            onPopInvokedWithResult: (didPop, result) async {
               if (didPop) return;
               if (isSaving || !checkUnsavedChanges()) {
                 Navigator.of(context).pop();
                 return;
               }
-              final bool? shouldPop = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  title: Text("Unsaved Changes", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold)),
-                  content: const Text("You have unsaved changes. Are you sure you want to discard them?"),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: Text("Keep Editing", style: TextStyle(color: _dustyOlive, fontWeight: FontWeight.bold)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text("Discard", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              );
-              if (shouldPop == true && context.mounted) {
+              final bool shouldDiscard = await showUnsavedChangesDialog(context);
+              if (shouldDiscard && context.mounted) {
                 Navigator.of(context).pop();
               }
             },

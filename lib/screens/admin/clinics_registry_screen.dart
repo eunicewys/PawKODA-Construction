@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pawkoda_fyp/models/clinic_model.dart';
 import 'package:pawkoda_fyp/services/booking_service.dart';
+import 'package:pawkoda_fyp/utils/unsaved_changes_dialog.dart';
 import 'package:pawkoda_fyp/screens/widgets/fringe_header.dart';
 
 /// ClinicsRegistryScreen: Provides Penang Admin Desk with full directory controls over
@@ -556,62 +557,96 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 16,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 38,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            existing == null ? Icons.add_business_rounded : Icons.edit_location_alt_rounded,
-                            color: _yaleBlue,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              existing == null ? "Register New Clinic" : "Edit Clinic Profile",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: _darkText,
-                              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+            bool checkUnsavedChanges() {
+              if (existing == null) {
+                if (nameCtrl.text.trim().isNotEmpty) return true;
+                if (emailCtrl.text.trim() != (vetEmail ?? '')) return true;
+                if (addressCtrl.text.trim().isNotEmpty) return true;
+                if (phoneCtrl.text.trim() != '+60 ' && phoneCtrl.text.trim().isNotEmpty) return true;
+                if (mapsUrlCtrl.text.trim() != (initialMapsUrl ?? '')) return true;
+                if (latCtrl.text.trim().isNotEmpty) return true;
+                if (lngCtrl.text.trim().isNotEmpty) return true;
+                return false;
+              } else {
+                if (nameCtrl.text.trim() != existing.name) return true;
+                if (addressCtrl.text.trim() != existing.address) return true;
+                if (phoneCtrl.text.trim() != BookingService.formatPhoneWithHyphen(existing.phone)) return true;
+                final origLat = (existing.latitude != 0.0 && existing.latitude != 5.4164) ? existing.latitude.toString() : '';
+                final origLng = (existing.longitude != 0.0 && existing.longitude != 100.3327) ? existing.longitude.toString() : '';
+                if (latCtrl.text.trim() != origLat) return true;
+                if (lngCtrl.text.trim() != origLng) return true;
+                return false;
+              }
+            }
+
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop) return;
+                if (isSaving || !checkUnsavedChanges()) {
+                  Navigator.of(context).pop();
+                  return;
+                }
+                final bool shouldDiscard = await showUnsavedChangesDialog(context);
+                if (shouldDiscard && context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 16,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                            onPressed: () {
-                              FocusScope.of(context).unfocus();
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              existing == null ? Icons.add_business_rounded : Icons.edit_location_alt_rounded,
+                              color: _yaleBlue,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                existing == null ? "Register New Clinic" : "Edit Clinic Profile",
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: _darkText,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                              onPressed: () {
+                                FocusScope.of(context).unfocus();
+                                Navigator.maybePop(context);
+                              },
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 4),
                       Text(
                         "Register veterinary clinic profile. Operating hours and offered services are managed directly by Vet Personnel.",
@@ -780,7 +815,7 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                                   ? null
                                   : () {
                                       FocusScope.of(context).unfocus();
-                                      Navigator.pop(context);
+                                      Navigator.maybePop(context);
                                     },
                               child: Text("Cancel", style: TextStyle(color: _darkText, fontWeight: FontWeight.bold)),
                             ),
@@ -936,10 +971,10 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                   ),
                 ),
               ),
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }

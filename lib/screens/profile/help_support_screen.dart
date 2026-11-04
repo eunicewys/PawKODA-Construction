@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../widgets/fringe_header.dart';
 
 /// HelpSupportScreen: Displays searchable FAQ questions & solutions and
@@ -115,63 +115,82 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 16,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(Icons.support_agent_rounded, color: _dustyOlive, size: 22),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Report Problem / Contact Support",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: _darkCharcoal,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+            bool checkUnsavedChanges() {
+              if (subjectCtrl.text.trim().isNotEmpty) return true;
+              if (messageCtrl.text.trim().isNotEmpty) return true;
+              if (selectedCategory != 'General Issue') return true;
+              return false;
+            }
+
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop) return;
+                if (isSubmitting || !checkUnsavedChanges()) {
+                  Navigator.of(context).pop();
+                  return;
+                }
+                final bool shouldDiscard = await showUnsavedChangesDialog(context);
+                if (shouldDiscard && context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 16,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, size: 22, color: Colors.grey),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            tooltip: "Close",
-                            onPressed: () {
-                              FocusScope.of(context).unfocus();
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(Icons.support_agent_rounded, color: _dustyOlive, size: 22),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Report Problem / Contact Support",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: _darkCharcoal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 22, color: Colors.grey),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: "Close",
+                              onPressed: () {
+                                FocusScope.of(context).unfocus();
+                                Navigator.maybePop(context);
+                              },
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 4),
                       Text(
                         "Submit an inquiry to our support desk. We will respond within 24 hours.",
@@ -253,7 +272,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                                     ? null
                                     : () {
                                         FocusScope.of(context).unfocus();
-                                        Navigator.pop(context);
+                                        Navigator.maybePop(context);
                                       },
                                 child: Text("Cancel", style: TextStyle(color: _darkCharcoal, fontWeight: FontWeight.bold, fontSize: 13)),
                               ),
@@ -354,10 +373,10 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   ),
                 ),
               ),
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 

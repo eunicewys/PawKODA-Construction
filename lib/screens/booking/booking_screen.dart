@@ -14,6 +14,7 @@ import '../../services/pet_service.dart';
 import '../../services/booking_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_notification_service.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../widgets/fringe_header.dart';
 import '../widgets/offline_banner.dart';
 
@@ -1992,12 +1993,34 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (modalCtx, setMState) {
-            return StreamBuilder<List<BookingModel>>(
-              stream: _bookingService.streamClinicActiveBookings(clinic.id),
-              builder: (context, bookingSnapshot) {
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setMState) {
+            bool checkUnsavedChanges() {
+              if (selectedPet != null) return true;
+              if (selectedDate != null) return true;
+              if (selectedTime.isNotEmpty) return true;
+              if (selectedVet != '-- Select if any --') return true;
+              if (notesCtrl.text.trim().isNotEmpty) return true;
+              if (clinic.services.isNotEmpty && selectedService != clinic.services.first) return true;
+              return false;
+            }
+
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop) return;
+                if (!checkUnsavedChanges()) {
+                  Navigator.of(modalCtx).pop();
+                  return;
+                }
+                final bool shouldDiscard = await showUnsavedChangesDialog(modalCtx);
+                if (shouldDiscard && modalCtx.mounted) {
+                  Navigator.of(modalCtx).pop();
+                }
+              },
+              child: StreamBuilder<List<BookingModel>>(
+                stream: _bookingService.streamClinicActiveBookings(clinic.id),
+                builder: (context, bookingSnapshot) {
                 final activeClinicBookings = bookingSnapshot.data ?? [];
 
                 return Container(
@@ -2688,10 +2711,10 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                   ),
                 );
               },
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 

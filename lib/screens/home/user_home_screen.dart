@@ -10,6 +10,7 @@ import '../../providers/connectivity_provider.dart';
 import '../../models/pet_model.dart';
 import '../../services/pet_service.dart';
 import '../../utils/image_helper.dart';
+import '../../utils/unsaved_changes_dialog.dart';
 import '../login_screen.dart';
 import '../nutrition/nutrition_engine_screen.dart';
 import '../nutrition/saved_recipes_screen.dart';
@@ -499,15 +500,43 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setMState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.85,
-              decoration: BoxDecoration(
-                color: _desertSand,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-              ),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
+          bool checkUnsavedChanges() {
+            if (weightCtrl.text.trim() != "1.0" && weightCtrl.text.trim().isNotEmpty) return true;
+            if (otherAllergenCtrl.text.trim().isNotEmpty) return true;
+            if (selectedSpecies != null) return true;
+            if (selectedGender != null) return true;
+            if (selectedReproductive != null) return true;
+            if (isPregnant) return true;
+            if (isNursing) return true;
+            if (selectedBreed != null) return true;
+            if (selectedBirthDate != null) return true;
+            if (selectedAllergens.isNotEmpty) return true;
+            if (hasNoAllergies) return true;
+            return false;
+          }
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              if (!checkUnsavedChanges()) {
+                Navigator.of(context).pop();
+                return;
+              }
+              final bool shouldDiscard = await showUnsavedChangesDialog(context);
+              if (shouldDiscard && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                decoration: BoxDecoration(
+                  color: _desertSand,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -891,10 +920,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               ),
             ),
           ),
-        );
-      },
-    ),
-  );
+        ),
+      );
+    },
+  ),
+);
 }
 
 
@@ -930,15 +960,45 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setMState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.85,
-              decoration: BoxDecoration(
-                color: _desertSand, // Changed to Desert Sand as requested
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-              ),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
+          bool checkUnsavedChanges() {
+            if (nameCtrl.text.trim().isNotEmpty) return true;
+            if (weightCtrl.text.trim() != "1.0" && weightCtrl.text.trim().isNotEmpty) return true;
+            if (otherAllergenCtrl.text.trim().isNotEmpty) return true;
+            if (selectedSpecies != null) return true;
+            if (selectedGender != null) return true;
+            if (selectedReproductive != null) return true;
+            if (isPregnant) return true;
+            if (isNursing) return true;
+            if (selectedBreed != null) return true;
+            if (selectedBirthDate != null) return true;
+            if (petImage != null) return true;
+            if (selectedAllergens.isNotEmpty) return true;
+            if (hasNoAllergies) return true;
+            return false;
+          }
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              if (isSaving || !checkUnsavedChanges()) {
+                Navigator.of(context).pop();
+                return;
+              }
+              final bool shouldDiscard = await showUnsavedChangesDialog(context);
+              if (shouldDiscard && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                decoration: BoxDecoration(
+                  color: _desertSand, // Changed to Desert Sand as requested
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 25),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1382,10 +1442,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               ),
             ),
           ),
-        );
-      },
-    ),
-  );
+        ),
+      );
+    },
+  ),
+);
 }
 
   void _showImageSourceSheet(StateSetter setMState, Function(XFile?) onImagePicked) {
