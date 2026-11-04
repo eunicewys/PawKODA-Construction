@@ -1721,15 +1721,16 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   ) {
     final String trimmed = vetName.trim();
     if (trimmed.isEmpty || trimmed == 'Any Available Vet' || trimmed.startsWith('--')) {
-      return defaultSlots; // No specific vet chosen: return all main available clinic slots
+      return defaultSlots; // No specific vet chosen: return all clinic operating slots
     }
 
     if (clinic != null) {
-      final vetSlots = clinic.getSlotsForDoctor(trimmed);
-      if (vetSlots.isNotEmpty) {
-        final filtered = defaultSlots.where((s) => vetSlots.contains(s)).toList();
-        return filtered.isNotEmpty ? filtered : vetSlots;
+      if (!clinic.isDoctorAvailable(trimmed)) {
+        return []; // Doctor is off-duty / unavailable
       }
+      final vetSlots = clinic.getSlotsForDoctor(trimmed);
+      if (vetSlots.isEmpty) return [];
+      return defaultSlots.where((s) => vetSlots.contains(s)).toList();
     }
 
     return defaultSlots;
@@ -1741,28 +1742,31 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     ClinicModel? clinic,
     String selectedVet = '',
   }) {
-    // Filter time slots based on doctor personnel schedule/availability
+    // Filter time slots strictly based on doctor personnel schedule/availability
     final vetWorkingSlots = _getVetWorkingSlots(selectedVet, allSlots, clinic);
 
+    List<String> resultSlots = [];
     final now = DateTime.now();
     final bool isToday = date.year == now.year && date.month == now.month && date.day == now.day;
 
     if (!isToday) {
-      return vetWorkingSlots;
-    }
-
-    // If current time is after 5:00 PM (17:00), same-day bookings are closed
-    if (now.hour >= 17) {
+      resultSlots = List<String>.from(vetWorkingSlots);
+    } else if (now.hour >= 17) {
+      // If current time is after 5:00 PM (17:00), same-day bookings are closed
       return [];
+    } else {
+      // Slots must be at least 3 hours later than current time
+      final minAllowedTime = now.add(const Duration(hours: 3));
+
+      resultSlots = vetWorkingSlots.where((slot) {
+        final slotDateTime = _parseTimeSlot(date, slot);
+        return !slotDateTime.isBefore(minAllowedTime);
+      }).toList();
     }
 
-    // Slots must be at least 3 hours later than current time
-    final minAllowedTime = now.add(const Duration(hours: 3));
-
-    return vetWorkingSlots.where((slot) {
-      final slotDateTime = _parseTimeSlot(date, slot);
-      return !slotDateTime.isBefore(minAllowedTime);
-    }).toList();
+    // Always sort time slots strictly from earliest to latest (e.g. 08:00 AM to 07:00 PM)
+    resultSlots.sort((a, b) => ClinicModel.parseTimeToMinutesStatic(a).compareTo(ClinicModel.parseTimeToMinutesStatic(b)));
+    return resultSlots;
   }
 
   /// Check if a specific time slot on a specific date is booked (PENDING or CONFIRMED)
@@ -1771,30 +1775,52 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     required String slot,
     required String selectedVet,
     required List<BookingModel> activeBookings,
+    ClinicModel? clinic,
   }) {
     final String targetSlot = slot.trim().toLowerCase();
     final String sVet = selectedVet.trim();
     final bool sIsAny = sVet.isEmpty || sVet == 'Any Available Vet' || sVet.startsWith('--');
 
-    return activeBookings.any((b) {
+    final matchingBookings = activeBookings.where((b) {
       final bool sameDate = b.bookingDate.year == date.year &&
           b.bookingDate.month == date.month &&
           b.bookingDate.day == date.day;
       if (!sameDate) return false;
 
-      final bool sameSlot = b.timeSlot.trim().toLowerCase() == targetSlot;
-      if (!sameSlot) return false;
+      return b.timeSlot.trim().toLowerCase() == targetSlot;
+    }).toList();
 
-      final String bVet = b.preferredVet.trim();
-      final bool bIsAny = bVet.isEmpty || bVet == 'Any Available Vet' || bVet.startsWith('--');
+    if (matchingBookings.isEmpty) return false;
 
-      // If either user requested "Any Available Vet", or both requested the same vet, lock slot
-      if (sIsAny || bIsAny) {
-        return true;
+    // Dynamic slot capacity: max(1, count of available doctors working this time slot)
+    int totalWorkingDocsCount = 1;
+    if (clinic != null && clinic.veterinarians.isNotEmpty) {
+      final availableVetsWorkingThisSlot = clinic.veterinarians.where((v) {
+        if (!clinic.isDoctorAvailable(v)) return false;
+        final slots = clinic.getSlotsForDoctor(v);
+        return slots.contains(slot);
+      }).toList();
+      if (availableVetsWorkingThisSlot.isNotEmpty) {
+        totalWorkingDocsCount = availableVetsWorkingThisSlot.length;
       }
+    }
 
-      return bVet.toLowerCase() == sVet.toLowerCase();
-    });
+    if (!sIsAny) {
+      // Specific doctor selected by user (e.g. Doctor B):
+      // Lock only if Doctor B is individually booked OR if all capacity is full
+      final bool isDocIndividuallyBooked = matchingBookings.any((b) {
+        final String bVet = b.preferredVet.trim();
+        return bVet.toLowerCase() == sVet.toLowerCase();
+      });
+
+      if (isDocIndividuallyBooked) return true;
+
+      return matchingBookings.length >= totalWorkingDocsCount;
+    } else {
+      // 'Any Available Vet' selected by user:
+      // Locked ONLY IF matching bookings >= dynamic slot capacity max(1, N)
+      return matchingBookings.length >= totalWorkingDocsCount;
+    }
   }
 
   /// Check if all available time slots on a specific date are booked
@@ -1815,6 +1841,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       slot: slot,
       selectedVet: selectedVet,
       activeBookings: activeBookings,
+      clinic: clinic,
     ));
   }
 
@@ -1959,18 +1986,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     PetProfile? selectedPet;
     final notesCtrl = TextEditingController();
 
-    final timeSlots = clinic.operatingTimeSlots.isNotEmpty
-        ? clinic.operatingTimeSlots
-        : [
-            '08:00 AM',
-            '09:00 AM',
-            '10:30 AM',
-            '11:45 AM',
-            '02:00 PM',
-            '03:30 PM',
-            '05:00 PM',
-            '07:30 PM',
-          ];
+    final timeSlots = clinic.operatingTimeSlots;
 
     showModalBottomSheet(
       context: context,
@@ -2420,6 +2436,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                         slot: selectedTime,
                                         selectedVet: selectedVet,
                                         activeBookings: activeClinicBookings,
+                                        clinic: clinic,
                                       ) ||
                                       !slotsForDay.contains(selectedTime))) {
                                 selectedTime = '';
@@ -2459,6 +2476,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                           slot: slot,
                                           selectedVet: selectedVet,
                                           activeBookings: activeClinicBookings,
+                                          clinic: clinic,
                                         );
                                         final isSel = selectedTime == slot;
 
@@ -2573,6 +2591,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                 slot: selectedTime,
                                 selectedVet: selectedVet,
                                 activeBookings: activeClinicBookings,
+                                clinic: clinic,
                               );
 
                               if (doubleCheckLocked) {

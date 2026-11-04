@@ -864,7 +864,9 @@ class _ClinicsRegistryScreenState extends State<ClinicsRegistryScreen> {
                                         longitude: lng,
                                         services: existing?.services ?? const [],
                                         veterinarians: existing?.veterinarians ?? const [],
+                                        doctorSchedules: existing?.doctorSchedules ?? const [],
                                         operatingDays: existing?.operatingDays ?? const [],
+                                        operatingTimeSlots: existing?.operatingTimeSlots ?? const [],
                                         isAcceptingBookings: existing?.isAcceptingBookings ?? false,
                                       );
 

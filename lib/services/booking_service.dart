@@ -291,11 +291,28 @@ class BookingService {
 
     final bool isAnyVet = vetKey.contains('any') || vetKey.startsWith('--') || vetKey.isEmpty;
 
-    final String specificLockDocId = '${booking.clinicId}_${dateKey}_${vetKey}_$slotKey';
-    final String anyVetLockDocId = '${booking.clinicId}_${dateKey}_any_vet_$slotKey';
+    // Fetch clinic model to determine working doctors for this time slot
+    ClinicModel? clinic;
+    try {
+      final clinicDoc = await _db.collection('CLINICS').doc(booking.clinicId).get();
+      if (clinicDoc.exists && clinicDoc.data() != null) {
+        clinic = ClinicModel.fromMap(clinicDoc.data()!, clinicDoc.id);
+      }
+    } catch (_) {}
 
-    final DocumentReference specificLockRef = _db.collection('CLINIC_SLOT_LOCKS').doc(specificLockDocId);
-    final DocumentReference anyVetLockRef = _db.collection('CLINIC_SLOT_LOCKS').doc(anyVetLockDocId);
+    // Find all available doctors at this clinic who work this specific time slot
+    List<String> workingVets = [];
+    if (clinic != null && clinic.veterinarians.isNotEmpty) {
+      workingVets = clinic.veterinarians.where((v) {
+        if (!clinic!.isDoctorAvailable(v)) return false;
+        final slots = clinic.getSlotsForDoctor(v);
+        return slots.contains(booking.timeSlot);
+      }).toList();
+    }
+
+    if (workingVets.isEmpty) {
+      workingVets = ['Duty Veterinarian'];
+    }
 
     final DocumentReference userBookingRef = _db
         .collection('USERS')
@@ -303,47 +320,80 @@ class BookingService {
         .collection('BOOKINGS')
         .doc(); // Auto-generate ID
 
-    await _db.runTransaction((transaction) async {
-      // 1. Read existing lock documents atomically
-      final DocumentSnapshot specificLockSnap = await transaction.get(specificLockRef);
-      final DocumentSnapshot anyVetLockSnap = await transaction.get(anyVetLockRef);
+    if (!isAnyVet) {
+      // Specific Doctor Requested (locks specifically that doctor)
+      final String specificLockDocId = '${booking.clinicId}_${dateKey}_${vetKey}_$slotKey';
+      final DocumentReference specificLockRef = _db.collection('CLINIC_SLOT_LOCKS').doc(specificLockDocId);
 
-      // 2. Check for conflicts
-      if (specificLockSnap.exists) {
-        throw FirebaseException(
-          plugin: 'cloud_firestore',
-          code: 'already-exists',
-          message: 'Sorry! This time slot for ${booking.preferredVet} was just booked by another user. Please select another time slot or day.',
-        );
-      }
+      await _db.runTransaction((transaction) async {
+        final DocumentSnapshot lockSnap = await transaction.get(specificLockRef);
+        if (lockSnap.exists) {
+          throw FirebaseException(
+            plugin: 'cloud_firestore',
+            code: 'already-exists',
+            message: 'Sorry! This time slot for ${booking.preferredVet} was just booked by another user. Please select another time slot or day.',
+          );
+        }
 
-      if (anyVetLockSnap.exists) {
-        throw FirebaseException(
-          plugin: 'cloud_firestore',
-          code: 'already-exists',
-          message: 'Sorry! This time slot at ${booking.clinicName} was just booked by another user. Please select another time slot or day.',
-        );
-      }
+        final Map<String, dynamic> lockData = {
+          'clinicId': booking.clinicId,
+          'bookingDate': dateKey,
+          'timeSlot': booking.timeSlot,
+          'preferredVet': booking.preferredVet,
+          'userId': booking.userId,
+          'bookingId': userBookingRef.id,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
 
-      // 3. Write atomic locks
-      final Map<String, dynamic> lockData = {
-        'clinicId': booking.clinicId,
-        'bookingDate': dateKey,
-        'timeSlot': booking.timeSlot,
-        'preferredVet': booking.preferredVet,
-        'userId': booking.userId,
-        'bookingId': userBookingRef.id,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+        transaction.set(specificLockRef, lockData);
+        transaction.set(userBookingRef, booking.toMap());
+      });
+    } else {
+      // "Any Available Vet" Requested (allocates to first unbooked doctor for this slot)
+      final List<DocumentReference> lockRefs = workingVets.map((v) {
+        final k = _slugify(v);
+        return _db.collection('CLINIC_SLOT_LOCKS').doc('${booking.clinicId}_${dateKey}_${k}_$slotKey');
+      }).toList();
 
-      transaction.set(specificLockRef, lockData);
-      if (!isAnyVet) {
-        transaction.set(anyVetLockRef, lockData);
-      }
+      await _db.runTransaction((transaction) async {
+        final List<DocumentSnapshot> snaps = [];
+        for (final ref in lockRefs) {
+          snaps.add(await transaction.get(ref));
+        }
 
-      // 4. Create the booking document
-      transaction.set(userBookingRef, booking.toMap());
-    });
+        int freeIndex = -1;
+        for (int i = 0; i < snaps.length; i++) {
+          if (!snaps[i].exists) {
+            freeIndex = i;
+            break;
+          }
+        }
+
+        if (freeIndex < 0) {
+          throw FirebaseException(
+            plugin: 'cloud_firestore',
+            code: 'already-exists',
+            message: 'Sorry! All doctors for this time slot at ${booking.clinicName} are fully booked. Please select another time slot or day.',
+          );
+        }
+
+        final String assignedVet = workingVets[freeIndex];
+        final DocumentReference selectedLockRef = lockRefs[freeIndex];
+
+        final Map<String, dynamic> lockData = {
+          'clinicId': booking.clinicId,
+          'bookingDate': dateKey,
+          'timeSlot': booking.timeSlot,
+          'preferredVet': assignedVet,
+          'userId': booking.userId,
+          'bookingId': userBookingRef.id,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+
+        transaction.set(selectedLockRef, lockData);
+        transaction.set(userBookingRef, booking.toMap());
+      });
+    }
 
     return userBookingRef.id;
   }

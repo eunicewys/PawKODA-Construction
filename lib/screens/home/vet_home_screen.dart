@@ -1121,7 +1121,9 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
       }
     }
 
-    return slots.toSet().toList(); // Ensure unique time slot choices
+    final List<String> uniqueSlots = slots.toSet().toList();
+    uniqueSlots.sort((a, b) => _parseTimeToMinutes(a).compareTo(_parseTimeToMinutes(b)));
+    return uniqueSlots;
   }
 
   int _parseTimeToMinutes(String timeStr) {
@@ -1202,15 +1204,43 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
         return;
       }
 
-      // If ALL 4 sections are fulfilled, enable accepting bookings
+      // If ALL 4 sections are fulfilled, enable accepting bookings with 100% full profile sync
       if (uid != null) {
-        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({'isAcceptingBookings': true});
-        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({'isAcceptingBookings': true}, SetOptions(merge: true));
+        Map<String, dynamic> fullData = {};
+        try {
+          final userDoc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
+          if (userDoc.exists && userDoc.data() != null) {
+            fullData = Map<String, dynamic>.from(userDoc.data()!);
+          }
+        } catch (_) {}
+
+        final String clinicName = fullData['clinicName'] ?? fullData['displayName'] ?? fullData['name'] ?? 'Veterinary Clinic';
+        List<String> vetsList = List<String>.from(fullData['veterinarians'] ?? []);
+        List<Map<String, dynamic>> doctorDetailsList = List<Map<String, dynamic>>.from(
+          (fullData['doctorDetails'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []
+        );
+
+        if (vetsList.isEmpty) {
+          vetsList = ['Duty Veterinarian ($clinicName)'];
+        }
+
+        final syncData = {
+          'isAcceptingBookings': true,
+          'operatingHours': currentHours,
+          'operatingDays': currentDays,
+          'operatingTimeSlots': currentTimeslots,
+          'services': currentServices,
+          'veterinarians': vetsList,
+          'doctorDetails': doctorDetailsList,
+        };
+
+        await FirebaseFirestore.instance.collection('USERS').doc(uid).set(syncData, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set(syncData, SetOptions(merge: true));
       }
     } else {
       // Disable accepting bookings
       if (uid != null) {
-        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({'isAcceptingBookings': false});
+        await FirebaseFirestore.instance.collection('USERS').doc(uid).set({'isAcceptingBookings': false}, SetOptions(merge: true));
         await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({'isAcceptingBookings': false}, SetOptions(merge: true));
       }
     }
@@ -1939,36 +1969,49 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
                                 if (confirmSave != true) return;
 
-                                // 3. Save to Firestore
+                                // 3. Save to Firestore with 100% full profile sync
                                 final uid = FirebaseAuth.instance.currentUser?.uid;
 
                                 List<String> currentServices = [];
+                                List<String> currentVets = [];
+                                List<Map<String, dynamic>> currentDoctors = [];
+                                String clinicName = 'Veterinary Clinic';
+
                                 if (uid != null) {
                                   try {
                                     final doc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
-                                    if (doc.exists) {
-                                      currentServices = List<String>.from(doc.data()?['services'] ?? []);
+                                    if (doc.exists && doc.data() != null) {
+                                      final data = doc.data()!;
+                                      clinicName = data['clinicName'] ?? data['displayName'] ?? data['name'] ?? 'Veterinary Clinic';
+                                      currentServices = List<String>.from(data['services'] ?? []);
+                                      currentVets = List<String>.from(data['veterinarians'] ?? []);
+                                      currentDoctors = List<Map<String, dynamic>>.from(
+                                        (data['doctorDetails'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []
+                                      );
                                     }
                                   } catch (_) {}
+                                }
+
+                                if (currentVets.isEmpty) {
+                                  currentVets = ['Duty Veterinarian ($clinicName)'];
                                 }
 
                                 final bool isFullyConfigured = currentServices.isNotEmpty;
 
                                 if (uid != null) {
-                                  await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
+                                  final updatePayload = {
                                     'operatingHours': formatted,
                                     'operatingDays': selectedDays,
                                     'operatingTimeSlots': selectedTimeSlots,
                                     'isAcceptingBookings': isFullyConfigured,
+                                    'services': currentServices,
+                                    'veterinarians': currentVets,
+                                    'doctorDetails': currentDoctors,
                                     'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
-                                  });
-                                  await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
-                                    'operatingHours': formatted,
-                                    'operatingDays': selectedDays,
-                                    'operatingTimeSlots': selectedTimeSlots,
-                                    'isAcceptingBookings': isFullyConfigured,
-                                    'lastHoursUpdatedAt': FieldValue.serverTimestamp(),
-                                  }, SetOptions(merge: true));
+                                  };
+
+                                  await FirebaseFirestore.instance.collection('USERS').doc(uid).set(updatePayload, SetOptions(merge: true));
+                                  await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set(updatePayload, SetOptions(merge: true));
                                 }
 
                                 if (context.mounted) {
@@ -2168,16 +2211,29 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       List<String> currentDays = [];
                       String currentHours = "";
                       List<String> currentSlots = [];
+                      List<String> currentVets = [];
+                      List<Map<String, dynamic>> currentDoctors = [];
+                      String clinicName = 'Veterinary Clinic';
+
                       if (uid != null) {
                         try {
                           final doc = await FirebaseFirestore.instance.collection('USERS').doc(uid).get();
-                          if (doc.exists) {
-                            final data = doc.data();
-                            currentDays = List<String>.from(data?['operatingDays'] ?? []);
-                            currentHours = (data?['operatingHours'] ?? "").toString();
-                            currentSlots = List<String>.from(data?['operatingTimeSlots'] ?? []);
+                          if (doc.exists && doc.data() != null) {
+                            final data = doc.data()!;
+                            clinicName = data['clinicName'] ?? data['displayName'] ?? data['name'] ?? 'Veterinary Clinic';
+                            currentDays = List<String>.from(data['operatingDays'] ?? []);
+                            currentHours = (data['operatingHours'] ?? "").toString();
+                            currentSlots = List<String>.from(data['operatingTimeSlots'] ?? []);
+                            currentVets = List<String>.from(data['veterinarians'] ?? []);
+                            currentDoctors = List<Map<String, dynamic>>.from(
+                              (data['doctorDetails'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []
+                            );
                           }
                         } catch (_) {}
+                      }
+
+                      if (currentVets.isEmpty) {
+                        currentVets = ['Duty Veterinarian ($clinicName)'];
                       }
 
                       final bool isFullyConfigured = selectedServices.isNotEmpty &&
@@ -2186,16 +2242,19 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                           currentSlots.isNotEmpty;
 
                       if (uid != null) {
-                        await FirebaseFirestore.instance.collection('USERS').doc(uid).update({
+                        final updatePayload = {
                           'services': selectedServices,
+                          'operatingHours': currentHours,
+                          'operatingDays': currentDays,
+                          'operatingTimeSlots': currentSlots,
+                          'veterinarians': currentVets,
+                          'doctorDetails': currentDoctors,
                           'isAcceptingBookings': isFullyConfigured,
                           'lastServicesUpdatedAt': FieldValue.serverTimestamp(),
-                        });
-                        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set({
-                          'services': selectedServices,
-                          'isAcceptingBookings': isFullyConfigured,
-                          'lastServicesUpdatedAt': FieldValue.serverTimestamp(),
-                        }, SetOptions(merge: true));
+                        };
+
+                        await FirebaseFirestore.instance.collection('USERS').doc(uid).set(updatePayload, SetOptions(merge: true));
+                        await FirebaseFirestore.instance.collection('CLINICS').doc(uid).set(updatePayload, SetOptions(merge: true));
                       }
                       if (context.mounted) {
                         Navigator.pop(ctx);

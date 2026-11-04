@@ -70,6 +70,9 @@ class ClinicModel {
     // 5. Operating days must be configured
     if (operatingDays.isEmpty) return false;
 
+    // 6. Operating time slots must be explicitly set (not empty)
+    if (operatingTimeSlots.isEmpty) return false;
+
     return true;
   }
 
@@ -102,8 +105,12 @@ class ClinicModel {
     if (doc.isEmpty) return true; // Default to available if not explicitly set
 
     final bool isAvailable = doc['isAvailable'] ?? true;
+    if (!isAvailable) return false;
+
     final List slots = (doc['timeSlots'] as List?) ?? [];
-    return isAvailable && slots.isNotEmpty;
+    if (doc.containsKey('timeSlots') && slots.isEmpty) return false;
+
+    return true;
   }
 
   static int parseTimeToMinutesStatic(String timeStr) {
@@ -138,13 +145,15 @@ class ClinicModel {
         rawSlots = List<String>.from(operatingTimeSlots);
       } else {
         final bool isAvailable = doc['isAvailable'] ?? true;
-        if (!isAvailable) return []; // Off-duty doctor has no available time slots
+        if (!isAvailable) return []; // Off-duty doctor has 0 available time slots
 
         final List slots = (doc['timeSlots'] as List?) ?? [];
-        if (slots.isEmpty) {
-          rawSlots = List<String>.from(operatingTimeSlots);
-        } else {
+        if (doc.containsKey('timeSlots') && slots.isEmpty) {
+          return []; // Doctor has no working time slots assigned
+        } else if (slots.isNotEmpty) {
           rawSlots = slots.map((s) => s.toString()).toList();
+        } else {
+          rawSlots = List<String>.from(operatingTimeSlots);
         }
       }
     }
@@ -270,6 +279,15 @@ class ClinicModel {
         ? doctorSchedules.map((d) => (d['name'] ?? '').toString()).where((n) => n.isNotEmpty).toList()
         : List<String>.from(map['veterinarians'] ?? []);
 
+    if (vetNames.isEmpty) {
+      final String docName = (map['displayName'] ?? map['clinicName'] ?? map['name'] ?? '').toString().trim();
+      if (docName.isNotEmpty) {
+        vetNames.add(docName.toLowerCase().startsWith('dr.') ? docName : 'Duty Veterinarian ($docName)');
+      } else {
+        vetNames.add('Duty Veterinarian');
+      }
+    }
+
     return ClinicModel(
       id: docId,
       name: name,
@@ -291,7 +309,8 @@ class ClinicModel {
       veterinarians: vetNames,
       doctorSchedules: doctorSchedules,
       operatingDays: List<String>.from(map['operatingDays'] ?? []),
-      operatingTimeSlots: List<String>.from(map['operatingTimeSlots'] ?? map['operatingSlots'] ?? []),
+      operatingTimeSlots: (List<String>.from(map['operatingTimeSlots'] ?? map['operatingSlots'] ?? []))
+        ..sort((a, b) => parseTimeToMinutesStatic(a).compareTo(parseTimeToMinutesStatic(b))),
       isAcceptingBookings: acceptingBookings,
       description: map['description'] ?? '',
     );

@@ -52,15 +52,15 @@ class HealthIssue {
 class VaccinationRecord {
   final String id;
   final String petId;
-  final String type; // Vaccine, Deworming
+  final String type; // vaccine, deworming
   final String doseName;
   final DateTime dateGiven;
   final String vetName;
   final String dosage;
-  final DateTime? dueDate; // Next due date
+  final DateTime? dueDate; // next due date
   final bool isCompleted;
   final String notes;
-  final String? reminderTime; // e.g. "9:0" or "14:30"
+  final String? reminderTime;
 
   VaccinationRecord({
     required this.id,
