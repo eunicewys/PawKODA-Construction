@@ -98,23 +98,23 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'mark_read',
                         child: Row(
                           children: [
-                            Icon(Icons.done_all, color: Colors.blue, size: 20),
-                            SizedBox(width: 8),
-                            Text("Mark all as read"),
+                            const Icon(Icons.done_all, color: Colors.blue, size: 20),
+                            const SizedBox(width: 8),
+                            const Text("Mark all as read"),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'clear_all',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                            SizedBox(width: 8),
-                            Text("Clear all notifications"),
+                            const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            const SizedBox(width: 8),
+                            const Text("Clear all notifications"),
                           ],
                         ),
                       ),
@@ -125,145 +125,161 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           Expanded(
             child: Column(
               children: [
-            // Master Switch Switch Card
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(10),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                // Compact Push Notifications Switch Card
+                Container(
+                  margin: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(10),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _powderPetal,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      _notificationsEnabled
-                          ? Icons.notifications_active_rounded
-                          : Icons.notifications_off_rounded,
-                      color: _dustyOlive,
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Push Notifications",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: _darkCharcoal,
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _powderPetal,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
+                        child: Icon(
                           _notificationsEnabled
-                              ? "Alerts for pet health, vaccines, and bookings are ON"
-                              : "Notifications are currently turned OFF",
-                          style: TextStyle(fontSize: 12, color: _ashGrey),
+                              ? Icons.notifications_active_rounded
+                              : Icons.notifications_off_rounded,
+                          color: _dustyOlive,
+                          size: 20,
                         ),
-                      ],
-                    ),
-                  ),
-                  _isLoadingPreference
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Switch(
-                          value: _notificationsEnabled,
-                          activeThumbColor: _dustyOlive,
-                          onChanged: _toggleNotificationPreference,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Push Notifications",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: _darkCharcoal,
+                              ),
+                            ),
+                            Text(
+                              _notificationsEnabled
+                                  ? "Health, vaccine & booking alerts ON"
+                                  : "Notifications are turned OFF",
+                              style: TextStyle(fontSize: 11, color: _ashGrey),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                ],
-              ),
-            ),
-
-            // Retention Rule Notice & Filter Section Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, size: 16, color: _lightBronze),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      "Past notifications are kept for 30 days, then automatically purged.",
-                      style: TextStyle(fontSize: 12, color: _darkCharcoal.withAlpha(200)),
-                    ),
+                      ),
+                      _isLoadingPreference
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Transform.scale(
+                              scale: 0.85,
+                              child: Switch(
+                                value: _notificationsEnabled,
+                                activeThumbColor: _dustyOlive,
+                                onChanged: _toggleNotificationPreference,
+                              ),
+                            ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            const SizedBox(height: 12),
+                // Compact Retention Note & Filter Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.history_rounded, size: 14, color: _dustyOlive),
+                          const SizedBox(width: 4),
+                          Text(
+                            "HISTORY:",
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _darkCharcoal, letterSpacing: 0.3),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 12, color: _lightBronze),
+                          const SizedBox(width: 3),
+                          Text(
+                            "30-day auto-purge",
+                            style: TextStyle(fontSize: 10, color: _darkCharcoal.withAlpha(180), fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
 
-            // Filter Chips Bar ("Past 7days", "Past 14days", "Past 21 days", "Past 30 days")
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildFilterChip("Past 7 days", 7),
-                  const SizedBox(width: 8),
-                  _buildFilterChip("Past 14 days", 14),
-                  const SizedBox(width: 8),
-                  _buildFilterChip("Past 21 days", 21),
-                  const SizedBox(width: 8),
-                  _buildFilterChip("Past 30 days", 30),
-                ],
-              ),
-            ),
+                const SizedBox(height: 6),
 
-            const SizedBox(height: 16),
+                // Filter Chips Bar ("7 Days", "14 Days", "21 Days", "30 Days")
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    children: [
+                      _buildFilterChip("7 Days", 7),
+                      const SizedBox(width: 6),
+                      _buildFilterChip("14 Days", 14),
+                      const SizedBox(width: 6),
+                      _buildFilterChip("21 Days", 21),
+                      const SizedBox(width: 6),
+                      _buildFilterChip("30 Days", 30),
+                    ],
+                  ),
+                ),
 
-            // Notifications List
-            Expanded(
-              child: StreamBuilder<List<UserNotificationModel>>(
-                stream: _notificationService.streamNotifications(uid, pastDays: _selectedDaysFilter),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
+                const SizedBox(height: 8),
 
-                  final notifications = snapshot.data ?? [];
+                // Notifications List
+                Expanded(
+                  child: StreamBuilder<List<UserNotificationModel>>(
+                    stream: _notificationService.streamNotifications(uid, pastDays: _selectedDaysFilter),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
 
-                  if (notifications.isEmpty) {
-                    return _buildEmptyState();
-                  }
+                      final notifications = snapshot.data ?? [];
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: notifications.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = notifications[index];
-                      return _buildNotificationCard(item);
+                      if (notifications.isEmpty) {
+                        return _buildEmptyState();
+                      }
+
+                      return ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        itemCount: notifications.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final item = notifications[index];
+                          return _buildNotificationCard(item);
+                        },
+                      );
                     },
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
     ],
   ),
 );
@@ -272,19 +288,23 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   Widget _buildFilterChip(String label, int days) {
     final bool isSelected = _selectedDaysFilter == days;
     return ChoiceChip(
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: EdgeInsets.zero,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      visualDensity: VisualDensity.compact,
       label: Text(
         label,
         style: TextStyle(
           color: isSelected ? Colors.white : _darkCharcoal,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          fontSize: 11,
         ),
       ),
       selected: isSelected,
       selectedColor: _dustyOlive,
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isSelected ? _dustyOlive : _ashGrey.withAlpha(80),
         ),
@@ -333,68 +353,77 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     return Container(
       decoration: BoxDecoration(
         color: item.isRead ? Colors.white : const Color(0xFFFFFDF5),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: item.isRead ? Colors.grey.withAlpha(30) : _lightBronze.withAlpha(120),
           width: item.isRead ? 1 : 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(8),
-            blurRadius: 6,
+            color: Colors.black.withAlpha(6),
+            blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: iconBg,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(iconData, color: iconColor, size: 22),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                item.title,
-                style: TextStyle(
-                  fontWeight: item.isRead ? FontWeight.w600 : FontWeight.bold,
-                  fontSize: 15,
-                  color: _darkCharcoal,
-                ),
-              ),
-            ),
-            if (!item.isRead)
-              Container(
-                margin: const EdgeInsets.only(left: 6),
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: _lightBronze,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
-            Text(
-              item.body,
-              style: TextStyle(
-                fontSize: 13,
-                color: _darkCharcoal.withAlpha(220),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBg,
+                shape: BoxShape.circle,
               ),
+              child: Icon(iconData, color: iconColor, size: 18),
             ),
-            const SizedBox(height: 6),
-            Text(
-              dateFormatted,
-              style: TextStyle(fontSize: 11, color: _ashGrey),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style: TextStyle(
+                            fontWeight: item.isRead ? FontWeight.w600 : FontWeight.bold,
+                            fontSize: 13,
+                            color: _darkCharcoal,
+                          ),
+                        ),
+                      ),
+                      if (!item.isRead)
+                        Container(
+                          margin: const EdgeInsets.only(left: 6),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _lightBronze,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    item.body,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _darkCharcoal.withAlpha(220),
+                      height: 1.25,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    dateFormatted,
+                    style: TextStyle(fontSize: 10, color: _ashGrey, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
