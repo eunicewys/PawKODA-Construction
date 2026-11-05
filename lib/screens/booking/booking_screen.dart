@@ -1283,7 +1283,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       badgeTextColor = Colors.orange.shade900;
       statusLabel = "Pending";
     } else {
-      // CONFIRMED
       if (isPast) {
         badgeBgColor = Colors.grey.withValues(alpha: 0.18);
         badgeTextColor = Colors.grey.shade800;
@@ -2620,7 +2619,8 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                 serviceType: selectedService,
                                 bookingDate: selectedDate!,
                                 timeSlot: selectedTime,
-                                preferredVet: (selectedVet.startsWith("--") || selectedVet.isEmpty) ? "Any Available Vet" : selectedVet,
+                                preferredVet: (selectedVet.startsWith("--") ||
+                                    selectedVet.isEmpty) ? "Any Available Vet" : selectedVet,
                                 notes: notesCtrl.text.trim(),
                                 status: 'PENDING',
                                 createdAt: DateTime.now(),
@@ -2632,18 +2632,20 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                 await NotificationService().showNotification(
                                   id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
                                   title: "Booking Submitted (Pending)",
-                                  body: "Your booking request with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime is pending vet confirmation.",
+                                  body: "Your booking request with ${clinic.name} for ${selectedPet!.name} "
+                                      "on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime is pending vet confirmation.",
                                 );
 
-                                // 1. Log notification for Pet Owner
+                                //log notification for Pet Owner
                                 await UserNotificationService().logNotification(
                                   userId: userId,
                                   title: "Booking Submitted (Pending)",
-                                  body: "Your booking request with ${clinic.name} for ${selectedPet!.name} on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime is pending vet confirmation.",
+                                  body: "Your booking request with ${clinic.name} for ${selectedPet!.name} "
+                                      "on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime is pending vet confirmation.",
                                   type: 'booking',
                                 );
 
-                                // 2. Log notification for Vet / Clinic
+                                //log notification for Vet / Clinic
                                 await UserNotificationService().logNotification(
                                   userId: clinic.id,
                                   title: "New Appointment Request",

@@ -15,9 +15,9 @@ class BookingModel {
   final String serviceType;
   final DateTime bookingDate;
   final String timeSlot;
-  final String preferredVet; // Optional preferred vet / surgeon
+  final String preferredVet; //optional
   final String notes;
-  final String status; // CONFIRMED, PENDING, COMPLETED, CANCELLED
+  final String status;
   final DateTime createdAt;
 
   const BookingModel({

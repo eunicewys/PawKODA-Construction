@@ -3402,7 +3402,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
 
                     await BookingService().updateBookingStatus(booking.userId, booking.id, 'CANCELLED');
                     
-                    // 1. Log notification for Pet Owner
+                    //log notification for owner
                     await UserNotificationService().logNotification(
                       userId: booking.userId,
                       title: "Booking Request Cancelled",
@@ -3439,22 +3439,24 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                   onPressed: () async {
                     await BookingService().updateBookingStatus(booking.userId, booking.id, 'CONFIRMED');
 
-                    // 1. Log notification for Pet Owner
+                    //log notification for owner
                     await UserNotificationService().logNotification(
                       userId: booking.userId,
                       title: "Booking Confirmed!",
-                      body: "${booking.clinicName} has confirmed your appointment for ${booking.petName} on $dateStr at ${booking.timeSlot}.",
+                      body: "${booking.clinicName} has confirmed your appointment for "
+                          "${booking.petName} on $dateStr at ${booking.timeSlot}.",
                       type: 'booking',
                     );
 
-                    // 2. Trigger push notification for Pet Owner
+                    //trigger push notification for owner
                     await NotificationService().showNotification(
                       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
                       title: "Booking Confirmed!",
-                      body: "${booking.clinicName} confirmed appointment for ${booking.petName} on $dateStr at ${booking.timeSlot}.",
+                      body: "${booking.clinicName} confirmed appointment for ${booking.petName} "
+                          "on $dateStr at ${booking.timeSlot}.",
                     );
 
-                    // 3. Schedule 3-days-before push notification for Pet Owner
+                    //schedule 3days before push notification for owner
                     await NotificationService().scheduleBookingReminder(
                       bookingId: booking.id,
                       petName: booking.petName,

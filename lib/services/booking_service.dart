@@ -118,19 +118,6 @@ class BookingService {
     }
   }
 
-  /// Stream live clinics strictly from Firestore `CLINICS` collection (100% registered clinics)
-  Stream<List<ClinicModel>> streamLiveClinics() {
-    purgeLegacySampleClinicsFromFirestore();
-    return _db.collection('CLINICS').snapshots().map((snapshot) {
-      return snapshot.docs
-          .where((doc) => !legacySampleIds.contains(doc.id) && !legacySampleIds.contains(doc.id.toLowerCase()))
-          .map((doc) {
-        final data = doc.data();
-        return ClinicModel.fromMap(data, doc.id);
-      }).toList();
-    });
-  }
-
   /// Get clinics list filtered by city & search term
   Future<List<ClinicModel>> getClinics({
     String selectedCity = 'All Cities (Penang)',
@@ -147,6 +134,19 @@ class BookingService {
       selectedCity: selectedCity,
       searchQuery: searchQuery,
     );
+  }
+
+  /// Stream live Penang vet clinics from Firestore CLINICS collection
+  Stream<List<ClinicModel>> streamLiveClinics() {
+    purgeLegacySampleClinicsFromFirestore();
+    return _db.collection('CLINICS').snapshots().map((snapshot) {
+      return snapshot.docs
+          .where((doc) =>
+              !legacySampleIds.contains(doc.id) &&
+              !legacySampleIds.contains(doc.id.toLowerCase()))
+          .map((doc) => ClinicModel.fromMap(doc.data(), doc.id))
+          .toList();
+    });
   }
 
   /// Direct Google Maps launcher specifically directing to the exact vet place
