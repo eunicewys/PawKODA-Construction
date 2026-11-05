@@ -83,9 +83,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   String _mapTileType = 'm'; // 'm' = Google Maps Standard, 's' = Satellite, 'y' = Hybrid
   final TextEditingController _searchCtrl = TextEditingController();
 
-  double? _userLat;
-  double? _userLng;
-
   bool _isBookingPast(BookingModel booking) {
     final statusUpper = booking.status.toUpperCase();
     if (statusUpper == 'COMPLETED' || statusUpper == 'CANCELLED') {
@@ -129,25 +126,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
-    _initUserLocation();
-  }
-
-  @override
-  void didUpdateWidget(covariant BookingScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialTabIndex != oldWidget.initialTabIndex) {
-      _tabController.animateTo(widget.initialTabIndex);
-    }
-  }
-
-  Future<void> _initUserLocation() async {
-    final pos = await _bookingService.getUserLocation();
-    if (pos != null && mounted) {
-      setState(() {
-        _userLat = pos.latitude;
-        _userLng = pos.longitude;
-      });
-    }
   }
 
   @override
@@ -251,8 +229,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         final rawClinics = snapshot.data ?? [];
         final filteredClinics = _bookingService.processClinicsList(
           rawClinics,
-          userLat: _userLat,
-          userLng: _userLng,
           selectedCity: _selectedCity,
           searchQuery: _searchQuery,
         );

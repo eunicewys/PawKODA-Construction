@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -22,10 +21,6 @@ class BookingService {
     'Balik Pulau',
     'Bukit Mertajam',
   ];
-
-  /// Penang Central Benchmark Location (George Town / Bayan Lepas center: 5.4164, 100.3327)
-  static const double defaultUserLat = 5.4164;
-  static const double defaultUserLng = 100.3327;
 
   /// Formats any phone number into Malaysian standard e.g. "+60 4-281 1228" or "+60 12-345 6789"
   static String formatPhoneWithHyphen(String raw) {
@@ -76,55 +71,28 @@ class BookingService {
     return ClinicModel.parseExactCoordinatesFromGoogleMapsUrl(mapsUrl, address, clinicName);
   }
 
-  /// Calculate precise geodesic distance between user's coordinates and vet clinic
-  static double calculateDistanceKm({
-    required double startLat,
-    required double startLng,
-    required double endLat,
-    required double endLng,
+  /// Process clinics list with city & search filters
+  List<ClinicModel> processClinicsList(
+    List<ClinicModel> rawClinics, {
+    double? userLat,
+    double? userLng,
+    String selectedCity = 'All Cities (Penang)',
+    String searchQuery = '',
   }) {
-    const double earthRadiusKm = 6371.0;
+    List<ClinicModel> filtered = rawClinics.where((clinic) {
+      final matchesCity = (selectedCity == 'All Cities (Penang)' || selectedCity == 'All' || selectedCity == 'All Cities') ||
+          clinic.city.toLowerCase().contains(selectedCity.toLowerCase()) ||
+          selectedCity.toLowerCase().contains(clinic.city.toLowerCase());
+      final matchesQuery = searchQuery.isEmpty ||
+          clinic.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          clinic.specialty.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          clinic.city.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          clinic.services.any((s) => s.toLowerCase().contains(searchQuery.toLowerCase()));
+      return matchesCity && matchesQuery;
+    }).toList();
 
-    double dLat = _degreesToRadians(endLat - startLat);
-    double dLng = _degreesToRadians(endLng - startLng);
-
-    double lat1 = _degreesToRadians(startLat);
-    double lat2 = _degreesToRadians(endLat);
-
-    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.sin(dLng / 2) * math.sin(dLng / 2) * math.cos(lat1) * math.cos(lat2);
-    double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-
-    return earthRadiusKm * c;
-  }
-
-  static double _degreesToRadians(double degrees) {
-    return degrees * math.pi / 180.0;
-  }
-
-  /// Get current user live GPS position
-  Future<Position?> getUserLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return null;
-      }
-      if (permission == LocationPermission.deniedForever) return null;
-
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 4),
-        ),
-      );
-    } catch (e) {
-      debugPrint("Location service error: $e");
-      return null;
-    }
+    filtered.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return filtered;
   }
 
   static const Set<String> legacySampleIds = {
@@ -163,46 +131,8 @@ class BookingService {
     });
   }
 
-  /// Process clinics list with GPS distances and filters
-  List<ClinicModel> processClinicsList(
-    List<ClinicModel> rawClinics, {
-    double? userLat,
-    double? userLng,
-    String selectedCity = 'All Cities (Penang)',
-    String searchQuery = '',
-  }) {
-    final double actualUserLat = userLat ?? defaultUserLat;
-    final double actualUserLng = userLng ?? defaultUserLng;
-
-    List<ClinicModel> calculated = rawClinics.map((clinic) {
-      double dist = calculateDistanceKm(
-        startLat: actualUserLat,
-        startLng: actualUserLng,
-        endLat: clinic.latitude,
-        endLng: clinic.longitude,
-      );
-      return clinic.copyWithDistance(dist);
-    }).toList();
-
-    calculated.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-
-    return calculated.where((clinic) {
-      final matchesCity = (selectedCity == 'All Cities (Penang)' || selectedCity == 'All' || selectedCity == 'All Cities') ||
-          clinic.city.toLowerCase().contains(selectedCity.toLowerCase()) ||
-          selectedCity.toLowerCase().contains(clinic.city.toLowerCase());
-      final matchesQuery = searchQuery.isEmpty ||
-          clinic.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          clinic.specialty.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          clinic.city.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          clinic.services.any((s) => s.toLowerCase().contains(searchQuery.toLowerCase()));
-      return matchesCity && matchesQuery;
-    }).toList();
-  }
-
-  /// Get clinics with precise distance calculated from user's place & sorted by nearest distance
+  /// Get clinics list filtered by city & search term
   Future<List<ClinicModel>> getClinics({
-    double? userLat,
-    double? userLng,
     String selectedCity = 'All Cities (Penang)',
     String searchQuery = '',
   }) async {
@@ -214,8 +144,6 @@ class BookingService {
         .toList();
     return processClinicsList(
       clinics,
-      userLat: userLat,
-      userLng: userLng,
       selectedCity: selectedCity,
       searchQuery: searchQuery,
     );
