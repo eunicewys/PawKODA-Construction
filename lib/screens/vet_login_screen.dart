@@ -190,6 +190,211 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
     );
   }
 
+  void _showForgotPasswordDialog() {
+    final TextEditingController resetEmailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isResetting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              backgroundColor: Colors.white,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: _coffeeBean.withAlpha(25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.lock_reset_rounded,
+                        color: _coffeeBean,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Reset Vet Password",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _darkText,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Enter your veterinary organization email address and we'll send you a password reset link.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _darkText.withAlpha(200),
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: resetEmailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: TextStyle(color: _darkText),
+                      decoration: InputDecoration(
+                        hintText: "clinic@vet.com",
+                        hintStyle: TextStyle(color: _fadedCopper.withAlpha(180), fontSize: 14),
+                        fillColor: _almondCream.withAlpha(80),
+                        filled: true,
+                        prefixIcon: Icon(Icons.email_outlined, color: _fadedCopper, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                side: BorderSide(color: _fadedCopper.withAlpha(120)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              onPressed: isResetting ? null : () => Navigator.pop(context),
+                              child: Text(
+                                "Cancel",
+                                maxLines: 1,
+                                softWrap: false,
+                                style: TextStyle(
+                                  color: _darkText,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _coffeeBean,
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                elevation: 0,
+                              ),
+                              onPressed: isResetting
+                                  ? null
+                                  : () async {
+                                      final email = resetEmailController.text.trim().toLowerCase();
+                                      if (email.isEmpty || !email.contains('@')) {
+                                        _showPawDialog(
+                                          "Invalid Email",
+                                          "Please enter a valid organization email address.",
+                                          isError: true,
+                                        );
+                                        return;
+                                      }
+
+                                      setDialogState(() => isResetting = true);
+
+                                      try {
+                                        debugPrint("[PasswordReset] Querying USERS collection for vet: $email");
+                                        // 1. Query Firestore USERS collection to check if email exists
+                                        final userQuery = await FirebaseFirestore.instance
+                                            .collection('USERS')
+                                            .where('email', isEqualTo: email)
+                                            .limit(1)
+                                            .get();
+
+                                        if (userQuery.docs.isEmpty) {
+                                          setDialogState(() => isResetting = false);
+                                          _showPawDialog("Reset Error", "This email is not registered.", isError: true);
+                                          return;
+                                        }
+
+                                        // 2. Email IS registered -> Send password reset link
+                                        debugPrint("[PasswordReset] Email found in USERS collection. Sending reset link...");
+                                        await FirebaseAuth.instance.setLanguageCode('en');
+                                        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                                        debugPrint("[PasswordReset] Reset email sent successfully.");
+
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          _showPawDialog(
+                                            "Reset Link Sent",
+                                            "A password reset link has been sent to $email.\n\nPlease check your Inbox, Spam, Junk, or Promotions folder.",
+                                            isError: false,
+                                          );
+                                        }
+                                      } on FirebaseException catch (e) {
+                                        debugPrint("[PasswordReset] FirebaseException: code=${e.code}, message=${e.message}");
+                                        setDialogState(() => isResetting = false);
+                                        if (e.code == 'permission-denied') {
+                                          _showPawDialog(
+                                            "Reset Error",
+                                            "Firestore security rules block email checking. Please update Firestore rules in Firebase Console to allow reading USERS collection.",
+                                            isError: true,
+                                          );
+                                        } else {
+                                          _showPawDialog("Reset Error", e.message ?? "An error occurred.", isError: true);
+                                        }
+                                      } catch (e) {
+                                        debugPrint("[PasswordReset] Exception: $e");
+                                        setDialogState(() => isResetting = false);
+                                        _showPawDialog("Reset Error", "Technical detail: $e", isError: true);
+                                      }
+                                    },
+                              child: isResetting
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        "Send Link",
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
@@ -202,7 +407,7 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
             // Main Content Column
             Column(
               children: [
-                // Top Section: Vet Branding Header
+                // Top Section: Vet Branding Header (Matches Owner Login screen height)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Column(
@@ -265,7 +470,29 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                             _buildField("ORGANIZATION EMAIL", _emailController, "clinic@vet.com", icon: Icons.email_outlined),
                             const SizedBox(height: 14),
                             _buildField("PASSWORD", _passwordController, "••••••••", isPass: true, icon: Icons.lock_outline),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 8),
+
+                            // Forgot Password Link
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(0, 26),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: _showForgotPasswordDialog,
+                                child: Text(
+                                  "Forgot Password?",
+                                  style: TextStyle(
+                                    color: _toffeeBrown,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
 
                             // Sign In Button
                             SizedBox(
@@ -283,11 +510,11 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                                         width: 22,
                                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                       )
-                                    : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                    : const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
                               ),
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
 
                             // Register Link
                             Center(
@@ -306,19 +533,20 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                                   child: Text.rich(
                                     TextSpan(
                                       text: "New Veterinary Organization? ",
-                                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                                       children: [
                                         TextSpan(
                                           text: "Register Here",
                                           style: TextStyle(
                                             color: _toffeeBrown,
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                            decoration: TextDecoration.underline,
+                                            fontSize: 13,
                                           ),
                                         ),
                                       ],
                                     ),
+                                    maxLines: 1,
+                                    softWrap: false,
                                   ),
                                 ),
                               ),

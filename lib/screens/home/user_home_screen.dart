@@ -828,10 +828,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ),
                     child: ListTile(
                       title: const Text("No Allergies", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black)),
-                      leading: Radio<bool>(
-                        value: true,
+                      leading: RadioGroup<bool>(
                         groupValue: hasNoAllergies,
-                        activeColor: _dustyOlive,
                         onChanged: (_) {
                           setMState(() {
                             hasNoAllergies = !hasNoAllergies;
@@ -841,6 +839,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                             }
                           });
                         },
+                        child: Radio<bool>(
+                          value: true,
+                          activeColor: _dustyOlive,
+                        ),
                       ),
                       onTap: () {
                         setMState(() {
@@ -1318,10 +1320,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     ),
                     child: ListTile(
                       title: const Text("No Allergies", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black)),
-                      leading: Radio<bool>(
-                        value: true,
+                      leading: RadioGroup<bool>(
                         groupValue: hasNoAllergies,
-                        activeColor: _dustyOlive,
                         onChanged: (_) {
                           setMState(() {
                             hasNoAllergies = !hasNoAllergies;
@@ -1331,6 +1331,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                             }
                           });
                         },
+                        child: Radio<bool>(
+                          value: true,
+                          activeColor: _dustyOlive,
+                        ),
                       ),
                       onTap: () {
                         setMState(() {

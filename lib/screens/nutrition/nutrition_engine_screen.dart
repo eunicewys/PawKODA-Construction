@@ -322,13 +322,6 @@ class _NutritionEngineScreenState extends State<NutritionEngineScreen> {
                     ),
                   ],
                 ),
-                if (provider.isSickPet && diseaseProfile.requiresIdealWeight) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    "Target Weight: ${provider.idealWeight.toStringAsFixed(1)} kg (BCS ${pet.bodyConditionScore}/9)",
-                    style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1509,6 +1502,28 @@ class PetFoodBowlPainter extends CustomPainter {
       );
     }
 
+    if (c.contains('fruit') || c.contains('berry')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFCE93D8),
+        darkColor: Color(0xFF8E24AA),
+        outlineColor: Color(0xFF4A148C),
+        shape: _KibbleShape.sphere,
+        width: 22,
+        height: 22,
+      );
+    }
+
+    if (c.contains('fish') || c.contains('salmon') || c.contains('seafood')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFFFAB91),
+        darkColor: Color(0xFFE64A19),
+        outlineColor: Color(0xFFBF360C),
+        shape: _KibbleShape.oval,
+        width: 26,
+        height: 16,
+      );
+    }
+
     if (c.contains('poultry') || c.contains('chicken') || c.contains('turkey')) {
       return const _KibbleStyle(
         lightColor: Color(0xFFFFA726),
@@ -1528,6 +1543,28 @@ class PetFoodBowlPainter extends CustomPainter {
         shape: _KibbleShape.sphere,
         width: 24,
         height: 20,
+      );
+    }
+
+    if (c.contains('egg') || c.contains('protein')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFFFE082),
+        darkColor: Color(0xFFFFB300),
+        outlineColor: Color(0xFFFF8F00),
+        shape: _KibbleShape.oval,
+        width: 24,
+        height: 18,
+      );
+    }
+
+    if (c.contains('toxic')) {
+      return const _KibbleStyle(
+        lightColor: Color(0xFFEF5350),
+        darkColor: Color(0xFFD32F2F),
+        outlineColor: Color(0xFFB71C1C),
+        shape: _KibbleShape.sphere,
+        width: 22,
+        height: 22,
       );
     }
 

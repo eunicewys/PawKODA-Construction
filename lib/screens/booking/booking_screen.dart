@@ -2634,6 +2634,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                   title: "Booking Submitted (Pending)",
                                   body: "Your booking request with ${clinic.name} for ${selectedPet!.name} "
                                       "on ${DateFormat('dd MMM').format(selectedDate!)} at $selectedTime is pending vet confirmation.",
+                                  petName: selectedPet!.name,
                                 );
 
                                 //log notification for Pet Owner

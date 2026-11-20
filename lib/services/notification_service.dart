@@ -238,7 +238,7 @@ class NotificationService {
         "<b>Treatment:</b> $treatmentName<br/>"
         "<b>Due Date:</b> $dateStr<br/><br/>"
         "Please arrange a vet appointment today to keep $petName's health booster schedule up to date.";
-    final String summaryText = "$petName • Health Reminder";
+    final String summaryText = petName;
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
@@ -253,6 +253,7 @@ class NotificationService {
       category: AndroidNotificationCategory.reminder,
       audioAttributesUsage: AudioAttributesUsage.notification,
       ticker: 'Pet Health Reminder',
+      subText: petName,
       autoCancel: true,
       styleInformation: BigTextStyleInformation(
         bigText,
@@ -383,7 +384,7 @@ class NotificationService {
         "<b>Appointment Date:</b> $apptDateStr<br/>"
         "<b>Time Slot:</b> $timeSlot<br/><br/>"
         "Your appointment is in 3 days. Please arrive 10 minutes before your scheduled time slot.";
-    final String summaryText = "$petName • Appointment Reminder";
+    final String summaryText = petName;
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       healthChannelId,
@@ -397,6 +398,7 @@ class NotificationService {
       visibility: NotificationVisibility.public,
       category: AndroidNotificationCategory.reminder,
       audioAttributesUsage: AudioAttributesUsage.notification,
+      subText: petName,
       styleInformation: BigTextStyleInformation(
         bigText,
         htmlFormatBigText: true,
@@ -450,6 +452,7 @@ class NotificationService {
     dynamic rawId,
     required String title,
     required String body,
+    String? petName,
     String? payload,
   }) async {
     final int safeId = _toSafeNotificationId(rawId ?? baseId ?? id ?? title);
@@ -470,11 +473,14 @@ class NotificationService {
       visibility: NotificationVisibility.public,
       category: AndroidNotificationCategory.reminder,
       audioAttributesUsage: AudioAttributesUsage.notification,
+      subText: petName,
       styleInformation: BigTextStyleInformation(
         bigText,
         htmlFormatBigText: true,
         contentTitle: title,
         htmlFormatContentTitle: true,
+        summaryText: petName,
+        htmlFormatSummaryText: true,
       ),
     );
 

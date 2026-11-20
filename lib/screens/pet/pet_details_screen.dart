@@ -413,16 +413,24 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "Diagnosed: ${DateFormat('dd MMM yyyy').format(issue.diagnosisDate)}",
-                            style: TextStyle(fontSize: 12, color: _ashGrey, fontWeight: FontWeight.bold),
+                          Flexible(
+                            child: Text(
+                              "Diagnosed: ${DateFormat('dd MMM yyyy').format(issue.diagnosisDate)}",
+                              style: TextStyle(fontSize: 12, color: _ashGrey, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          Text(
-                            "Status: ${issue.status}",
-                            style: TextStyle(
-                              fontSize: 12, 
-                              fontWeight: FontWeight.bold, 
-                              color: issue.status.toLowerCase() == 'recovered' ? Colors.green : _darkCharcoal
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              "Status: ${issue.status}",
+                              textAlign: TextAlign.end,
+                              style: TextStyle(
+                                fontSize: 12, 
+                                fontWeight: FontWeight.bold, 
+                                color: issue.status.toLowerCase() == 'recovered' ? Colors.green : _darkCharcoal,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -1247,7 +1255,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
   Widget _buildCheckbox(String l, bool v, Function(bool?) o) => CheckboxListTile(title: Text(l, style: const TextStyle(fontSize: 13)), value: v, onChanged: o, controlAffinity: ListTileControlAffinity.leading, dense: true, contentPadding: EdgeInsets.zero);
   Widget _buildStepperButton(IconData i, VoidCallback t) => Container(width: 44, height: 44, decoration: BoxDecoration(color: _dustyOlive, borderRadius: BorderRadius.circular(12)), child: IconButton(icon: Icon(i, color: Colors.white, size: 18), onPressed: t));
-  Widget _buildNoAllergyOption(bool v, VoidCallback onToggle) => Container(decoration: BoxDecoration(color: Colors.white.withAlpha(100), borderRadius: BorderRadius.circular(12)), child: ListTile(title: const Text("No Allergies", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black)), leading: Radio<bool>(value: true, groupValue: v, activeColor: _dustyOlive, onChanged: (_) => onToggle()), onTap: onToggle, contentPadding: const EdgeInsets.symmetric(horizontal: 8), dense: true));
+  Widget _buildNoAllergyOption(bool v, VoidCallback onToggle) => Container(decoration: BoxDecoration(color: Colors.white.withAlpha(100), borderRadius: BorderRadius.circular(12)), child: ListTile(title: const Text("No Allergies", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black)), leading: RadioGroup<bool>(groupValue: v, onChanged: (_) => onToggle(), child: Radio<bool>(value: true, activeColor: _dustyOlive)), onTap: onToggle, contentPadding: const EdgeInsets.symmetric(horizontal: 8), dense: true));
 
   void _showErrorDialog(String t, String m) {
     showDialog(

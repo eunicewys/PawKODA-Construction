@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        _showPawDialog("Access Error", "User profile not found in database.", isError: true);
+        _showPawDialog("Access Error", "User profile not found.", isError: true);
       }
     } on FirebaseAuthException catch (e) {
       String errorMsg = "Login failed.";
@@ -137,70 +137,277 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: bgAlphaColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
-                  color: mainColor,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _darkText,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _darkText.withAlpha(200),
-                  fontSize: 14,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: mainColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: bgAlphaColor,
+                    shape: BoxShape.circle,
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    "Okay",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  child: Icon(
+                    isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+                    color: mainColor,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _darkText,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _darkText.withAlpha(200),
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      "Okay",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  void _showForgotPasswordDialog() {
+    final TextEditingController resetEmailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isResetting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              backgroundColor: Colors.white,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: _dustyOlive.withAlpha(25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.lock_reset_rounded,
+                          color: _dustyOlive,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    Text(
+                      "Reset Password",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _darkText,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Enter your account email address and we'll send you a password reset link.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _darkText.withAlpha(200),
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: resetEmailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: TextStyle(color: _darkText),
+                      decoration: InputDecoration(
+                        hintText: "hello@pawkoda.com",
+                        hintStyle: TextStyle(color: _ashGrey.withAlpha(180), fontSize: 14),
+                        fillColor: _powderPetal.withAlpha(50),
+                        filled: true,
+                        prefixIcon: Icon(Icons.email_outlined, color: _ashGrey, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                side: BorderSide(color: _ashGrey.withAlpha(120)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              onPressed: isResetting ? null : () => Navigator.pop(context),
+                              child: Text(
+                                "Cancel",
+                                maxLines: 1,
+                                softWrap: false,
+                                style: TextStyle(
+                                  color: _darkText,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _dustyOlive,
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                elevation: 0,
+                              ),
+                              onPressed: isResetting
+                                  ? null
+                                  : () async {
+                                      final email = resetEmailController.text.trim().toLowerCase();
+                                      if (email.isEmpty || !email.contains('@')) {
+                                        _showPawDialog(
+                                          "Invalid Email",
+                                          "Please enter a valid email address.",
+                                          isError: true,
+                                        );
+                                        return;
+                                      }
+
+                                      setDialogState(() => isResetting = true);
+
+                                      try {
+                                        debugPrint("[PasswordReset] Querying USERS collection for: $email");
+                                        // 1. Query Firestore USERS collection to check if email exists
+                                        final userQuery = await FirebaseFirestore.instance
+                                            .collection('USERS')
+                                            .where('email', isEqualTo: email)
+                                            .limit(1)
+                                            .get();
+
+                                        if (userQuery.docs.isEmpty) {
+                                          setDialogState(() => isResetting = false);
+                                          _showPawDialog("Reset Error", "This email is not registered.", isError: true);
+                                          return;
+                                        }
+
+                                        // 2. Email IS registered -> Send password reset link
+                                        debugPrint("[PasswordReset] Email found in USERS collection. Sending reset link...");
+                                        await FirebaseAuth.instance.setLanguageCode('en');
+                                        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                                        debugPrint("[PasswordReset] Reset email sent successfully.");
+
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          _showPawDialog(
+                                            "Reset Link Sent",
+                                            "A password reset link has been sent to $email.\n\nPlease check your Inbox, Spam, Junk, or Promotions folder.",
+                                            isError: false,
+                                          );
+                                        }
+                                      } on FirebaseException catch (e) {
+                                        debugPrint("[PasswordReset] FirebaseException: code=${e.code}, message=${e.message}");
+                                        setDialogState(() => isResetting = false);
+                                        if (e.code == 'permission-denied') {
+                                          _showPawDialog(
+                                            "Reset Error",
+                                            "Firestore security rules block email checking. Please update Firestore rules in Firebase Console to allow reading USERS collection.",
+                                            isError: true,
+                                          );
+                                        } else {
+                                          _showPawDialog("Reset Error", e.message ?? "An error occurred.", isError: true);
+                                        }
+                                      } catch (e) {
+                                        debugPrint("[PasswordReset] Exception: $e");
+                                        setDialogState(() => isResetting = false);
+                                        _showPawDialog("Reset Error", "Technical detail: $e", isError: true);
+                                      }
+                                    },
+                              child: isResetting
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        "Send Link",
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          },
+        );
+      },
     );
   }
 
@@ -281,7 +488,29 @@ class _LoginScreenState extends State<LoginScreen> {
                             _buildField("EMAIL ADDRESS", _emailController, "hello@pawkoda.com"),
                             const SizedBox(height: 14),
                             _buildField("PASSWORD", _passwordController, "••••••••", isPass: true),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 8),
+                            
+                            // Forgot Password Link
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(0, 26),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: _showForgotPasswordDialog,
+                                child: Text(
+                                  "Forgot Password?",
+                                  style: TextStyle(
+                                    color: _lightBronze,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
                             
                             // The Sign In Button (Dusty Olive)
                             SizedBox(
@@ -306,17 +535,27 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 12),
                             Center(
                               child: TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
                                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
-                                child: Text.rich(
-                                  TextSpan(
-                                    text: "Don't have an account? ",
-                                    style: const TextStyle(color: Colors.grey, fontSize: 14),
-                                    children: [
-                                      TextSpan(
-                                        text: "Create Account",
-                                        style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 14),
-                                      )
-                                    ],
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text.rich(
+                                    TextSpan(
+                                      text: "Don't have an account? ",
+                                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                      children: [
+                                        TextSpan(
+                                          text: "Create Account",
+                                          style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 13),
+                                        )
+                                      ],
+                                    ),
+                                    maxLines: 1,
+                                    softWrap: false,
                                   ),
                                 ),
                               ),

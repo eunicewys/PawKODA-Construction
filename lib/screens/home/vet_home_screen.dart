@@ -3415,6 +3415,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
                       title: "Booking Cancelled",
                       body: "${booking.clinicName} cancelled booking request for ${booking.petName} on $dateStr at ${booking.timeSlot}.",
+                      petName: booking.petName,
                     );
 
                     if (context.mounted) {
@@ -3454,6 +3455,7 @@ class _VetHomeScreenState extends State<VetHomeScreen> {
                       title: "Booking Confirmed!",
                       body: "${booking.clinicName} confirmed appointment for ${booking.petName} "
                           "on $dateStr at ${booking.timeSlot}.",
+                      petName: booking.petName,
                     );
 
                     //schedule 3days before push notification for owner

@@ -5,11 +5,9 @@ import 'home/user_home_screen.dart';
 import 'home/vet_home_screen.dart';
 import 'home/admin_home_screen.dart';
 
-/**
- * HomeScreen: This is the "Switchboard" screen.
- * It doesn't show any UI itself, but instead checks the user's role 
- * from UserProvider and displays the correct Dashboard (Owner, Vet, or Admin).
- */
+/// HomeScreen: This is the "Switchboard" screen.
+/// It doesn't show any UI itself, but instead checks the user's role 
+/// from UserProvider and displays the correct Dashboard (Owner, Vet, or Admin).
 class HomeScreen extends StatelessWidget {
   final int initialIndex;
   const HomeScreen({super.key, this.initialIndex = 0});

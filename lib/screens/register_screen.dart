@@ -202,7 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Section: Logo & Title (Compact)
+            // Top Section: Logo & Title
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
               child: Column(
@@ -214,12 +214,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: Colors.white.withAlpha(40),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 36),
+                    child: const Icon(Icons.pets, color: Colors.white, size: 34),
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     "Create Account",
-                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -246,9 +246,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text("Start to manage your pet's health today", style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 12)),
+                        child: Text("Start to manage your pet's health today", style: TextStyle(color: Color(0xFF6C6C6C), fontSize: 13)),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       _buildField("FULL NAME", _nameController, "Sarah Lim"),
                       const SizedBox(height: 10),
                       _buildField(
@@ -277,38 +277,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onToggle: () => setState(() => _isObscuredConfirm = !_isObscuredConfirm),
                         hasError: _passwordError,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 48,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleRegister,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _dustyOlive,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           child: _isLoading 
                             ? const SizedBox(
-                                height: 22,
-                                width: 22,
+                                height: 20,
+                                width: 20,
                                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                               )
-                            : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                            : const Text("Create Account", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
+                      const SizedBox(height: 8),
                       Center(
                         child: TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           onPressed: () => Navigator.pop(context),
-                          child: Text.rich(
-                            TextSpan(
-                              text: "Already have an account? ",
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                              children: [
-                                TextSpan(
-                                  text: "Sign In",
-                                  style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                              ],
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text.rich(
+                              TextSpan(
+                                text: "Already have an account? ",
+                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                children: [
+                                  TextSpan(
+                                    text: "Sign In",
+                                    style: TextStyle(color: _lightBronze, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                              maxLines: 1,
+                              softWrap: false,
                             ),
                           ),
                         ),
@@ -342,14 +353,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 : [],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
           obscureText: isPass && isObscured,
-          style: TextStyle(color: _darkText),
+          style: TextStyle(color: _darkText, fontSize: 14),
           decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             hintText: hint,
-            hintStyle: TextStyle(color: _ashGrey.withAlpha(180), fontSize: 14), // Darker hint
+            hintStyle: TextStyle(color: _ashGrey.withAlpha(180), fontSize: 14),
             fillColor: _powderPetal.withAlpha(50),
             filled: true,
             border: OutlineInputBorder(
