@@ -209,12 +209,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    width: 54,
+                    height: 54,
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(40),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 34),
+                    child: Image.asset(
+                      'assets/images/pawkoda_logo.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   const Text(

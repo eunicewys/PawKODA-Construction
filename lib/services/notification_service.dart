@@ -18,7 +18,7 @@ class NotificationService {
   bool get isInitialized => _isInitialized;
 
   // Single Source of Truth for Notification Channel Constants
-  static const String healthChannelId = 'pawkoda_health_reminders';
+  static const String healthChannelId = 'pawkoda_health_reminders_v2';
   static const String healthChannelName = 'Pet Health & Vaccine Reminders';
   static const String healthChannelDesc =
       'Notifications for upcoming vaccinations and deworming boosters.';
@@ -127,9 +127,6 @@ class NotificationService {
     if (input == null) {
       return (DateTime.now().millisecondsSinceEpoch.abs() % 2147483000);
     }
-    if (input is int) {
-      return (input.abs() % 2147483000);
-    }
 
     final String str = input.toString();
     int hash = 2166136261;
@@ -155,7 +152,6 @@ class NotificationService {
   ///
   /// Schedules local phone notifications ONLY for 09:00 AM sharp (starting 3 days before up to due date).
   /// If today's 09:00 AM has already passed, schedules for tomorrow at 09:00 AM sharp.
-  /// Never triggers immediate banner popups while user is navigating inside the app.
   Future<void> scheduleHealthReminder({
     dynamic rawId,
     dynamic baseId,
@@ -185,7 +181,7 @@ class NotificationService {
       reminderTime.minute,
     );
 
-    // If 3 days prior 09:00 AM has already passed
+    // If 3 days prior 09:00 AM has already passed, adjust to today 9:00 AM or tomorrow 9:00 AM
     if (scheduledDate.isBefore(now)) {
       final tz.TZDateTime today9AM = tz.TZDateTime(
         tz.local,
@@ -199,11 +195,12 @@ class NotificationService {
       if (now.isBefore(today9AM)) {
         scheduledDate = today9AM;
       } else {
+        final tomorrow = now.add(const Duration(days: 1));
         scheduledDate = tz.TZDateTime(
           tz.local,
-          now.year,
-          now.month,
-          now.day + 1,
+          tomorrow.year,
+          tomorrow.month,
+          tomorrow.day,
           reminderTime.hour,
           reminderTime.minute,
         );
@@ -217,11 +214,12 @@ class NotificationService {
       nextDueDate.day,
       23,
       59,
+      59,
     );
 
-    // If scheduled date exceeds due date or is past, do not schedule further
-    if (scheduledDate.isAfter(dueDateCutoff) || scheduledDate.isBefore(now)) {
-      debugPrint("Health reminder due date $nextDueDate passed or past 9:00 AM today. No instant popups in app.");
+    // Only skip if the scheduled 9:00 AM date has passed the due date completely
+    if (scheduledDate.isAfter(dueDateCutoff)) {
+      debugPrint("Health reminder due date $nextDueDate passed completely. Skipping 9 AM reminder.");
       return;
     }
 
@@ -309,7 +307,6 @@ class NotificationService {
 
   /// Schedule Vet Appointment Booking Reminder 3 days before event date at 09:00 AM sharp.
   /// If today's 09:00 AM has passed, schedules for tomorrow at 09:00 AM sharp.
-  /// Never triggers immediate banner popups while user is in the app.
   Future<void> scheduleBookingReminder({
     required String bookingId,
     required String petName,
@@ -346,11 +343,12 @@ class NotificationService {
       if (now.isBefore(today9AM)) {
         scheduledDate = today9AM;
       } else {
+        final tomorrow = now.add(const Duration(days: 1));
         scheduledDate = tz.TZDateTime(
           tz.local,
-          now.year,
-          now.month,
-          now.day + 1,
+          tomorrow.year,
+          tomorrow.month,
+          tomorrow.day,
           9,
           0,
         );
@@ -364,10 +362,11 @@ class NotificationService {
       bookingDate.day,
       23,
       59,
+      59,
     );
 
-    if (scheduledDate.isAfter(apptCutoff) || scheduledDate.isBefore(now)) {
-      debugPrint("Booking date $bookingDate has passed or today 9:00 AM passed. Next reminder tomorrow 9:00 AM.");
+    if (scheduledDate.isAfter(apptCutoff)) {
+      debugPrint("Booking date $bookingDate has passed. Skipping 9 AM reminder.");
       return;
     }
 

@@ -414,12 +414,17 @@ class _VetLoginScreenState extends State<VetLoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        width: 68,
+                        height: 68,
+                        padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
                           color: Colors.white.withAlpha(40),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.local_hospital, color: Colors.white, size: 44),
+                        child: Image.asset(
+                          'assets/images/pawkoda_logo.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       const Text(

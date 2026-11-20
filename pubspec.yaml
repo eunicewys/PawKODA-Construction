@@ -72,6 +72,7 @@ flutter:
   assets:
     - assets/data/ingredients.json
     - assets/data/breeds.json
+    - assets/images/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

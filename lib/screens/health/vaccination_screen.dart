@@ -500,6 +500,12 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
 
                             // Trigger On-Phone Notification Logic
                             if (isUpcoming) {
+                              await NotificationService().showNotification(
+                                title: "Health Reminder Set: ${widget.pet.name}",
+                                body: "${selectedType! == 'Vaccine' ? 'Vaccination' : 'Deworm'} ($formattedName) scheduled for ${DateFormat('dd MMM yyyy').format(selectedDate)}.",
+                                petName: widget.pet.name,
+                              );
+
                               await NotificationService().scheduleHealthReminder(
                                 rawId: recordId,
                                 petName: widget.pet.name,
@@ -801,7 +807,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                                 message: "Are you sure you want to delete '${rec.doseName}'? This action cannot be undone.",
                                               );
                                               if (confirm) {
-                                                await NotificationService().cancelReminder(rec.id.hashCode);
+                                                await NotificationService().cancelReminder(rec.id);
                                                 await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
                                               }
                                             },
@@ -963,7 +969,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                                 message: "Are you sure you want to delete the reminder for '${rec.doseName}'? This action cannot be undone.",
                                               );
                                               if (confirm) {
-                                                await NotificationService().cancelReminder(rec.id.hashCode);
+                                                await NotificationService().cancelReminder(rec.id);
                                                 await _healthService.deleteVaccination(uid, widget.pet.id, rec.id);
                                               }
                                             },
@@ -1063,7 +1069,7 @@ class _VaccinationScreenState extends State<VaccinationScreen> {
                                                   notes: rec.notes,
                                                   reminderTime: rec.reminderTime,
                                                 );
-                                                await NotificationService().cancelReminder(rec.id.hashCode);
+                                                await NotificationService().cancelReminder(rec.id);
                                                 await _healthService.updateVaccination(uid, widget.pet.id, rec.id, updatedRecord);
                                                 if (context.mounted) {
                                                   ScaffoldMessenger.of(context).showSnackBar(
